@@ -59,16 +59,16 @@ const parseCache = new ParseCache<{ document: TextDocument; stylesheet: Styleshe
 function colorSwatchInfo(color: string, doc?: string): () => HTMLElement {
   return () => {
     const el = document.createElement("div");
-    el.className = "miro-completion-color";
+    el.className = "prism-completion-color";
     const swatch = document.createElement("span");
-    swatch.className = "miro-completion-color-swatch";
+    swatch.className = "prism-completion-color-swatch";
     swatch.style.background = color;
     const label = document.createElement("span");
     label.textContent = color;
     el.append(swatch, label);
     if (doc) {
       const desc = document.createElement("div");
-      desc.className = "miro-completion-color-desc";
+      desc.className = "prism-completion-color-desc";
       desc.textContent = doc;
       el.append(desc);
     }
@@ -104,7 +104,7 @@ export function createCssCompletionSource(lang: CssLang): CompletionSource {
       if (!document || !stylesheet) {
         document = bundle.createTextDocument(
           // uri 仅用于 service 内部相对路径解析；未提供 documentContext 时路径补全不出现
-          "file:///miro-css.document",
+          "file:///prism-css.document",
           lang === "sass" ? "scss" : lang,
           1,
           docText,

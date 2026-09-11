@@ -50,8 +50,8 @@ const INSTALL_FOOTER = `
 - Linux：\`.deb\` / \`.AppImage\`
 
 应用内可通过「设置 → 关于 → 检查更新」或启动时自动检查升级。
-macOS 已 ad-hoc 签名；若仍提示「未验证开发者」，请右键 → 打开。首次安装若见「已损坏」，见 [多平台发布.md](https://github.com/yqstart/MiroCode/blob/master/docs/多平台发布.md#macos安装后提示已损坏无法打开)。
-Windows 若 SmartScreen 提示「已保护你的电脑」，见 [多平台发布.md · Windows](https://github.com/yqstart/MiroCode/blob/master/docs/多平台发布.md#windowssmartscreen-提示已保护你的电脑)（更多信息 → 仍要运行）。
+macOS 已 ad-hoc 签名；若仍提示「未验证开发者」，请右键 → 打开。首次安装若见「已损坏」，见 [多平台发布.md](https://github.com/yqstart/PrismCode/blob/master/docs/多平台发布.md#macos安装后提示已损坏无法打开)。
+Windows 若 SmartScreen 提示「已保护你的电脑」，见 [多平台发布.md · Windows](https://github.com/yqstart/PrismCode/blob/master/docs/多平台发布.md#windowssmartscreen-提示已保护你的电脑)（更多信息 → 仍要运行）。
 `.trim();
 
 const version = readVersion(process.argv[2]);

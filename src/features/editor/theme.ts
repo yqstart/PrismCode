@@ -19,7 +19,7 @@ interface ThemePalette {
   highlight: HighlightStyle;
 }
 
-/** Miro Dark：提高饱和度与明度，避免语法色偏灰发暗 */
+/** Prism Dark：提高饱和度与明度，避免语法色偏灰发暗 */
 const darkHighlight = HighlightStyle.define([
   { tag: t.keyword, color: "#d8b4fe" },
   { tag: t.controlKeyword, color: "#d8b4fe" },
@@ -147,7 +147,7 @@ const cyberHighlight = HighlightStyle.define([
 ]);
 
 const PALETTES: Record<ThemeId, ThemePalette> = {
-  "miro-dark": {
+  "prism-dark": {
     bg: "#101114",
     fg: "#f4f4f5",
     gutter: "#17181c",
@@ -205,10 +205,10 @@ function uiTheme(palette: ThemePalette): Extension {
         backgroundColor: palette.bg,
         color: palette.fg,
         fontSize: "inherit",
-        fontFamily: "var(--miro-editor-font-family, var(--font-mono))",
+        fontFamily: "var(--prism-editor-font-family, var(--font-mono))",
       },
       ".cm-scroller": {
-        fontFamily: "var(--miro-editor-font-family, var(--font-mono))",
+        fontFamily: "var(--prism-editor-font-family, var(--font-mono))",
         lineHeight: "1.65",
       },
       ".cm-content": {
@@ -299,15 +299,15 @@ export function editorThemeExtensions(theme: ThemeId): Extension[] {
 }
 
 export const THEME_LABELS: Record<ThemeId, string> = {
-  "miro-dark": "Miro Dark",
-  dawn: "Miro Light",
-  midnight: "Miro Midnight",
-  cyberpunk: "Miro Cyberpunk",
+  "prism-dark": "Prism Dark",
+  dawn: "Prism Light",
+  midnight: "Prism Midnight",
+  cyberpunk: "Prism Cyberpunk",
 };
 
 /** 状态栏快捷切换顺序 */
 export const THEME_ORDER: ThemeId[] = [
-  "miro-dark",
+  "prism-dark",
   "dawn",
   "midnight",
   "cyberpunk",

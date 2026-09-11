@@ -11,7 +11,7 @@ export interface RemoteSession {
   config: SshConnectConfig;
 }
 
-const SSH_TAB_ID = "miro://ssh";
+const SSH_TAB_ID = "prism://ssh";
 
 /**
  * SSH 远程会话视图：作为独立编辑区标签打开（对齐 VS Code 远程开发入口形态），

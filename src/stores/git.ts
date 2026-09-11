@@ -504,7 +504,7 @@ export const useGitStore = defineStore("git", () => {
 
     try {
       if (choice === "smart") {
-        await gitStash(root, `Miro Code: checkout ${name}`, true);
+        await gitStash(root, `Prism Code: checkout ${name}`, true);
         if (!isCurrent()) return;
         await gitCheckout(root, name, false);
         if (!isCurrent()) return;

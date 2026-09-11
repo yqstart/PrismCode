@@ -8,7 +8,7 @@
 
 import { getWindowSessionId, MAIN_WINDOW_SESSION_ID } from "./windowSession.ts";
 
-const STORAGE_PREFIX = "mirocode.editor-session.v3:";
+const STORAGE_PREFIX = "prismcode.editor-session.v3:";
 const LEGACY_STORAGE_PREFIX = "mirocode.editor-session.v2:";
 const MAX_TABS = 60;
 const MAX_RECENT_PATHS = 50;

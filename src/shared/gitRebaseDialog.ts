@@ -19,7 +19,7 @@ export async function openInteractiveRebase(
   options: InteractiveRebaseOptions,
 ): Promise<boolean> {
   if (!handler) {
-    console.warn("[mirocode] InteractiveRebaseDialog 未挂载");
+    console.warn("[prismcode] InteractiveRebaseDialog 未挂载");
     return false;
   }
   return handler(options);

@@ -9,8 +9,8 @@
 //!    delegate 方法，没有 `setDockMenu:` setter），objc runtime 静默 no-op，
 //!    Rust 端菜单从未设上——macOS 退回到 `applicationDockMenu:` 返回值
 //!    （tao 的 TaoAppDelegate 未实现该方法返回 nil）→ **macOS 自动渲染
-//!    当前所有打开的窗口列表**（这就是用户截图里看到的 `Miro Code` +
-//!    `Miro Code — MiroCode` 多窗口残留）。
+//!    当前所有打开的窗口列表**（这就是用户截图里看到的 `Prism Code` +
+//!    `Prism Code — PrismCode` 多窗口残留）。
 //!
 //! 修复策略：
 //! - 用 `class_addMethod` 给 NSApp.delegate.class（即 TaoAppDelegate）
@@ -337,7 +337,7 @@ mod macos {
             // 不能 autorelease；item 的初始引用才交给 pool
             let menu: *mut AnyObject = msg_send![nsmenu_class, alloc];
             let menu: *mut AnyObject = msg_send![menu, init];
-            let title = NSString::from_str("Miro Code");
+            let title = NSString::from_str("Prism Code");
             let _: () = msg_send![menu, setTitle: &*title];
 
             let _: () = msg_send![menu, addItem: open_item];

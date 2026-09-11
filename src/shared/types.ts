@@ -1,4 +1,4 @@
-export type ThemeId = "miro-dark" | "dawn" | "midnight" | "cyberpunk";
+export type ThemeId = "prism-dark" | "dawn" | "midnight" | "cyberpunk";
 
 export const EDITOR_FONT_IDS = [
   "system",

@@ -22,7 +22,7 @@ assert("文件名大小写不敏感", isEnvFileName(".ENV.PRODUCTION"));
 assert("不误判普通文件", !isEnvFileName("settings.yml"));
 
 const envState = EditorState.create({
-  doc: 'export APP_NAME=MiroCode\nAPP_ENV="dev" # 当前环境\nEMPTY=\n',
+  doc: 'export APP_NAME=PrismCode\nAPP_ENV="dev" # 当前环境\nEMPTY=\n',
   extensions: [envLanguage],
 });
 const envTree = syntaxTree(envState).toString();
@@ -32,7 +32,7 @@ assert("Env 值高亮节点", envTree.includes("string"), envTree);
 assert("Env 注释高亮节点", envTree.includes("comment"), envTree);
 
 const yamlState = EditorState.create({
-  doc: "app:\n  name: Miro Code\nfeatures:\n  - search\nenabled: true\n",
+  doc: "app:\n  name: Prism Code\nfeatures:\n  - search\nenabled: true\n",
   extensions: [yaml()],
 });
 const yamlTree = syntaxTree(yamlState).toString();

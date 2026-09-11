@@ -504,7 +504,7 @@ onMounted(async () => {
     for (const request of backlog) queueExternalOpenRequest(request);
   }
 
-  if (settings.settings.autoCheckUpdates) {
+  if (settings.settings.autoCheckUpdates && !import.meta.env.DEV) {
     window.setTimeout(() => {
       void checkForAppUpdate("auto", (message, ms) =>
         workspace.showNotice(message, ms),

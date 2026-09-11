@@ -13,7 +13,7 @@ export function registerPushDialogHandler(next: PushHandler | null) {
 /** 打开 Push 对话框；取消返回 null */
 export async function openPushDialog(): Promise<PushDialogResult | null> {
   if (!pushHandler) {
-    console.warn("[mirocode] PushDialog 未挂载");
+    console.warn("[prismcode] PushDialog 未挂载");
     return null;
   }
   return pushHandler();
@@ -31,7 +31,7 @@ export function registerUpdateDialogHandler(next: UpdateHandler | null) {
 
 export async function openUpdateProjectDialog(): Promise<UpdateStrategy | null> {
   if (!updateHandler) {
-    console.warn("[mirocode] UpdateProjectDialog 未挂载");
+    console.warn("[prismcode] UpdateProjectDialog 未挂载");
     return null;
   }
   return updateHandler();

@@ -548,7 +548,7 @@ fn commit_internal(
     let tree = repo.find_tree(tree_id).map_err(|e| e.to_string())?;
     let sig = repo
         .signature()
-        .or_else(|_| Signature::now("Miro Code", "mirocode@local"))
+        .or_else(|_| Signature::now("Prism Code", "prismcode@local"))
         .map_err(|e| e.to_string())?;
 
     let parents = match repo.head() {
@@ -1672,7 +1672,7 @@ impl TempGitCredentialStore {
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_nanos())
             .unwrap_or(0);
-        let path_buf = dir.join(format!("mirocode-git-cred-{nonce}.txt"));
+        let path_buf = dir.join(format!("prismcode-git-cred-{nonce}.txt"));
         let payload = format!(
             "{protocol}://{}:{}@{host}{path}\n",
             percent_encode_credential(username),
@@ -1770,7 +1770,7 @@ fn format_cli_remote_error(op: &str, detail: &str, remote_url: &str) -> String {
 }
 
 fn save_git_credential_with_timeout(url: &str, username: &str, password: &str) {
-    save_miro_cred(url, username, password);
+    save_prism_cred(url, username, password);
 
     let Some((protocol, host)) = parse_http_remote(url) else {
         return;
@@ -1807,11 +1807,9 @@ fn save_git_credential_with_timeout(url: &str, username: &str, password: &str) {
         }
     }
 }
-fn miro_cred_store_path() -> Option<PathBuf> {
-    let home = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE"))?;
+fn prism_cred_store_path() -> Option<PathBuf> {
     Some(
-        PathBuf::from(home)
-            .join(".mirocode")
+        crate::user_data::user_data_dir()?
             .join("git-credentials.json"),
     )
 }
@@ -1822,9 +1820,9 @@ struct StoredGitCred {
     password: String,
 }
 
-fn load_miro_cred(url: &str) -> Option<(String, String)> {
+fn load_prism_cred(url: &str) -> Option<(String, String)> {
     let key = cred_host_key(url)?;
-    let path = miro_cred_store_path()?;
+    let path = prism_cred_store_path()?;
     let raw = std::fs::read_to_string(path).ok()?;
     let map: std::collections::HashMap<String, StoredGitCred> = serde_json::from_str(&raw).ok()?;
     let c = map.get(&key)?;
@@ -1834,11 +1832,11 @@ fn load_miro_cred(url: &str) -> Option<(String, String)> {
     Some((c.username.clone(), c.password.clone()))
 }
 
-fn save_miro_cred(url: &str, username: &str, password: &str) {
+fn save_prism_cred(url: &str, username: &str, password: &str) {
     let Some(key) = cred_host_key(url) else {
         return;
     };
-    let Some(path) = miro_cred_store_path() else {
+    let Some(path) = prism_cred_store_path() else {
         return;
     };
     if let Some(parent) = path.parent() {
@@ -1876,24 +1874,24 @@ fn write_private(path: &std::path::Path, content: &str) -> std::io::Result<()> {
     f.write_all(content.as_bytes())
 }
 
-/// 写入系统 git credential（尽力而为）+ Miro Code 本地凭据（可靠记住）
+/// 写入系统 git credential（尽力而为）+ Prism Code 本地凭据（可靠记住）
 fn save_git_credential(url: &str, username: &str, password: &str) {
     save_git_credential_with_timeout(url, username, password);
 }
 
-/// 供登录弹窗预填：按远程 URL 查 Miro Code 已存用户名
+/// 供登录弹窗预填：按远程 URL 查 Prism Code 已存用户名
 #[tauri::command]
 pub fn git_stored_username(url: String) -> Option<String> {
-    load_miro_cred(&url).map(|(u, _)| u)
+    load_prism_cred(&url).map(|(u, _)| u)
 }
 
-/// 远程凭据：显式账号密码 → Miro 已存凭据 → SSH → git credential helper
+/// 远程凭据：显式账号密码 → Prism 已存凭据 → SSH → git credential helper
 fn make_callbacks(username: Option<String>, password: Option<String>) -> RemoteCallbacks<'static> {
     let mut cb = RemoteCallbacks::new();
     cb.credentials(move |url, username_from_url, allowed| {
         let explicit_user = username.as_deref();
         let explicit_pass = password.as_deref();
-        let stored = load_miro_cred(url);
+        let stored = load_prism_cred(url);
 
         if allowed.contains(git2::CredentialType::USERNAME) {
             let user = explicit_user
@@ -2171,7 +2169,7 @@ pub fn git_stash(
     let result = (|| {
         let mut repo = open_repo(&root)?;
         let sig = repo.signature().map_err(|e| e.to_string())?;
-        let msg = message.unwrap_or_else(|| "Miro Code stash".into());
+        let msg = message.unwrap_or_else(|| "Prism Code stash".into());
         let flags = if include_untracked.unwrap_or(false) {
             StashFlags::INCLUDE_UNTRACKED
         } else {
@@ -3123,9 +3121,11 @@ fn is_rebase_in_progress(root: &str) -> bool {
     dir.join("rebase-merge").is_dir() || dir.join("rebase-apply").is_dir()
 }
 
-fn is_miro_rebase_in_progress(root: &str) -> bool {
+fn is_prism_rebase_in_progress(root: &str) -> bool {
     git_dir(root)
-        .map(|d| d.join("miro-rebase.json").is_file())
+        .map(|d| {
+            d.join("prism-rebase.json").is_file() || d.join("miro-rebase.json").is_file()
+        })
         .unwrap_or(false)
 }
 
@@ -3197,7 +3197,7 @@ pub struct GitRebaseStep {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct MiroRebaseState {
+struct PrismRebaseState {
     onto: String,
     branch: String,
     /// rebase 开始前的 HEAD，供 Abort 恢复
@@ -3206,24 +3206,38 @@ struct MiroRebaseState {
     squash_msgs: Vec<String>,
 }
 
-fn miro_rebase_path(root: &str) -> Result<PathBuf, String> {
+fn prism_rebase_path(root: &str) -> Result<PathBuf, String> {
+    Ok(git_dir(root)?.join("prism-rebase.json"))
+}
+
+fn legacy_rebase_path(root: &str) -> Result<PathBuf, String> {
     Ok(git_dir(root)?.join("miro-rebase.json"))
 }
 
-fn load_miro_rebase(root: &str) -> Result<MiroRebaseState, String> {
-    let path = miro_rebase_path(root)?;
+fn load_prism_rebase(root: &str) -> Result<PrismRebaseState, String> {
+    let path = if prism_rebase_path(root)?.is_file() {
+        prism_rebase_path(root)?
+    } else {
+        legacy_rebase_path(root)?
+    };
     let raw = std::fs::read_to_string(&path).map_err(|e| format!("读取 rebase 状态失败: {e}"))?;
-    serde_json::from_str(&raw).map_err(|e| format!("解析 rebase 状态失败: {e}"))
+    let state: PrismRebaseState =
+        serde_json::from_str(&raw).map_err(|e| format!("解析 rebase 状态失败: {e}"))?;
+    if path.file_name().and_then(|n| n.to_str()) == Some("miro-rebase.json") {
+        let _ = save_prism_rebase(root, &state);
+        let _ = std::fs::remove_file(path);
+    }
+    Ok(state)
 }
 
-fn save_miro_rebase(root: &str, state: &MiroRebaseState) -> Result<(), String> {
-    let path = miro_rebase_path(root)?;
+fn save_prism_rebase(root: &str, state: &PrismRebaseState) -> Result<(), String> {
+    let path = prism_rebase_path(root)?;
     let raw = serde_json::to_string_pretty(state).map_err(|e| e.to_string())?;
     std::fs::write(&path, raw).map_err(|e| e.to_string())
 }
 
-fn clear_miro_rebase(root: &str) {
-    if let Ok(path) = miro_rebase_path(root) {
+fn clear_prism_rebase(root: &str) {
+    if let Ok(path) = prism_rebase_path(root) {
         let _ = std::fs::remove_file(path);
     }
 }
@@ -3253,11 +3267,11 @@ pub async fn git_rebase_status(root: String) -> Result<GitRebaseStatus, String> 
 fn git_rebase_status_blocking(root: String) -> Result<GitRebaseStatus, String> {
     let repo = open_repo(&root)?;
     let conflicted = repo.index().map(|i| i.has_conflicts()).unwrap_or(false);
-    let miro = is_miro_rebase_in_progress(&root);
+    let prism = is_prism_rebase_in_progress(&root);
     let native = is_rebase_in_progress(&root);
-    let in_progress = miro || native;
-    let kind = if miro {
-        "miro".into()
+    let in_progress = prism || native;
+    let kind = if prism {
+        "prism".into()
     } else if native {
         "git".into()
     } else {
@@ -3274,8 +3288,8 @@ fn git_rebase_status_blocking(root: String) -> Result<GitRebaseStatus, String> {
         if let Ok(s) = std::fs::read_to_string(onto_file) {
             onto = Some(s.trim().chars().take(7).collect());
         }
-        if miro {
-            if let Ok(state) = load_miro_rebase(&root) {
+        if prism {
+            if let Ok(state) = load_prism_rebase(&root) {
                 head_name = Some(state.branch);
                 onto = Some(state.onto.chars().take(7).collect());
             }
@@ -3305,20 +3319,20 @@ pub async fn git_rebase_continue(root: String) -> Result<String, String> {
 }
 
 fn git_rebase_continue_blocking(root: String) -> Result<String, String> {
-    if is_miro_rebase_in_progress(&root) {
+    if is_prism_rebase_in_progress(&root) {
         // 先提交当前冲突解决结果（若仍有未暂存冲突则失败）
         let repo = open_repo(&root)?;
         if repo.index().map(|i| i.has_conflicts()).unwrap_or(false) {
             return Err("仍有未解决冲突，请先在 Commit 面板解决".into());
         }
-        let state = load_miro_rebase(&root)?;
+        let state = load_prism_rebase(&root)?;
         let step = state
             .remaining
             .first()
             .cloned()
             .ok_or_else(|| "Rebase 状态中没有待处理步骤".to_string())?;
         let action = step.action.to_lowercase();
-        validate_miro_rebase_action(&action)?;
+        validate_prism_rebase_action(&action)?;
         // 若处于 cherry-pick 中间态
         if repo.path().join("CHERRY_PICK_HEAD").is_file() {
             // `cherry-pick -n` 冲突在当前 Git 实现下不会留下 CHERRY_PICK_HEAD；
@@ -3341,7 +3355,7 @@ fn git_rebase_continue_blocking(root: String) -> Result<String, String> {
                 return Err("GIT_REBASE_CONFLICT|||继续 Rebase 仍有冲突".into());
             }
             if action == "reword" {
-                finalize_miro_rebase_step(&root, &action, &step)?;
+                finalize_prism_rebase_step(&root, &action, &step)?;
             }
         } else {
             let mut status_options = StatusOptions::new();
@@ -3381,9 +3395,9 @@ fn git_rebase_continue_blocking(root: String) -> Result<String, String> {
                 let msg = if action == "reword" {
                     step.message
                         .clone()
-                        .unwrap_or_else(|| "Miro Code rebase continue".into())
+                        .unwrap_or_else(|| "Prism Code rebase continue".into())
                 } else {
-                    "Miro Code rebase continue".into()
+                    "Prism Code rebase continue".into()
                 };
                 // 提交失败时不能继续移除当前 step，否则 rebase 状态会与仓库实际
                 // 内容脱节，后续 Abort 也无法准确恢复。
@@ -3391,7 +3405,7 @@ fn git_rebase_continue_blocking(root: String) -> Result<String, String> {
             } else {
                 // fix/squash 使用 cherry-pick -n，冲突解决后只存在索引变更，
                 // 必须继续 amend 当前 HEAD，不能创建一个新的普通提交。
-                finalize_miro_rebase_step(&root, &action, &step)?;
+                finalize_prism_rebase_step(&root, &action, &step)?;
             }
         }
         // 当前冲突的 step 已通过 cherry-pick --continue / 提交完成：
@@ -3399,13 +3413,13 @@ fn git_rebase_continue_blocking(root: String) -> Result<String, String> {
         // cherry-pick——变更已应用，git 报 "previous cherry-pick is now empty"
         // 或再次冲突，用户只能 Abort（skip 分支已有相同处理）
         {
-            let mut state = load_miro_rebase(&root)?;
+            let mut state = load_prism_rebase(&root)?;
             if !state.remaining.is_empty() {
                 state.remaining.remove(0);
-                save_miro_rebase(&root, &state)?;
+                save_prism_rebase(&root, &state)?;
             }
         }
-        return replay_miro_rebase(root);
+        return replay_prism_rebase(root);
     }
     match run_git(&root, &["-c", "core.editor=true", "rebase", "--continue"]) {
         Ok(msg) => Ok(if msg.is_empty() {
@@ -3438,8 +3452,8 @@ pub async fn git_rebase_abort(root: String) -> Result<String, String> {
 }
 
 fn git_rebase_abort_blocking(root: String) -> Result<String, String> {
-    if is_miro_rebase_in_progress(&root) {
-        let state = load_miro_rebase(&root)?;
+    if is_prism_rebase_in_progress(&root) {
+        let state = load_prism_rebase(&root)?;
         validate_git_positional_arg(&state.branch, "Rebase 分支")?;
         validate_git_positional_arg(&state.original_head, "Rebase 原始提交")?;
         if git_dir(&root)?.join("CHERRY_PICK_HEAD").is_file() {
@@ -3450,7 +3464,7 @@ fn git_rebase_abort_blocking(root: String) -> Result<String, String> {
             .map_err(|e| format!("恢复 Rebase 分支失败: {e}"))?;
         run_git(&root, &["reset", "--hard", &state.original_head])
             .map_err(|e| format!("恢复 Rebase 原始提交失败: {e}"))?;
-        clear_miro_rebase(&root);
+        clear_prism_rebase(&root);
         return Ok("已中止交互 Rebase".into());
     }
     run_git(&root, &["rebase", "--abort"])?;
@@ -3472,7 +3486,7 @@ pub async fn git_rebase_skip(root: String) -> Result<String, String> {
 }
 
 fn git_rebase_skip_blocking(root: String) -> Result<String, String> {
-    if is_miro_rebase_in_progress(&root) {
+    if is_prism_rebase_in_progress(&root) {
         if git_dir(&root)?.join("CHERRY_PICK_HEAD").is_file() {
             run_git(&root, &["cherry-pick", "--abort"])
                 .map_err(|e| format!("跳过 Rebase 当前 cherry-pick 失败: {e}"))?;
@@ -3482,12 +3496,12 @@ fn git_rebase_skip_blocking(root: String) -> Result<String, String> {
             run_git(&root, &["reset", "--hard", "HEAD"])
                 .map_err(|e| format!("清理 Rebase 当前步骤失败: {e}"))?;
         }
-        let mut state = load_miro_rebase(&root)?;
+        let mut state = load_prism_rebase(&root)?;
         if !state.remaining.is_empty() {
             state.remaining.remove(0);
-            save_miro_rebase(&root, &state)?;
+            save_prism_rebase(&root, &state)?;
         }
-        return replay_miro_rebase(root);
+        return replay_prism_rebase(root);
     }
     match run_git(&root, &["rebase", "--skip"]) {
         Ok(msg) => Ok(if msg.is_empty() {
@@ -3529,16 +3543,16 @@ pub fn git_rebase_plan(root: String, onto: String) -> Result<Vec<GitCommitInfo>,
     Ok(commits)
 }
 
-fn replay_miro_rebase(root: String) -> Result<String, String> {
-    let mut state = load_miro_rebase(&root)?;
+fn replay_prism_rebase(root: String) -> Result<String, String> {
+    let mut state = load_prism_rebase(&root)?;
     let repo = open_repo(&root)?;
 
     while let Some(step) = state.remaining.first().cloned() {
         let action = step.action.to_lowercase();
-        validate_miro_rebase_action(&action)?;
+        validate_prism_rebase_action(&action)?;
         if action == "drop" {
             state.remaining.remove(0);
-            save_miro_rebase(&root, &state)?;
+            save_prism_rebase(&root, &state)?;
             continue;
         }
 
@@ -3554,7 +3568,7 @@ fn replay_miro_rebase(root: String) -> Result<String, String> {
                     .output()
                     .map_err(|e| e.to_string())?;
                 if !out.status.success() {
-                    save_miro_rebase(&root, &state)?;
+                    save_prism_rebase(&root, &state)?;
                     if open_repo(&root)
                         .ok()
                         .and_then(|r| r.index().ok())
@@ -3571,7 +3585,7 @@ fn replay_miro_rebase(root: String) -> Result<String, String> {
                     ));
                 }
                 if action == "reword" {
-                    finalize_miro_rebase_step(&root, &action, &step)?;
+                    finalize_prism_rebase_step(&root, &action, &step)?;
                 }
                 state.squash_msgs.clear();
             }
@@ -3582,7 +3596,7 @@ fn replay_miro_rebase(root: String) -> Result<String, String> {
                     .output()
                     .map_err(|e| e.to_string())?;
                 if !out.status.success() {
-                    save_miro_rebase(&root, &state)?;
+                    save_prism_rebase(&root, &state)?;
                     if open_repo(&root)
                         .ok()
                         .and_then(|r| r.index().ok())
@@ -3599,7 +3613,7 @@ fn replay_miro_rebase(root: String) -> Result<String, String> {
                     ));
                 }
                 // amend 保留原信息
-                finalize_miro_rebase_step(&root, &action, &step)?;
+                finalize_prism_rebase_step(&root, &action, &step)?;
             }
             "squash" => {
                 let out = std::process::Command::new("git")
@@ -3608,7 +3622,7 @@ fn replay_miro_rebase(root: String) -> Result<String, String> {
                     .output()
                     .map_err(|e| e.to_string())?;
                 if !out.status.success() {
-                    save_miro_rebase(&root, &state)?;
+                    save_prism_rebase(&root, &state)?;
                     if open_repo(&root)
                         .ok()
                         .and_then(|r| r.index().ok())
@@ -3626,7 +3640,7 @@ fn replay_miro_rebase(root: String) -> Result<String, String> {
                 }
                 let msg = step.message.clone().unwrap_or(default_msg);
                 state.squash_msgs.push(msg);
-                finalize_miro_rebase_step(&root, &action, &step)?;
+                finalize_prism_rebase_step(&root, &action, &step)?;
             }
             _ => {
                 return Err(format!("未知 rebase 动作: {action}"));
@@ -3634,21 +3648,21 @@ fn replay_miro_rebase(root: String) -> Result<String, String> {
         }
 
         state.remaining.remove(0);
-        save_miro_rebase(&root, &state)?;
+        save_prism_rebase(&root, &state)?;
     }
 
-    clear_miro_rebase(&root);
+    clear_prism_rebase(&root);
     Ok("交互 Rebase 完成".into())
 }
 
-fn validate_miro_rebase_action(action: &str) -> Result<(), String> {
+fn validate_prism_rebase_action(action: &str) -> Result<(), String> {
     match action {
         "pick" | "reword" | "squash" | "fix" | "drop" => Ok(()),
         _ => Err(format!("未知 rebase 动作: {action}")),
     }
 }
 
-fn finalize_miro_rebase_step(
+fn finalize_prism_rebase_step(
     root: &str,
     action: &str,
     step: &GitRebaseStep,
@@ -3658,7 +3672,7 @@ fn finalize_miro_rebase_step(
             let msg = step
                 .message
                 .clone()
-                .unwrap_or_else(|| "Miro Code rebase continue".into());
+                .unwrap_or_else(|| "Prism Code rebase continue".into());
             git_commit(root.to_string(), msg, None, Some(true)).map(|_| ())
         }
         "fix" => run_git(root, &["commit", "--amend", "--no-edit", "--allow-empty"])
@@ -3668,7 +3682,7 @@ fn finalize_miro_rebase_step(
             let msg = step
                 .message
                 .clone()
-                .unwrap_or_else(|| "Miro Code rebase continue".into());
+                .unwrap_or_else(|| "Prism Code rebase continue".into());
             let head_msg = {
                 let repo = open_repo(root)?;
                 repo.head()
@@ -3715,9 +3729,9 @@ fn git_rebase_interactive_blocking(
     validate_git_positional_arg(&onto, "Rebase 基准")?;
     for step in &steps {
         validate_git_positional_arg(&step.commit_id, "Rebase 提交")?;
-        validate_miro_rebase_action(&step.action.to_lowercase())?;
+        validate_prism_rebase_action(&step.action.to_lowercase())?;
     }
-    if is_rebase_in_progress(&root) || is_miro_rebase_in_progress(&root) {
+    if is_rebase_in_progress(&root) || is_prism_rebase_in_progress(&root) {
         return Err("已有 Rebase 进行中，请先 Continue 或 Abort".into());
     }
     let repo = open_repo(&root)?;
@@ -3744,7 +3758,7 @@ fn git_rebase_interactive_blocking(
         .map_err(|e| e.to_string())?
         .id()
         .to_string();
-    let state = MiroRebaseState {
+    let state = PrismRebaseState {
         onto: onto_oid.to_string(),
         branch,
         original_head,
@@ -3753,13 +3767,13 @@ fn git_rebase_interactive_blocking(
     };
     // 先保存恢复状态，再执行硬重置。即使进程在重置后异常退出，Abort 仍能
     // 使用原始 HEAD 把分支恢复回来。
-    save_miro_rebase(&root, &state)?;
+    save_prism_rebase(&root, &state)?;
 
     // 硬重置到 onto，再按步骤重放
     let onto_commit = repo.find_commit(onto_oid).map_err(|e| e.to_string())?;
     repo.reset(onto_commit.as_object(), ResetType::Hard, None)
         .map_err(|e| format!("重置到 onto 失败: {e}"))?;
-    replay_miro_rebase(root)
+    replay_prism_rebase(root)
 }
 
 /// 真正的 git revert（生成反向提交）
@@ -4443,7 +4457,7 @@ mod tests {
     #[test]
     fn read_unpushed_cache_returns_none_for_non_git_dir() {
         let tmp = std::env::temp_dir().join(format!(
-            "mirocode-not-a-repo-{}",
+            "prismcode-not-a-repo-{}",
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .map(|d| d.as_nanos())

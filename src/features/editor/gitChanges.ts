@@ -56,7 +56,7 @@ const changeDecorField = StateField.define<DecorationSet>({
           builder.add(
             line.from,
             line.from,
-            Decoration.line({ class: `cm-miro-git-bg cm-miro-git-bg-${c.kind}` }),
+            Decoration.line({ class: `cm-prism-git-bg cm-prism-git-bg-${c.kind}` }),
           );
         }
         return builder.finish();
@@ -76,31 +76,31 @@ class ChangeMarker extends GutterMarker {
   }
   toDOM(): Node {
     const el = document.createElement("div");
-    el.className = `cm-miro-git-change cm-miro-git-change-${this.kind}`;
+    el.className = `cm-prism-git-change cm-prism-git-change-${this.kind}`;
     return el;
   }
 }
 
 const changeTheme = EditorView.theme({
-  ".cm-miro-git-changes": {
+  ".cm-prism-git-changes": {
     width: "6px",
     flexShrink: "0",
   },
-  ".cm-miro-git-changes .cm-gutterElement": {
+  ".cm-prism-git-changes .cm-gutterElement": {
     padding: "0",
   },
-  ".cm-miro-git-change": {
+  ".cm-prism-git-change": {
     width: "100%",
     height: "100%",
     boxSizing: "border-box",
   },
-  ".cm-miro-git-change-added": { backgroundColor: "var(--success)" },
-  ".cm-miro-git-change-modified": { backgroundColor: "var(--accent)" },
-  ".cm-miro-git-change-deleted": {
+  ".cm-prism-git-change-added": { backgroundColor: "var(--success)" },
+  ".cm-prism-git-change-modified": { backgroundColor: "var(--accent)" },
+  ".cm-prism-git-change-deleted": {
     position: "relative",
     background: "transparent",
   },
-  ".cm-miro-git-change-deleted::after": {
+  ".cm-prism-git-change-deleted::after": {
     content: "''",
     position: "absolute",
     top: "2px",
@@ -111,13 +111,13 @@ const changeTheme = EditorView.theme({
     borderRight: "3px solid transparent",
     borderTop: "5px solid var(--danger)",
   },
-  ".cm-miro-git-bg-added": {
+  ".cm-prism-git-bg-added": {
     backgroundColor: "color-mix(in srgb, var(--success) 12%, transparent)",
   },
-  ".cm-miro-git-bg-modified": {
+  ".cm-prism-git-bg-modified": {
     backgroundColor: "color-mix(in srgb, var(--accent) 10%, transparent)",
   },
-  ".cm-miro-git-bg-deleted": {
+  ".cm-prism-git-bg-deleted": {
     backgroundColor: "color-mix(in srgb, var(--danger) 9%, transparent)",
   },
 });
@@ -186,7 +186,7 @@ export function gitChangesExtension(opts: GitChangesOptions): Extension {
 
   function changeGutter(openDiff: () => void) {
     return gutter({
-      class: "cm-miro-git-changes",
+      class: "cm-prism-git-changes",
       lineMarker(view, line) {
         const map = view.state.field(changeField);
         const lineNo = view.state.doc.lineAt(line.from).number;

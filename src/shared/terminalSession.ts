@@ -2,7 +2,7 @@
 
 import { getWindowSessionId } from "./windowSession.ts";
 
-const STORAGE_PREFIX = "mirocode.terminal-session.v1:";
+const STORAGE_PREFIX = "prismcode.terminal-session.v1:";
 const MAX_TERMINALS = 32;
 
 export interface TerminalSessionItem {

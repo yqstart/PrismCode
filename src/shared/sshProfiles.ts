@@ -9,7 +9,7 @@ export interface SshProfile {
   username: string;
   authKind: SshAuthKind;
   privateKeyPath: string;
-  /** 是否记住密码/口令（存于 ~/.mirocode/ssh-credentials.json） */
+  /** 是否记住密码/口令（存于 ~/.prismcode/ssh-credentials.json） */
   rememberSecret?: boolean;
 }
 
@@ -19,9 +19,11 @@ export interface SshSecret {
 }
 
 /** 旧版 localStorage 主机列表，启动时迁移至磁盘后删除 */
-const LEGACY_PROFILES_KEY = "mirocode.sshProfiles.v1";
+const LEGACY_PROFILES_KEY = "prismcode.sshProfiles.v1";
+const LEGACY_PROFILES_KEY_MIRO = "mirocode.sshProfiles.v1";
 /** 旧版 localStorage 密文，启动时迁移后删除 */
-const LEGACY_SECRETS_KEY = "mirocode.sshSecrets.v1";
+const LEGACY_SECRETS_KEY = "prismcode.sshSecrets.v1";
+const LEGACY_SECRETS_KEY_MIRO = "mirocode.sshSecrets.v1";
 
 let migratePromise: Promise<void> | null = null;
 
@@ -32,7 +34,9 @@ async function migrateLegacyProfiles(): Promise<void> {
       localStorage.removeItem(LEGACY_PROFILES_KEY);
       return;
     }
-    const raw = localStorage.getItem(LEGACY_PROFILES_KEY);
+    const raw =
+      localStorage.getItem(LEGACY_PROFILES_KEY) ??
+      localStorage.getItem(LEGACY_PROFILES_KEY_MIRO);
     if (!raw) return;
     const parsed = JSON.parse(raw) as SshProfile[];
     if (!Array.isArray(parsed) || parsed.length === 0) {
@@ -48,7 +52,9 @@ async function migrateLegacyProfiles(): Promise<void> {
 
 async function migrateLegacySecrets(): Promise<void> {
   try {
-    const raw = localStorage.getItem(LEGACY_SECRETS_KEY);
+    const raw =
+      localStorage.getItem(LEGACY_SECRETS_KEY) ??
+      localStorage.getItem(LEGACY_SECRETS_KEY_MIRO);
     if (!raw) return;
     const parsed = JSON.parse(raw) as Record<string, SshSecret>;
     if (!parsed || typeof parsed !== "object") {
@@ -80,7 +86,7 @@ async function ensureMigrated(): Promise<void> {
   return migratePromise;
 }
 
-/** 应用级全局主机列表（~/.mirocode/ssh-profiles.json，与工作区/窗口无关） */
+/** 应用级全局主机列表（~/.prismcode/ssh-profiles.json，与工作区/窗口无关） */
 export async function loadSshProfiles(): Promise<SshProfile[]> {
   await ensureMigrated();
   try {

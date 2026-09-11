@@ -80,7 +80,7 @@ const mergeLayoutTheme = Prec.highest(
       backgroundColor: "var(--bg-editor)",
     },
     ".cm-scroller": {
-      fontFamily: "var(--miro-editor-font-family, var(--font-mono))",
+      fontFamily: "var(--prism-editor-font-family, var(--font-mono))",
       lineHeight: "1.55",
     },
     ".cm-content": {
@@ -422,7 +422,7 @@ watch(theme, () => {
     <div
       ref="host"
       class="merge-host"
-      :style="{ '--miro-editor-font-family': editorFontFamily }"
+      :style="{ '--prism-editor-font-family': editorFontFamily }"
     />
   </div>
 </template>

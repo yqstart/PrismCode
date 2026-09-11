@@ -186,12 +186,12 @@ jobs:
         uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # 更新包签名：仓库 Settings → Secrets 配置（内容为 .secrets/mirocode.key 全文）
+          # 更新包签名：仓库 Settings → Secrets 配置（内容为 .secrets/prismcode.key 全文）
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: v__VERSION__
-          releaseName: Miro Code v__VERSION__
+          releaseName: Prism Code v__VERSION__
           releaseBody: ${{ steps.notes.outputs.body }}
           # 已发布的 Release 须为 false；若希望先审再发，可改为 true（且勿对手动已发布 tag 再跑）
           releaseDraft: false

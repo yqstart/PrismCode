@@ -49,7 +49,7 @@ const signatureField = StateField.define<SignatureState | null>({
 /** 渲染签名帮助 tooltip（当前签名高亮，当前参数加粗） */
 function renderSignature(help: TsSignatureHelp): HTMLDivElement {
   const dom = document.createElement("div");
-  dom.className = "miro-signature-help";
+  dom.className = "prism-signature-help";
   const activeSig = Math.min(
     Math.max(0, 0),
     help.signatures.length - 1,
@@ -57,10 +57,10 @@ function renderSignature(help: TsSignatureHelp): HTMLDivElement {
   for (let s = 0; s < help.signatures.length; s += 1) {
     const sig = help.signatures[s];
     const line = document.createElement("div");
-    line.className = "miro-signature-line";
+    line.className = "prism-signature-line";
     if (s === activeSig) line.classList.add("active");
     const label = document.createElement("span");
-    label.className = "miro-signature-label";
+    label.className = "prism-signature-label";
     // 参数高亮：用激活参数索引切分 label（v1：整体显示，参数粗体单独行）
     label.textContent = sig.label;
     line.append(label);
@@ -68,13 +68,13 @@ function renderSignature(help: TsSignatureHelp): HTMLDivElement {
       const param = sig.parameters[Math.max(0, help.activeParameter)];
       if (param) {
         const p = document.createElement("div");
-        p.className = "miro-signature-param";
+        p.className = "prism-signature-param";
         p.textContent = `↳ ${param.label}`;
         line.append(p);
       }
       if (sig.documentation) {
         const d = document.createElement("div");
-        d.className = "miro-signature-doc";
+        d.className = "prism-signature-doc";
         d.textContent = sig.documentation;
         line.append(d);
       }

@@ -11,6 +11,7 @@ use std::{
 pub mod commands;
 pub mod cli;
 pub mod external_open;
+pub mod user_data;
 
 #[derive(Default)]
 struct AppLifecycleState {
@@ -51,7 +52,7 @@ fn menu_labels(locale: &str) -> NativeMenuLabels {
             terminal: "Toggle Terminal",
             sidebar: "Toggle Sidebar",
             settings: "Settings…",
-            quit: "Quit Miro Code",
+            quit: "Quit Prism Code",
             undo: "Undo",
             redo: "Redo",
             cut: "Cut",
@@ -72,7 +73,7 @@ fn menu_labels(locale: &str) -> NativeMenuLabels {
             terminal: "切换终端",
             sidebar: "切换侧边栏",
             settings: "设置…",
-            quit: "退出 Miro Code",
+            quit: "退出 Prism Code",
             undo: "撤销",
             redo: "重做",
             cut: "剪切",
@@ -230,11 +231,11 @@ pub fn run() {
             return;
         }
         Ok(cli::CliAction::Version) => {
-            println!("Miro Code {}", env!("CARGO_PKG_VERSION"));
+            println!("Prism Code {}", env!("CARGO_PKG_VERSION"));
             return;
         }
         Err(error) => {
-            eprintln!("mirocode: {error}");
+            eprintln!("prismcode: {error}");
             std::process::exit(2);
         }
     };
@@ -242,7 +243,9 @@ pub fn run() {
     let mut builder = tauri::Builder::default();
 
     // 必须最先注册：CLI 第二次调用由插件转发给现有实例，避免重复创建 GUI。
-    #[cfg(desktop)]
+    // debug 构建（`pnpm tauri:dev`）不启用：开发版使用独立 identifier，需与已安装
+    // 正式版并行运行，互不抢焦点、不转发 argv。
+    #[cfg(all(desktop, not(debug_assertions)))]
     {
         builder = builder.plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
             let invocation_cwd = if cwd.trim().is_empty() {
@@ -257,7 +260,7 @@ pub fn run() {
                     external_open::focus_primary_window(app);
                 }
                 Ok(cli::CliAction::Help | cli::CliAction::Version) => {}
-                Err(error) => eprintln!("mirocode: {error}"),
+                Err(error) => eprintln!("prismcode: {error}"),
             }
         }));
     }

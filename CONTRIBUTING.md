@@ -1,6 +1,6 @@
 # 贡献指南
 
-感谢关注 Miro Code。欢迎 Issue、讨论与 Pull Request。
+感谢关注 Prism Code。欢迎 Issue、讨论与 Pull Request。
 
 ## 开发环境
 
@@ -16,8 +16,8 @@
 ## 本地运行
 
 ```bash
-git clone https://github.com/yqstart/MiroCode.git
-cd MiroCode
+git clone https://github.com/yqstart/PrismCode.git
+cd PrismCode
 pnpm install
 pnpm tauri:dev
 ```
@@ -38,7 +38,7 @@ cargo check --manifest-path src-tauri/Cargo.toml
 
 ## 贡献方向
 
-Miro Code 核心功能集已收敛，当前进入**优化迭代期**，主打轻量级、快速、顺滑。
+Prism Code 核心功能集已收敛，当前进入**优化迭代期**，主打轻量级、快速、顺滑。
 
 - **欢迎**：Bug 修复、性能与流畅度优化、交互体验打磨、视觉细节完善
 - **慎入**：大功能模块新增（请先开 Issue 讨论）
@@ -57,7 +57,7 @@ Miro Code 核心功能集已收敛，当前进入**优化迭代期**，主打轻
 
 - 描述问题与方案；关联相关 Issue
 - UI 变更尽量附截图或简短录屏
-- 架构级变更（目录结构调整、核心选型）请同步更新 `AGENTS.md` 与 `docs/Miro Code技术架构文档.md`
+- 架构级变更（目录结构调整、核心选型）请同步更新 `AGENTS.md` 与 `docs/Prism Code技术架构文档.md`
 - 标识符/文件名保持英文；注释与文档用中文
 
 ## Issue

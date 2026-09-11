@@ -46,7 +46,7 @@ export async function openFolderInNewWindow(
   // 时回滚，避免下次启动反复尝试不存在的动态窗口。
   saveWindowSession(folder, windowId);
   const webview = new WebviewWindow(label, {
-    title: `Miro Code — ${basename(folder)}`,
+    title: `Prism Code — ${basename(folder)}`,
     url,
     width: 1280,
     height: 800,

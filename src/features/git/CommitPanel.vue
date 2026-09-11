@@ -566,7 +566,7 @@ function onCommitKeydown(event: KeyboardEvent) {
           v-bind="PLAIN_INPUT_ATTRS"
           class="message"
           rows="3"
-          name="miro-commit-message"
+          name="prism-commit-message"
           :placeholder="t('git.commitMessage')"
           @keydown="onCommitKeydown"
         />

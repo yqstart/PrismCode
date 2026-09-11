@@ -136,17 +136,17 @@ if (import.meta.env.DEV) {
   // 在 dev 启动时打印自检指引
   // eslint-disable-next-line no-console
   console.log(
-    "%c[MiroCode 真机自检]%c 打开工作区后，在 Console 粘贴: await __ipcSelfCheck()",
+    "%c[PrismCode 真机自检]%c 打开工作区后，在 Console 粘贴: await __ipcSelfCheck()",
     "background:#7c3aed;color:#fff;padding:2px 6px;border-radius:3px",
     "color:#888",
   );
   // eslint-disable-next-line no-console
   console.log(
-    "[MiroCode 真机自检] 真机复现 push 卡住期间并发 IPC：await __ipcSelfCheck({ slowMs: 800, fastCount: 20 })",
+    "[PrismCode 真机自检] 真机复现 push 卡住期间并发 IPC：await __ipcSelfCheck({ slowMs: 800, fastCount: 20 })",
   );
   // eslint-disable-next-line no-console
   console.log(
-    "[MiroCode 真机自检] 或配慢网络点 Push 后立刻跑：await __ipcSelfCheck({ fastCount: 20 })",
+    "[PrismCode 真机自检] 或配慢网络点 Push 后立刻跑：await __ipcSelfCheck({ fastCount: 20 })",
   );
 
   // ==================== ⌘/Ctrl+滚轮调字号自测 ====================

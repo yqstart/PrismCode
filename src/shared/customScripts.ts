@@ -1,7 +1,7 @@
 // ==================== 自定义脚本持久化 ====================
 // 自定义脚本属于当前编辑器用户的本地配置，不写入项目 package.json；按工作区根路径隔离。
 
-const CUSTOM_KEY = "mirocode.customScripts.v1";
+const CUSTOM_KEY = "prismcode.customScripts.v1";
 const MAX_CUSTOM_SCRIPTS = 64;
 
 export interface CustomScriptItem {

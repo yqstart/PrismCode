@@ -790,7 +790,7 @@ function vueExpressionSource(context: CompletionContext): CompletionResult | nul
 
 // ==================== 用户自定义 snippets 源（VS Code snippets.json 体系） ====================
 
-/** 用户 snippets（全局 ~/.mirocode/snippets + 项目 .vscode/*.code-snippets；scope 语言过滤） */
+/** 用户 snippets（全局 ~/.prismcode/snippets + 项目 .vscode/*.code-snippets；scope 语言过滤） */
 async function userSnippetSource(
   context: CompletionContext,
   filePath: string,

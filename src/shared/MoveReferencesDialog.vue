@@ -162,12 +162,12 @@ onBeforeUnmount(() => {
   place-items: center;
   background: var(--bg-overlay);
   backdrop-filter: blur(4px);
-  animation: miro-overlay-in var(--transition-normal) var(--ease-out);
+  animation: prism-overlay-in var(--transition-normal) var(--ease-out);
 }
 
 .panel {
   width: min(560px, calc(100vw - 32px));
-  animation: miro-dialog-in var(--transition-normal) var(--ease-out);
+  animation: prism-dialog-in var(--transition-normal) var(--ease-out);
   max-height: min(70vh, 640px);
   display: flex;
   flex-direction: column;

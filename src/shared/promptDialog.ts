@@ -24,7 +24,7 @@ export async function promptInput(
   options: PromptDialogOptions,
 ): Promise<string | null> {
   if (!handler) {
-    console.warn("[mirocode] PromptDialog 未挂载，无法弹出输入框");
+    console.warn("[prismcode] PromptDialog 未挂载，无法弹出输入框");
     return null;
   }
   return handler(options);

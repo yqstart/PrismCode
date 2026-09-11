@@ -3,7 +3,7 @@
 // key = 语言分类 + label；localStorage 持久化（上限 500 条，淘汰最旧）。
 // 纯函数部分拆出便于 node 直测。
 
-const STORAGE_KEY = "mirocode.completion.memory.v1";
+const STORAGE_KEY = "prismcode.completion.memory.v1";
 const MAX_ENTRIES = 500;
 
 export interface MemoryEntry {

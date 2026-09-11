@@ -21,7 +21,7 @@ export async function openUpdateNotesDialog(
   options: UpdateNotesDialogOptions,
 ): Promise<UpdateNotesAction | null> {
   if (!handler) {
-    console.warn("[mirocode] UpdateNotesDialog 未挂载");
+    console.warn("[prismcode] UpdateNotesDialog 未挂载");
     return null;
   }
   return handler(options);

@@ -23,16 +23,16 @@ function vueRangeParserPath(
     if (range.from < bodyStart || range.to > bodyEnd) continue;
 
     const kind = match[1].toLowerCase();
-    if (kind === "template") return `${filepath}.mirocode-range.html`;
+    if (kind === "template") return `${filepath}.prismcode-range.html`;
     if (kind === "style") {
       const lang = /\blang\s*=\s*["']([^"']+)["']/i.exec(match[2])?.[1];
       const ext = lang && /^(?:scss|less|sass|css)$/i.test(lang) ? lang : "css";
-      return `${filepath}.mirocode-range.${ext}`;
+      return `${filepath}.prismcode-range.${ext}`;
     }
 
     const lang = /\blang\s*=\s*["']([^"']+)["']/i.exec(match[2])?.[1];
     const ext = lang && /^(?:ts|tsx|jsx|js)$/i.test(lang) ? lang : "js";
-    return `${filepath}.mirocode-range.${ext}`;
+    return `${filepath}.prismcode-range.${ext}`;
   }
   return null;
 }

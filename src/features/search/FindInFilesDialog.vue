@@ -170,7 +170,7 @@ function onKeydown(event: KeyboardEvent) {
             v-bind="PLAIN_INPUT_ATTRS"
             class="ui-input"
             type="text"
-            name="miro-find-query"
+            name="prism-find-query"
             :placeholder="t('search.findInputPlaceholder')"
           />
         </label>
@@ -184,7 +184,7 @@ function onKeydown(event: KeyboardEvent) {
               v-bind="PLAIN_INPUT_ATTRS"
               class="ui-input"
               type="text"
-              name="miro-find-replace"
+              name="prism-find-replace"
               :placeholder="t('search.replaceInputPlaceholder')"
             />
           </div>
@@ -202,7 +202,7 @@ function onKeydown(event: KeyboardEvent) {
               v-bind="PLAIN_INPUT_ATTRS"
               class="ui-input mask"
               type="text"
-              name="miro-find-mask"
+              name="prism-find-mask"
               :placeholder="t('search.fileMaskPlaceholder')"
             />
           </label>
@@ -297,12 +297,12 @@ function onKeydown(event: KeyboardEvent) {
   padding: 32px;
   background: var(--bg-overlay);
   backdrop-filter: blur(6px);
-  animation: miro-overlay-in var(--transition-normal) var(--ease-out);
+  animation: prism-overlay-in var(--transition-normal) var(--ease-out);
 }
 
 .dialog {
   width: min(860px, 100%);
-  animation: miro-dialog-in var(--transition-normal) var(--ease-out);
+  animation: prism-dialog-in var(--transition-normal) var(--ease-out);
   height: min(640px, 100%);
   display: flex;
   flex-direction: column;

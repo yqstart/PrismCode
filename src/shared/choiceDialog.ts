@@ -29,7 +29,7 @@ export async function promptChoice(
   options: ChoiceDialogOptions,
 ): Promise<string | null> {
   if (!handler) {
-    console.warn("[mirocode] ChoiceDialog 未挂载，无法弹出确认框");
+    console.warn("[prismcode] ChoiceDialog 未挂载，无法弹出确认框");
     return null;
   }
   return handler(options);

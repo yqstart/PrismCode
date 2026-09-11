@@ -1,8 +1,10 @@
-const RECENT_KEY = "mirocode.recentFolders.v1";
+const RECENT_KEY = "prismcode.recentFolders.v1";
+const LEGACY_RECENT_KEY = "mirocode.recentFolders.v1";
 
 export function loadRecentFolders(): string[] {
   try {
-    const raw = localStorage.getItem(RECENT_KEY);
+    const raw =
+      localStorage.getItem(RECENT_KEY) ?? localStorage.getItem(LEGACY_RECENT_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     return Array.isArray(parsed) ? parsed.filter((x) => typeof x === "string") : [];

@@ -1,4 +1,4 @@
-# Miro Code 技术架构文档
+# Prism Code 技术架构文档
 
 > 面向维护者与贡献者的技术基线。本文档描述**当前已定版**的技术实现，与代码一一对应；如有出入以代码为准。
 > 产品基线版本：**v0.14.0**（2026-08-14）。
@@ -9,7 +9,7 @@
 
 | 项 | 说明 |
 |---|---|
-| 产品名 | Miro Code |
+| 产品名 | Prism Code |
 | 定位 | 轻量级、快速、顺滑的跨平台桌面代码编辑器 |
 | 技术栈 | Tauri 2 + Vue 3 + TypeScript + Pinia + CodeMirror 6 |
 | 平台 | Windows / macOS / Linux |
@@ -72,7 +72,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                     Miro Code（前端 Vue 3）                    │
+│                     Prism Code（前端 Vue 3）                    │
 │  AppShell │ TitleBar │ ActivityBar │ SideBar │ EditorArea    │
 │  StatusBar │ SettingsModal │ 编辑区多标签（文件/SSH/GitLog）│ 终端底部面板 │
 ├─────────────────────────────────────────────────────────────┤
@@ -100,7 +100,7 @@
 ### 4.2 目录结构（定版）
 
 ```
-MiroCode/
+PrismCode/
 ├── src/                      # Vue 前端
 │   ├── app/                  # AppShell / TitleBar / ActivityBar / SideBar / EditorArea / StatusBar
 │   ├── features/
@@ -221,7 +221,7 @@ MiroCode/
 | Branches 弹层 | 本地 / 远程列表；Checkout、New Branch、Rename、Delete（含远程）、Merge into current、Rebase current onto、交互式 Rebase、Compare with current、Set upstream、Copy |
 | 交互式 Rebase | 提交列表 pick / reword / squash / fix / drop + 拖拽排序；冲突时 Commit 横幅 Continue / Skip / Abort |
 | 冲突分栏 | `CompareView.vue`（CM6 MergeView）：左右双栏可编辑，prev/next 冲突导航，填本地 / 远程 / Base，一键接受 ours/theirs，手动解决后保存 |
-| 认证 | HTTPS 弹窗登录 + 记住凭据（`~/.mirocode/git-credentials.json` + 尽力同步系统 git credential）；SSH 密钥优先 |
+| 认证 | HTTPS 弹窗登录 + 记住凭据（`~/.prismcode/git-credentials.json` + 尽力同步系统 git credential）；SSH 密钥优先 |
 | 状态同步 | 资源树 Git 状态色点；状态栏分支 + ↑↓ 同步标记 + 冲突数；编辑区有变更文件右键可 Diff / 回滚，回滚后编辑器内容同步重载 |
 
 **安全约束**：强制推送 / 重置 / 删除分支二次确认；凭据不打印日志；远程操作（push/pull/fetch/update）单一入口 `remoteInFlight` 守卫防并发。
@@ -250,8 +250,8 @@ MiroCode/
 | 本地终端 | **底部面板**（VS Code 风格）：状态栏左下角终端按钮 / ⌘J 开关；xterm + PTY（`tauri-plugin-pty`），多标签顶栏；面板仅占**编辑区列**（AppShell `.center` 内 EditorArea 下方），资源管理器保持整列全高；高度可拖拽并持久化（`settings.layout.terminalPanelHeight`）；收起时保活（v-show 隐藏），关闭全部终端才销毁；打开面板不打断画布（SSH/GitLog/Compare）聚焦；新建终端挂载即聚焦；本地补丁将 PTY 阻塞读写/等待/终止派发到 `spawn_blocking`，避免常驻进程阻塞 Tauri IPC |
 | 终端忙/闲 | `terminalIdle.ts` 解析 PTY 输出流判定 shell 是否停在提示符（剥 ANSI 后行尾 `$ % # > ❯ »` 特征 + 150ms 稳定窗口），上报 `sessions` store 的 `localIdle`；Package 脚本芯片点击时活动终端忙则自动新开终端执行，写入命令即标记忙、命令结束提示符回归即恢复闲 |
 | SSH | **独立编辑区标签**（与本地终端解耦）；主机列表 / 远程终端 |
-| 主机配置 | `~/.mirocode/ssh-profiles.json`（应用级全局，与项目无关）；「记住密码」写 `~/.mirocode/ssh-credentials.json`（0600） |
-| 密钥校验 | `~/.ssh/known_hosts` + `~/.mirocode/known_hosts`；未知主机指纹需用户确认（TOFU） |
+| 主机配置 | `~/.prismcode/ssh-profiles.json`（应用级全局，与项目无关）；「记住密码」写 `~/.prismcode/ssh-credentials.json`（0600） |
+| 密钥校验 | `~/.ssh/known_hosts` + `~/.prismcode/known_hosts`；未知主机指纹需用户确认（TOFU） |
 | 切换项目 | 强制关闭本窗口全部远程 Shell；本地终端随工作区重建 |
 | 输入桥 | `terminalInputBridge.ts` 拦截纯 Backspace/Delete 直接写控制字符（WKWebView 误报空格兜底 + `suppressNextWhitespace` 标志） |
 | 终端尺寸 | 外层 padding + 内层无 padding 挂 xterm；可见后才 `fit + spawn`（隐藏态错误尺寸会致提示符折行） |
@@ -260,7 +260,7 @@ MiroCode/
 
 ## 10. 主题与视觉体系
 
-- **主题 ID**：`miro-dark`（深色）、`dawn`（浅色，Miro Light）、`midnight`（深蓝）、`cyberpunk`（霓虹，应用默认）——四套全部可用，设置面板主题卡 / 状态栏主题菜单 / 状态栏主题名右键循环切换
+- **主题 ID**：`prism-dark`（深色）、`dawn`（浅色，Prism Light）、`midnight`（深蓝）、`cyberpunk`（霓虹，应用默认）——四套全部可用，设置面板主题卡 / 状态栏主题菜单 / 状态栏主题名右键循环切换
 - **单一真相源**：`styles/tokens.css` 定义语义变量（色值见 `themes.css` 四套主题块）；组件只消费变量
 - **编辑器同步**：`features/editor/theme.ts` 维护四套 `PALETTES`（含 `HighlightStyle`），UI 主题切换时 `editorThemeExtensions` 同步重建，禁止 UI 已切换而代码区不同步
 - **圆角与密度**：设置弹层 16px、内容卡 12px、控件 8–10px；间距节奏 8 / 12 / 16 / 24
@@ -272,11 +272,11 @@ MiroCode/
 
 | 配置域 | 存储 |
 |---|---|
-| 设置（主题 / 编辑器 / 更新 / 语言） | localStorage（键前缀 `mirocode.*`） |
-| 最近项目 / 编辑器会话 / 布局 | localStorage（编辑器会话键 `mirocode.editor-session.v2:*`） |
-| Git HTTPS 凭据 | `~/.mirocode/git-credentials.json` |
-| SSH 主机 / 凭据 | `~/.mirocode/ssh-profiles.json` / `ssh-credentials.json`（0600） |
-| SSH known_hosts | `~/.ssh/known_hosts` + `~/.mirocode/known_hosts` |
+| 设置（主题 / 编辑器 / 更新 / 语言） | localStorage（键前缀 `prismcode.*`） |
+| 最近项目 / 编辑器会话 / 布局 | localStorage（编辑器会话键 `prismcode.editor-session.v2:*`） |
+| Git HTTPS 凭据 | `~/.prismcode/git-credentials.json` |
+| SSH 主机 / 凭据 | `~/.prismcode/ssh-profiles.json` / `ssh-credentials.json`（0600） |
+| SSH known_hosts | `~/.ssh/known_hosts` + `~/.prismcode/known_hosts` |
 
 配置变更热更新 UI，无需重启（含界面语言 → 原生菜单同步）。
 
@@ -320,7 +320,7 @@ MiroCode/
 | 文档 | 路径 |
 |---|---|
 | 使用说明 | `docs/使用说明.md` |
-| 视觉主题规范 | `docs/Miro Code视觉与主题规范.md` |
-| 定名规范 | `docs/Miro Code（米罗编辑器）官方定名文档.md` |
+| 视觉主题规范 | `docs/Prism Code视觉与主题规范.md` |
+| 定名规范 | `docs/Prism Code（棱镜编辑器）官方定名文档.md` |
 | 多平台发布 | `docs/多平台发布.md` |
 | 更新日志 | `CHANGELOG.md` |

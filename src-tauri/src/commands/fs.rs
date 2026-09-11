@@ -371,15 +371,14 @@ mod tests {
     }
 }
 
-/// 读取全局用户 snippets 目录（~/.mirocode/snippets/*.json），返回（文件名, 内容）列表。
+/// 读取全局用户 snippets 目录（~/.prismcode/snippets/*.json），返回（文件名, 内容）列表。
 /// 与应用级 SSH/AI 凭据同模式（home 目录不受工作区边界限制）；目录不存在返回空。
 #[tauri::command]
 pub fn snippets_read_global() -> Result<Vec<(String, String)>, String> {
     const MAX_BYTES: u64 = 512 * 1024; // 单文件 512KB 上限（snippet 文件足够）
-    let home = std::env::var_os("HOME")
-        .or_else(|| std::env::var_os("USERPROFILE"))
-        .ok_or_else(|| "无法确定用户主目录".to_string())?;
-    let dir = PathBuf::from(home).join(".mirocode").join("snippets");
+    let dir = crate::user_data::user_data_dir()
+        .ok_or_else(|| "无法确定用户主目录".to_string())?
+        .join("snippets");
     if !dir.is_dir() {
         return Ok(Vec::new());
     }

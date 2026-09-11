@@ -99,7 +99,7 @@ onBeforeUnmount(() => {
         v-bind="PLAIN_INPUT_ATTRS"
         class="ui-input"
         type="text"
-        name="miro-git-user"
+        name="prism-git-user"
         autocomplete="username"
         :placeholder="t('gitAuth.usernamePlaceholder')"
         @keydown.enter.prevent="passRef?.focus()"
@@ -112,7 +112,7 @@ onBeforeUnmount(() => {
         v-bind="PLAIN_INPUT_ATTRS"
         class="ui-input"
         type="password"
-        name="miro-git-pass"
+        name="prism-git-pass"
         autocomplete="current-password"
         :placeholder="t('gitAuth.passwordPlaceholder')"
         @keydown.enter.prevent="onConfirm"
@@ -147,13 +147,13 @@ onBeforeUnmount(() => {
   place-items: center;
   background: var(--bg-overlay);
   backdrop-filter: blur(4px);
-  animation: miro-overlay-in var(--transition-normal) var(--ease-out);
+  animation: prism-overlay-in var(--transition-normal) var(--ease-out);
   padding: 24px;
 }
 
 .dialog {
   width: min(420px, 100%);
-  animation: miro-dialog-in var(--transition-normal) var(--ease-out);
+  animation: prism-dialog-in var(--transition-normal) var(--ease-out);
   padding: 18px 18px 14px;
   border-radius: 12px;
   background: var(--bg-elevated);

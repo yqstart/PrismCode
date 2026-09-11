@@ -1,0 +1,17 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Prism Code Dev",
+  "identifier": "com.prismcode.app.dev",
+  "app": {
+    "windows": [
+      {
+        "title": "Prism Code Dev"
+      }
+    ]
+  },
+  "plugins": {
+    "updater": {
+      "active": false
+    }
+  }
+}

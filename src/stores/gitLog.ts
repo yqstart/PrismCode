@@ -1,7 +1,7 @@
 import { computed, ref } from "vue";
 import { defineStore } from "pinia";
 
-const GIT_LOG_TAB_ID = "miro://git-log";
+const GIT_LOG_TAB_ID = "prism://git-log";
 
 /**
  * Git Log / Graph：作为编辑区标签打开（对齐 VS Code Git Graph 入口形态），

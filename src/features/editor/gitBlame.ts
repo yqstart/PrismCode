@@ -85,13 +85,13 @@ class BlameMarker extends GutterMarker {
   }
   toDOM(): Node {
     const el = document.createElement("div");
-    el.className = "cm-miro-blame-line";
+    el.className = "cm-prism-blame-line";
     if (this.start) {
       const author = document.createElement("span");
-      author.className = "cm-miro-blame-author";
+      author.className = "cm-prism-blame-author";
       author.textContent = truncateAuthor(this.author);
       const hash = document.createElement("span");
-      hash.className = "cm-miro-blame-hash";
+      hash.className = "cm-prism-blame-hash";
       hash.textContent = this.hash;
       el.append(author, hash);
     }
@@ -100,7 +100,7 @@ class BlameMarker extends GutterMarker {
 }
 
 const blameTooltipTheme = EditorView.theme({
-  ".cm-miro-blame-tooltip": {
+  ".cm-prism-blame-tooltip": {
     backgroundColor: "var(--bg-elevated)",
     color: "var(--text-primary)",
     border: "1px solid color-mix(in srgb, var(--accent) 18%, var(--border-subtle))",
@@ -120,7 +120,7 @@ const blameTooltipTheme = EditorView.theme({
     pointerEvents: "none",
     userSelect: "none",
   },
-  ".cm-miro-blame-tooltip .summary": {
+  ".cm-prism-blame-tooltip .summary": {
     margin: "0 0 8px",
     fontWeight: "600",
     fontSize: "13px",
@@ -128,7 +128,7 @@ const blameTooltipTheme = EditorView.theme({
     color: "var(--text-primary)",
     wordBreak: "break-word",
   },
-  ".cm-miro-blame-tooltip .meta": {
+  ".cm-prism-blame-tooltip .meta": {
     display: "flex",
     alignItems: "center",
     gap: "5px",
@@ -137,14 +137,14 @@ const blameTooltipTheme = EditorView.theme({
     fontSize: "11px",
     color: "var(--text-secondary)",
   },
-  ".cm-miro-blame-tooltip .author": {
+  ".cm-prism-blame-tooltip .author": {
     display: "inline-flex",
     alignItems: "center",
     gap: "5px",
     minWidth: "0",
     maxWidth: "18ch",
   },
-  ".cm-miro-blame-tooltip .avatar": {
+  ".cm-prism-blame-tooltip .avatar": {
     width: "16px",
     height: "16px",
     flex: "0 0 16px",
@@ -158,42 +158,42 @@ const blameTooltipTheme = EditorView.theme({
     fontWeight: "700",
     lineHeight: "1",
   },
-  ".cm-miro-blame-tooltip .author-name": {
+  ".cm-prism-blame-tooltip .author-name": {
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
   },
-  ".cm-miro-blame-tooltip .separator": {
+  ".cm-prism-blame-tooltip .separator": {
     color: "var(--text-muted)",
     opacity: "0.65",
     userSelect: "none",
   },
-  ".cm-miro-blame-tooltip .meta .hash": {
+  ".cm-prism-blame-tooltip .meta .hash": {
     padding: "1px 5px",
     border: "1px solid var(--border-subtle)",
     borderRadius: "4px",
     backgroundColor: "var(--bg-inset)",
     color: "var(--accent)",
-    fontFamily: "var(--miro-editor-font-family, var(--font-mono))",
+    fontFamily: "var(--prism-editor-font-family, var(--font-mono))",
     fontSize: "10px",
     lineHeight: "1.35",
   },
-  ".cm-miro-blame-tooltip time": {
+  ".cm-prism-blame-tooltip time": {
     color: "var(--text-muted)",
     whiteSpace: "nowrap",
   },
 });
 
 const blameGutterTheme = EditorView.theme({
-  ".cm-miro-blame": {
+  ".cm-prism-blame": {
     backgroundColor: "color-mix(in srgb, var(--bg-panel) 55%, transparent)",
     textAlign: "left",
     whiteSpace: "nowrap",
   },
-  ".cm-miro-blame .cm-gutterElement": {
+  ".cm-prism-blame .cm-gutterElement": {
     padding: "0 6px 0 4px",
   },
-  ".cm-miro-blame-line": {
+  ".cm-prism-blame-line": {
     height: "100%",
     borderLeft: "1px solid color-mix(in srgb, var(--text-muted) 22%, transparent)",
     paddingLeft: "5px",
@@ -202,17 +202,17 @@ const blameGutterTheme = EditorView.theme({
     gap: "6px",
     overflow: "hidden",
   },
-  ".cm-miro-blame-author": {
+  ".cm-prism-blame-author": {
     color: "var(--text-secondary)",
     fontSize: "11px",
     overflow: "hidden",
     textOverflow: "ellipsis",
     maxWidth: "12ch",
   },
-  ".cm-miro-blame-hash": {
+  ".cm-prism-blame-hash": {
     color: "var(--text-muted)",
     fontSize: "10px",
-    fontFamily: "var(--miro-editor-font-family, var(--font-mono))",
+    fontFamily: "var(--prism-editor-font-family, var(--font-mono))",
   },
 });
 
@@ -256,7 +256,7 @@ function blameTooltip(info: GitBlameLine, pos: number): Tooltip {
     arrow: true,
     create(): { dom: HTMLElement } {
       const dom = document.createElement("div");
-      dom.className = "cm-miro-blame-tooltip";
+      dom.className = "cm-prism-blame-tooltip";
       dom.setAttribute("role", "tooltip");
 
       const summary = document.createElement("div");
@@ -312,7 +312,7 @@ const blameTooltipExtension = showTooltip.compute(
   },
 );
 
-const BLAME_TRIGGER_SELECTOR = ".cm-lineNumbers, .cm-miro-blame";
+const BLAME_TRIGGER_SELECTOR = ".cm-lineNumbers, .cm-prism-blame";
 
 function isBlameTriggerTarget(target: EventTarget | null): boolean {
   return target instanceof Element && target.closest(BLAME_TRIGGER_SELECTOR) !== null;
@@ -368,7 +368,7 @@ export function gitBlameExtension(opts: GitBlameOptions): Extension {
   if (opts.showGutter) {
     parts.push(
       gutter({
-        class: "cm-miro-blame",
+        class: "cm-prism-blame",
         lineMarker(view, line) {
           const lines = view.state.field(blameField);
           const lineNo = view.state.doc.lineAt(line.from).number;

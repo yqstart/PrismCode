@@ -44,8 +44,8 @@ const WATCH_IGNORE_NAMES = new Set([
   ".git",
   "node_modules",
   "target",
-  ".mirocode",
-  ".mirocode-index",
+  ".prismcode",
+  ".prismcode-index",
   ".DS_Store",
 ]);
 
@@ -1179,14 +1179,15 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     }
   }
 
-  /** 同步窗口原生标题（`Miro Code — 项目名`，与 openFolderInNewWindow 格式一致）。
+  /** 同步窗口原生标题（`Prism Code — 项目名`，与 openFolderInNewWindow 格式一致）。
    *  Overlay 标题栏隐藏 native title，但系统层仍读取：Mission Control / ⌘Tab /
-   *  窗口菜单 / 系统 Tab 合并浮层。不更新则多窗口时名称恒为默认 "Miro Code"。 */
+   *  窗口菜单 / 系统 Tab 合并浮层。不更新则多窗口时名称恒为默认 "Prism Code"。 */
   async function syncWindowTitle(root: string) {
     const state = { root, at: new Date().toISOString() };
     try {
       const { getCurrentWindow } = await import("@tauri-apps/api/window");
-      await getCurrentWindow().setTitle(`Miro Code — ${basename(root)}`);
+      const prefix = import.meta.env.DEV ? "Prism Code Dev" : "Prism Code";
+      await getCurrentWindow().setTitle(`${prefix} — ${basename(root)}`);
       Object.assign(state, { ok: true });
     } catch (e) {
       Object.assign(state, { ok: false, error: String(e) });

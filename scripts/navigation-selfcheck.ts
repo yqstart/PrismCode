@@ -1,5 +1,5 @@
 // ==================== 导航自测 ====================
-// 验证 Miro Code 自己定义的声明导航目标：组件、函数/class、模板绑定和 CSS class。
+// 验证 Prism Code 自己定义的声明导航目标：组件、函数/class、模板绑定和 CSS class。
 
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";

@@ -795,7 +795,7 @@ function wordAtOrTemplateBind(
 }
 
 /**
- * Miro Code 的可点击源判定：先处理路径、组件和样式，再处理脚本/模板符号。
+ * Prism Code 的可点击源判定：先处理路径、组件和样式，再处理脚本/模板符号。
  * 这是同步的轻量判断，只负责画出当前光标下的链接；真正跳转仍由异步解析完成。
  */
 export function findNavigationSourceAtPos(

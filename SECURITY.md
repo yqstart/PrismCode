@@ -16,9 +16,9 @@
 优先使用 GitHub 私有漏洞报告：
 
 1. 打开仓库 **Security → Advisories → Report a vulnerability**
-2. 或访问：https://github.com/yqstart/MiroCode/security/advisories/new
+2. 或访问：https://github.com/yqstart/PrismCode/security/advisories/new
 
-若无法使用上述渠道，可通过仓库维护者 GitHub 主页私信，主题注明「Miro Code Security」。
+若无法使用上述渠道，可通过仓库维护者 GitHub 主页私信，主题注明「Prism Code Security」。
 
 报告请尽量包含：
 

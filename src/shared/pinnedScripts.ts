@@ -2,7 +2,7 @@
 // 按项目（工作区根路径）记录「展示到终端顶栏」的 package.json scripts 勾选集合。
 // 独立 localStorage key（仿 recentFolders 模式），不污染 AppSettings 全局结构。
 
-const PINNED_KEY = "mirocode.pinnedScripts.v1";
+const PINNED_KEY = "prismcode.pinnedScripts.v1";
 
 type PinnedMap = Record<string, string[]>;
 

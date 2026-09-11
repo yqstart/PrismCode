@@ -1,4 +1,4 @@
-# Miro Code 视觉与主题规范
+# Prism Code 视觉与主题规范
 
 > 本文档描述**已定版**的四套主题、语义 token 与视觉规范，色值与 `src/styles/themes.css`、`src/features/editor/theme.ts` 一一对应。
 >
@@ -27,10 +27,10 @@
 
 | Theme ID | 显示名 | 角色 | 强调色 |
 |---|---|---|---|
-| `miro-dark` | Miro Dark | 石墨深色 | 紫 `#a78bfa` |
-| `dawn` | Miro Light | **浅色** | 蓝 `#4f6fe8` |
-| `midnight` | Miro Midnight | 深蓝深色 | 青蓝 `#66c7f3` |
-| `cyberpunk` | Miro Cyberpunk | 中性底霓虹深色（应用默认） | 青 `#63e6f3` |
+| `prism-dark` | Prism Dark | 石墨深色 | 紫 `#a78bfa` |
+| `dawn` | Prism Light | **浅色** | 蓝 `#4f6fe8` |
+| `midnight` | Prism Midnight | 深蓝深色 | 青蓝 `#66c7f3` |
+| `cyberpunk` | Prism Cyberpunk | 中性底霓虹深色（应用默认） | 青 `#63e6f3` |
 
 切换方式：设置 → 编辑器 → 外观主题（四宫格卡片）；状态栏主题名弹出菜单；状态栏主题名**右键**循环切换。UI 与编辑器高亮同源切换。
 
@@ -40,7 +40,7 @@
 
 组件与样式**只使用语义变量**（`styles/tokens.css` 声明，`themes.css` 按主题覆盖），禁止散落魔法色值。
 
-### 3.1 Miro Dark（`miro-dark`，默认）
+### 3.1 Prism Dark（`prism-dark`，默认）
 
 | Token | 值 | 用途 |
 |---|---|---|
@@ -66,7 +66,7 @@
 | `--shadow-popover` | `0 16px 36px rgba(0,0,0,.42), 0 3px 10px rgba(0,0,0,.24)` | 弹层 / 右键菜单 |
 | `--shadow-modal` | `0 28px 72px rgba(0,0,0,.58), 0 8px 24px rgba(0,0,0,.28)` | 弹层更强 |
 
-### 3.2 Miro Light（`dawn`，浅色 / 雾白）
+### 3.2 Prism Light（`dawn`，浅色 / 雾白）
 
 | Token | 值 | 用途 |
 |---|---|---|
@@ -94,7 +94,7 @@
 | `--shadow-popover` | `0 14px 32px rgba(15,23,42,.14), 0 3px 8px rgba(15,23,42,.06)` | 弹层 |
 | `--shadow-modal` | `0 26px 64px rgba(15,23,42,.2), 0 8px 20px rgba(15,23,42,.08)` | 弹层更强 |
 
-### 3.3 Miro Midnight（`midnight`，深蓝深色）
+### 3.3 Prism Midnight（`midnight`，深蓝深色）
 
 | Token | 值 | 用途 |
 |---|---|---|
@@ -120,7 +120,7 @@
 | `--shadow-popover` | `0 16px 36px rgba(0,0,0,.48), 0 3px 10px rgba(0,0,0,.28)` | 弹层 |
 | `--shadow-modal` | `0 28px 72px rgba(0,0,0,.62), 0 8px 24px rgba(0,0,0,.34)` | 弹层更强 |
 
-### 3.4 Miro Cyberpunk（`cyberpunk`，高对比霓虹）
+### 3.4 Prism Cyberpunk（`cyberpunk`，高对比霓虹）
 
 | Token | 值 | 用途 |
 |---|---|---|
@@ -158,16 +158,16 @@
 
 | 主题 | 背景 | 前景 | 选区 | 选区匹配 | 光标 |
 |---|---|---|---|---|---|
-| miro-dark | `#101114` | `#f4f4f5` | `rgba(167,139,250,.55)` | `rgba(167,139,250,.18)` | `#a78bfa` |
+| prism-dark | `#101114` | `#f4f4f5` | `rgba(167,139,250,.55)` | `rgba(167,139,250,.18)` | `#a78bfa` |
 | dawn | `#ffffff` | `#20242d` | `rgba(79,111,232,.28)` | `rgba(79,111,232,.11)` | `#4f6fe8` |
 | midnight | `#0e1421` | `#f1f5f9` | `rgba(102,199,243,.36)` | `rgba(102,199,243,.14)` | `#66c7f3` |
 | cyberpunk | `#101017` | `#f7f5fb` | `rgba(99,230,243,.36)` | `rgba(99,230,243,.14)` | `#63e6f3` |
 
 > 选区（selection）对比度**必须**高于选区匹配（selectionMatch）与搜索结果，避免「选中反而更暗」（雷区）。
 
-### 4.2 语法高亮角色色（Miro Dark 为基准，同源扩展）
+### 4.2 语法高亮角色色（Prism Dark 为基准，同源扩展）
 
-| 语法角色 | 深色（miro-dark） | 浅色（dawn） |
+| 语法角色 | 深色（prism-dark） | 浅色（dawn） |
 |---|---|---|
 | keyword | 淡紫 `#c792ea` | 深蓝 `#1d4ed8` |
 | string | 暖绿 `#c3e88d` | 深绿 `#047857` |
@@ -236,7 +236,7 @@ Midnight / Cyberpunk 各自维护完整 `HighlightStyle`（青蓝 / 霓虹粉青
 | `--shadow-popover` | `0 4px 16px rgba(0,0,0,.12), 0 1px 2px rgba(0,0,0,.04)` | 弹层 / 右键菜单 |
 | `--shadow-modal` | `0 24px 64px rgba(0,0,0,.32), 0 4px 12px rgba(0,0,0,.12)` | 弹层更强 |
 
-> 深色 3 套主题（`miro-dark / midnight / cyberpunk`）的对应阴影值在 `themes.css` 内**单独覆盖**为更深 / 更不透明度更高的版本；浅色 `dawn` 用 tokens.css 默认值。
+> 深色 3 套主题（`prism-dark / midnight / cyberpunk`）的对应阴影值在 `themes.css` 内**单独覆盖**为更深 / 更不透明度更高的版本；浅色 `dawn` 用 tokens.css 默认值。
 
 ### 6.3 元素规范
 
@@ -299,26 +299,26 @@ Midnight / Cyberpunk 各自维护完整 `HighlightStyle`（青蓝 / 霓虹粉青
 
 | 关键帧 | 用途 | 形态 |
 |---|---|---|
-| `miro-overlay-in` | 遮罩淡入 | `opacity 0 → 1` |
-| `miro-dialog-in` | dialog 弹入 | `translateY(6px) scale(0.98) → 1` |
-| `miro-tab-in` | tab 入场 | `translateY(2px) + opacity` |
-| `miro-toast-in` | toast 入场 | `translateY(8px) scale(0.98) → 1` |
-| `miro-canvas-in` | 画布主区切换 | `translateY(2px) + opacity` |
-| `miro-tooltip-in` | CM6 tooltip / completion / signature enter | `translateY(3px) scale(0.98) → 1` |
-| `miro-popover-in` | context menu / dropdown / project menu | `scale(0.96) + opacity → 1` |
-| `miro-status-pulse` | 状态点脉动 | `opacity 1 ↔ 0.55` |
-| `miro-dot-pop` | dirty / git dot 一次性弹入 | `scale 0.4 → 1.25 → 1` |
-| `miro-blink` | bracket match / accept hint | 一次性高亮 fade |
+| `prism-overlay-in` | 遮罩淡入 | `opacity 0 → 1` |
+| `prism-dialog-in` | dialog 弹入 | `translateY(6px) scale(0.98) → 1` |
+| `prism-tab-in` | tab 入场 | `translateY(2px) + opacity` |
+| `prism-toast-in` | toast 入场 | `translateY(8px) scale(0.98) → 1` |
+| `prism-canvas-in` | 画布主区切换 | `translateY(2px) + opacity` |
+| `prism-tooltip-in` | CM6 tooltip / completion / signature enter | `translateY(3px) scale(0.98) → 1` |
+| `prism-popover-in` | context menu / dropdown / project menu | `scale(0.96) + opacity → 1` |
+| `prism-status-pulse` | 状态点脉动 | `opacity 1 ↔ 0.55` |
+| `prism-dot-pop` | dirty / git dot 一次性弹入 | `scale 0.4 → 1.25 → 1` |
+| `prism-blink` | bracket match / accept hint | 一次性高亮 fade |
 
 ### 8.3 动效密度（当前实现）
 
 | 区域 | 动效策略 |
 |---|---|
-| 文件 tab | TransitionGroup + `miro-tab-in` + active `::after` 缩放 |
+| 文件 tab | TransitionGroup + `prism-tab-in` + active `::after` 缩放 |
 | 画布主区（CM/ImagePreview/md-preview/welcome） | `<Transition name="canvas" mode="out-in">` |
 | CodeMirror 弹层 | enter-only（CM6 原生无 leave 钩子） |
-| find panel / ctx menu / dropdown | `miro-popover-in` + leave 淡出 |
-| ActivityBar / StatusBar 状态点 | `miro-status-pulse` |
+| find panel / ctx menu / dropdown | `prism-popover-in` + leave 淡出 |
+| ActivityBar / StatusBar 状态点 | `prism-status-pulse` |
 | 资源树 / Commit 行 hover | `background/color/box-shadow` transition |
 | UpdateBadge / TitleBar icon | 简短 crossfade / badge enter |
 

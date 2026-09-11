@@ -180,12 +180,12 @@ onBeforeUnmount(() => {
   place-items: center;
   background: var(--bg-overlay);
   backdrop-filter: blur(4px);
-  animation: miro-overlay-in var(--transition-normal) var(--ease-out);
+  animation: prism-overlay-in var(--transition-normal) var(--ease-out);
   padding: 24px;
 }
 .dialog {
   width: min(720px, 100%);
-  animation: miro-dialog-in var(--transition-normal) var(--ease-out);
+  animation: prism-dialog-in var(--transition-normal) var(--ease-out);
   max-height: min(80vh, 640px);
   padding: 16px;
   border-radius: 12px;

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const title = "Miro Code";
+const title = "Prism Code";
 </script>
 
 <template>

@@ -14,7 +14,7 @@
 
 import { invoke } from "@tauri-apps/api/core";
 
-const STORE_KEY = "mirocode.securityScopedBookmarks.v1";
+const STORE_KEY = "prismcode.securityScopedBookmarks.v1";
 
 /** 从 localStorage 读出 path -> bookmark 映射（仅 macOS 有用） */
 function loadStore(): Record<string, string> {

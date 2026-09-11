@@ -6,7 +6,7 @@
  * 工作区」，启动时由主窗口按索引重建动态窗口。
  */
 
-const STORAGE_KEY = "mirocode.window-sessions.v1";
+const STORAGE_KEY = "prismcode.window-sessions.v1";
 const MAX_WINDOWS = 32;
 
 export const MAIN_WINDOW_SESSION_ID = "main";

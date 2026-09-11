@@ -823,7 +823,7 @@ function loadReviewState() {
     return;
   }
   try {
-    const raw = localStorage.getItem(`mirocode:git-review:${workspace.rootPath}:${key}`);
+    const raw = localStorage.getItem(`prismcode:git-review:${workspace.rootPath}:${key}`);
     reviewState.value = raw ? (JSON.parse(raw) as Record<string, boolean>) : {};
   } catch {
     reviewState.value = {};
@@ -834,7 +834,7 @@ function persistReviewState() {
   const key = detailReviewKey.value;
   if (!key) return;
   localStorage.setItem(
-    `mirocode:git-review:${workspace.rootPath}:${key}`,
+    `prismcode:git-review:${workspace.rootPath}:${key}`,
     JSON.stringify(reviewState.value),
   );
 }

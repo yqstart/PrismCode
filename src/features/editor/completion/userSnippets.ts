@@ -1,5 +1,5 @@
 // ==================== 用户自定义 snippets（VS Code snippets.json 体系） ====================
-// 支持源：全局 ~/.mirocode/snippets/*.json（Rust snippets_read_global）+ 项目 .vscode/*.code-snippets。
+// 支持源：全局 ~/.prismcode/snippets/*.json（Rust snippets_read_global）+ 项目 .vscode/*.code-snippets。
 // 格式与 VS Code 一致：{ name: { prefix: string|string[], body: string|string[], description?, scope? } }。
 // 占位符 $1/${1:default} 由补全 apply 做光标定位（复用 adapters 的占位逻辑）。
 // 解析/过滤为纯函数（零依赖，node 直测）；加载走 Tauri invoke（动态 import 保持顶层零依赖）。
@@ -91,7 +91,7 @@ export function languageIdFor(filePath: string): string {
 
 let globalCache: UserSnippet[] | null = null;
 
-/** 加载全局 snippets（~/.mirocode/snippets/*.json，缓存） */
+/** 加载全局 snippets（~/.prismcode/snippets/*.json，缓存） */
 export async function loadGlobalSnippets(): Promise<UserSnippet[]> {
   if (globalCache) return globalCache;
   try {

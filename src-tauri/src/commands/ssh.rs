@@ -1,8 +1,8 @@
 //! 极简 SSH Shell（ssh2）。
 //!
 //! - Shell：交互式远程终端，输出经 `ssh://data/{id}` 推送
-//! - 主机密钥：校验 `~/.ssh/known_hosts` + `~/.mirocode/known_hosts`
-//! - 密码凭据：`~/.mirocode/ssh-credentials.json`（0600）
+//! - 主机密钥：校验 `~/.ssh/known_hosts` + `~/.prismcode/known_hosts`
+//! - 密码凭据：`~/.prismcode/ssh-credentials.json`（0600）
 
 use std::collections::HashMap;
 use std::io::{Read, Write};
@@ -77,17 +77,16 @@ fn expand_home(path: &str) -> PathBuf {
     PathBuf::from(path)
 }
 
-fn miro_dir() -> Option<PathBuf> {
-    let home = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE"))?;
-    Some(PathBuf::from(home).join(".mirocode"))
+fn prism_dir() -> Option<PathBuf> {
+    crate::user_data::user_data_dir()
 }
 
 fn ssh_cred_store_path() -> Option<PathBuf> {
-    Some(miro_dir()?.join("ssh-credentials.json"))
+    Some(prism_dir()?.join("ssh-credentials.json"))
 }
 
 fn app_known_hosts_path() -> Option<PathBuf> {
-    Some(miro_dir()?.join("known_hosts"))
+    Some(prism_dir()?.join("known_hosts"))
 }
 
 fn system_known_hosts_path() -> PathBuf {
@@ -163,7 +162,7 @@ fn verify_or_trust_host_key(sess: &Session, host: &str, port: u16, accept: bool)
                 format!("[{host}]:{port}")
             };
             app_known
-                .add(&entry_host, key, "mirocode", fmt)
+                .add(&entry_host, key, "prismcode", fmt)
                 .map_err(|e| format!("写入 known_hosts 失败: {e}"))?;
             app_known
                 .write_file(&path, KnownHostFileKind::OpenSSH)
@@ -331,7 +330,7 @@ pub struct SshProfileStored {
 }
 
 fn ssh_profiles_path() -> Option<PathBuf> {
-    Some(miro_dir()?.join("ssh-profiles.json"))
+    Some(prism_dir()?.join("ssh-profiles.json"))
 }
 
 #[tauri::command]

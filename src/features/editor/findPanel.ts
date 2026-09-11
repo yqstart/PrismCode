@@ -13,7 +13,7 @@ import { runScopeHandlers } from "@codemirror/view";
 import { t } from "@/i18n";
 import { PLAIN_INPUT_ATTRS } from "@/shared/plainInput";
 
-const panelByView = new WeakMap<EditorView, MiroFindPanel>();
+const panelByView = new WeakMap<EditorView, PrismFindPanel>();
 
 function createEl<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -42,7 +42,7 @@ function bindButton(
     "button",
     {
       type: "button",
-      class: `miro-find-btn ${className}`,
+      class: `prism-find-btn ${className}`,
       "aria-label": label,
       title: label,
     },
@@ -140,7 +140,7 @@ function revealFirstFromCursor(view: EditorView, query: SearchQuery) {
   revealMatch(view, next.value.from, next.value.to);
 }
 
-class MiroFindPanel implements Panel {
+class PrismFindPanel implements Panel {
   dom: HTMLElement;
   private view: EditorView;
   private query: SearchQuery;
@@ -164,7 +164,7 @@ class MiroFindPanel implements Panel {
       "input",
       {
         type: "text",
-        class: "miro-find-input",
+        class: "prism-find-input",
         name: "search",
         form: "",
         "main-field": "true",
@@ -179,7 +179,7 @@ class MiroFindPanel implements Panel {
       "input",
       {
         type: "text",
-        class: "miro-find-input",
+        class: "prism-find-input",
         name: "replace",
         form: "",
         "aria-label": t("editorFind.replacePlaceholder"),
@@ -189,7 +189,7 @@ class MiroFindPanel implements Panel {
       },
     ) as HTMLInputElement;
 
-    this.matchCountEl = createEl("span", { class: "miro-find-count" }, ["—"]);
+    this.matchCountEl = createEl("span", { class: "prism-find-count" }, ["—"]);
 
     this.toggleReplaceBtn = bindButton(
       t("editorFind.toggleReplace"),
@@ -238,7 +238,7 @@ class MiroFindPanel implements Panel {
       "×",
     );
 
-    const findRow = createEl("div", { class: "miro-find-row" }, [
+    const findRow = createEl("div", { class: "prism-find-row" }, [
       this.toggleReplaceBtn,
       this.searchField,
       this.matchCountEl,
@@ -252,7 +252,7 @@ class MiroFindPanel implements Panel {
 
     const replaceOneBtn = createEl(
       "button",
-      { type: "button", class: "miro-find-text-btn" },
+      { type: "button", class: "prism-find-text-btn" },
       [t("editorFind.replaceOne")],
     );
     replaceOneBtn.addEventListener("click", (e) => {
@@ -263,7 +263,7 @@ class MiroFindPanel implements Panel {
 
     const replaceAllBtn = createEl(
       "button",
-      { type: "button", class: "miro-find-text-btn" },
+      { type: "button", class: "prism-find-text-btn" },
       [t("search.replaceAll")],
     );
     replaceAllBtn.addEventListener("click", (e) => {
@@ -272,13 +272,13 @@ class MiroFindPanel implements Panel {
       this.refreshMatchCount();
     });
 
-    this.replaceRow = createEl("div", { class: "miro-find-replace-row is-collapsed" }, [
-      createEl("span", { class: "miro-find-spacer" }),
+    this.replaceRow = createEl("div", { class: "prism-find-replace-row is-collapsed" }, [
+      createEl("span", { class: "prism-find-spacer" }),
       this.replaceField,
-      createEl("div", { class: "miro-find-replace-actions" }, [replaceOneBtn, replaceAllBtn]),
+      createEl("div", { class: "prism-find-replace-actions" }, [replaceOneBtn, replaceAllBtn]),
     ]);
 
-    this.dom = createEl("div", { class: "miro-find-panel cm-search", role: "search" }, [
+    this.dom = createEl("div", { class: "prism-find-panel cm-search", role: "search" }, [
       findRow,
       this.replaceRow,
     ]);
@@ -307,7 +307,7 @@ class MiroFindPanel implements Panel {
       "button",
       {
         type: "button",
-        class: `miro-find-btn miro-find-toggle ${className}`,
+        class: `prism-find-btn prism-find-toggle ${className}`,
         "aria-label": label,
         title: label,
         "aria-pressed": pressed ? "true" : "false",
@@ -497,8 +497,8 @@ class MiroFindPanel implements Panel {
   }
 }
 
-export function createMiroFindPanel(view: EditorView): Panel {
-  return new MiroFindPanel(view);
+export function createPrismFindPanel(view: EditorView): Panel {
+  return new PrismFindPanel(view);
 }
 
 /** ⌘F / Ctrl+F：打开查找（默认隐藏替换；有选区则填入） */
@@ -525,7 +525,7 @@ export function openFindReplacePanel(view: EditorView) {
  */
 function syncPanelOnReady(
   view: EditorView,
-  fn: (panel: MiroFindPanel) => void,
+  fn: (panel: PrismFindPanel) => void,
   retries = 5,
 ): void {
   const trySync = () => {

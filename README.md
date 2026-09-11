@@ -1,10 +1,10 @@
-# Miro Code
+# Prism Code
 
 基于 Tauri + Vue 3 的轻量化跨平台桌面代码编辑器。
 
 **许可证：[MIT](LICENSE)** · 纯开源免费
 
-> 名称取自 Micro + Mirror 的组合寓意，**与 Miro.com（看板产品）无关联**。
+> **Prism（棱镜）**寓意将代码光谱折射为清晰可读的编辑体验；与 Miro.com（看板产品）无关联。
 
 ## 产品定位
 
@@ -20,7 +20,7 @@
 - ⌘P 文件查找、⌘⇧F 全局搜索与替换
 - Git 全功能：左侧 Commit、编辑区 Git Log、Branches、交互式 Rebase、冲突分栏解决、HTTPS 登录
 - 本地终端（⌘J）与 SSH 远程（状态栏入口，远程终端）
-- 四套主题：`miro-dark`（默认）/ `dawn` / `midnight` / `cyberpunk`
+- 四套主题：`prism-dark`（默认）/ `dawn` / `midnight` / `cyberpunk`
 - 中 / 英界面语言切换（无需重启）
 - 应用内检查更新（GitHub Release）
 
@@ -66,10 +66,10 @@ pnpm release
 
 ### macOS 安装提示「已损坏」
 
-从 Release 安装后若系统提示「Miro Code 已损坏，无法打开」，在终端执行：
+从 Release 安装后若系统提示「Prism Code 已损坏，无法打开」，在终端执行：
 
 ```bash
-xattr -cr "/Applications/Miro Code.app"
+xattr -cr "/Applications/Prism Code.app"
 ```
 
 然后双击或右键 → **打开** 即可。原因与后续发版说明见 [多平台发布 · macOS 故障排除](docs/多平台发布.md#macos安装后提示已损坏无法打开)。
@@ -79,7 +79,7 @@ xattr -cr "/Applications/Miro Code.app"
 从 Release 下载后若 SmartScreen 拦截，在安装界面点 **更多信息** → **仍要运行** 即可；或在 PowerShell 中解除下载标记：
 
 ```powershell
-Unblock-File -LiteralPath "$env:USERPROFILE\Downloads\Miro Code_*.msi"
+Unblock-File -LiteralPath "$env:USERPROFILE\Downloads\Prism Code_*.msi"
 ```
 
 说明见 [多平台发布 · Windows SmartScreen](docs/多平台发布.md#windowssmartscreen-提示已保护你的电脑)。要彻底消除提示需配置 Windows 代码签名证书（见同文档维护者侧说明）。
@@ -89,11 +89,11 @@ Unblock-File -LiteralPath "$env:USERPROFILE\Downloads\Miro Code_*.msi"
 | 文档 | 说明 |
 |---|---|
 | [使用说明](docs/使用说明.md) | 功能与快捷键全览 |
-| [技术架构](docs/Miro%20Code技术架构文档.md) | 选型、分层、模块设计 |
-| [视觉主题](docs/Miro%20Code视觉与主题规范.md) | 四套主题与语义 token |
+| [技术架构](docs/Prism%20Code技术架构文档.md) | 选型、分层、模块设计 |
+| [视觉主题](docs/Prism%20Code视觉与主题规范.md) | 四套主题与语义 token |
 | [多平台发布](docs/多平台发布.md) | GitHub Actions 打 macOS / Win / Linux 包 |
 | [开源准备清单](docs/开源准备清单.md) | 公开发布勾选表 |
-| [官方定名](docs/Miro%20Code（米罗编辑器）官方定名文档.md) | 品牌与命名 |
+| [官方定名](docs/Prism%20Code（棱镜编辑器）官方定名文档.md) | 品牌与命名 |
 | [贡献指南](CONTRIBUTING.md) | 开发环境与 PR 约定 |
 | [安全政策](SECURITY.md) | 漏洞报告方式 |
 | [更新日志](CHANGELOG.md) | 版本变更 |
@@ -106,4 +106,4 @@ Unblock-File -LiteralPath "$env:USERPROFILE\Downloads\Miro Code_*.msi"
 
 ## 许可证
 
-[MIT](LICENSE) © MiroCode
+[MIT](LICENSE) © PrismCode

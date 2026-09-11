@@ -933,13 +933,13 @@ onBeforeUnmount(() =>
    进出场用 animation（动画事件丢失时元素保持可见，不会出现标签隐形）；
    move 必须保留 transition（位置补间需要持续过渡，且不涉及可见性）。 */
 .tab-enter-active {
-  animation: miro-tab-in 160ms var(--ease-out);
+  animation: prism-tab-in 160ms var(--ease-out);
 }
 .tab-leave-active {
-  animation: miro-tab-out 160ms var(--ease-out);
+  animation: prism-tab-out 160ms var(--ease-out);
   position: absolute;
 }
-@keyframes miro-tab-in {
+@keyframes prism-tab-in {
   from {
     opacity: 0;
     transform: translateY(2px);
@@ -949,7 +949,7 @@ onBeforeUnmount(() =>
     transform: none;
   }
 }
-@keyframes miro-tab-out {
+@keyframes prism-tab-out {
   from {
     opacity: 1;
   }
@@ -1084,16 +1084,16 @@ onBeforeUnmount(() =>
    transition 会把元素永久卡在 enter-from（opacity 0 = 黑屏）；
    animation 不播放时元素回到自身样式（可见），不会黑屏。 */
 .canvas-fade-enter-active {
-  animation: miro-canvas-fade-in var(--transition-medium) var(--ease-out);
+  animation: prism-canvas-fade-in var(--transition-medium) var(--ease-out);
 }
 .canvas-fade-leave-active {
-  animation: miro-canvas-fade-out var(--transition-medium) var(--ease-out);
+  animation: prism-canvas-fade-out var(--transition-medium) var(--ease-out);
 }
-@keyframes miro-canvas-fade-in {
+@keyframes prism-canvas-fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
 }
-@keyframes miro-canvas-fade-out {
+@keyframes prism-canvas-fade-out {
   from { opacity: 1; }
   to { opacity: 0; }
 }
@@ -1114,16 +1114,16 @@ onBeforeUnmount(() =>
    元素回到自身样式（opacity 1）保持可见，杜绝「标签已打开但编辑区黑屏」。
    同时模式下 enter 元素压在上层（z 2），leave 元素在下层（z 1）。 */
 .canvas-enter-active {
-  animation: miro-canvas-in var(--transition-slow) var(--ease-out);
+  animation: prism-canvas-in var(--transition-slow) var(--ease-out);
   z-index: 2;
 }
 .canvas-leave-active {
-  animation: miro-canvas-out var(--transition-fast) var(--ease-out);
+  animation: prism-canvas-out var(--transition-fast) var(--ease-out);
   z-index: 1;
   /* 离场视图不接收交互：动画卡住残留时也不能挡住新视图 */
   pointer-events: none;
 }
-@keyframes miro-canvas-in {
+@keyframes prism-canvas-in {
   from {
     opacity: 0;
     transform: translateY(4px);
@@ -1133,7 +1133,7 @@ onBeforeUnmount(() =>
     transform: none;
   }
 }
-@keyframes miro-canvas-out {
+@keyframes prism-canvas-out {
   from {
     opacity: 1;
     transform: translateY(0);
@@ -1147,12 +1147,12 @@ onBeforeUnmount(() =>
 /* ctx：tab-ctx / editor-ctx 右键菜单 popover。
    同 canvas：用 animation，动画事件丢失时菜单仍可见可点（transparent 也不挡点击）。 */
 .ctx-enter-active {
-  animation: miro-ctx-in var(--transition-medium) var(--ease-out);
+  animation: prism-ctx-in var(--transition-medium) var(--ease-out);
 }
 .ctx-leave-active {
-  animation: miro-ctx-out var(--transition-fast) var(--ease-out);
+  animation: prism-ctx-out var(--transition-fast) var(--ease-out);
 }
-@keyframes miro-ctx-in {
+@keyframes prism-ctx-in {
   from {
     opacity: 0;
     transform: scale(0.96);
@@ -1162,7 +1162,7 @@ onBeforeUnmount(() =>
     transform: scale(1);
   }
 }
-@keyframes miro-ctx-out {
+@keyframes prism-ctx-out {
   from {
     opacity: 1;
     transform: scale(1);

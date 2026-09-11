@@ -27,7 +27,7 @@ export async function promptGitAuth(
   options: GitAuthDialogOptions = {},
 ): Promise<GitAuthResult | null> {
   if (!handler) {
-    console.warn("[mirocode] GitAuthDialog 未挂载");
+    console.warn("[prismcode] GitAuthDialog 未挂载");
     return null;
   }
   return handler(options);

@@ -4,6 +4,12 @@
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-09-11
+
+### 变更
+
+- **品牌更名**：Miro Code（米罗编辑器）→ **Prism Code（棱镜编辑器）**；包名、Bundle ID、CLI（`prismcode`）、用户目录（`~/.prismcode`）、主题 ID（`prism-dark`）、GitHub 仓库（`yqstart/PrismCode`）等全域同步；旧 localStorage / `~/.mirocode` 数据自动迁移。
+
 ## [2.2.1] - 2026-09-04
 
 ### 改进
@@ -49,8 +55,8 @@
 
 ### 新增
 
-- 增加 `mirocode` CLI，支持文件/目录打开、`path:line:column` 定位、`--goto`、版本和帮助查询；重复调用通过单实例桥接转发到已运行窗口。
-- 增加 macOS Launch Services 文件打开事件处理、冷启动请求队列和代码文件关联，外部工具或 Finder 传入的路径可直接进入 Miro Code。
+- 增加 `prismcode` CLI，支持文件/目录打开、`path:line:column` 定位、`--goto`、版本和帮助查询；重复调用通过单实例桥接转发到已运行窗口。
+- 增加 macOS Launch Services 文件打开事件处理、冷启动请求队列和代码文件关联，外部工具或 Finder 传入的路径可直接进入 Prism Code。
 
 ### 改进
 
@@ -102,7 +108,7 @@
 
 ### 首个可用大版本
 
-Miro Code 1.0.0 是当前代码基线的首个可用大版本，定位为轻量、快速、顺滑、跨平台、离线优先的桌面代码编辑器。核心工作流已经定版，后续迭代将围绕性能、流畅度和交互体验持续优化。
+Prism Code 1.0.0 是当前代码基线的首个可用大版本，定位为轻量、快速、顺滑、跨平台、离线优先的桌面代码编辑器。核心工作流已经定版，后续迭代将围绕性能、流畅度和交互体验持续优化。
 
 ### 工作区与项目管理
 
@@ -149,7 +155,7 @@ Miro Code 1.0.0 是当前代码基线的首个可用大版本，定位为轻量�
 
 ### 主题、语言与窗口体验
 
-- 提供 `miro-dark`、`dawn`、`midnight`、`cyberpunk` 四套主题，编辑区语法高亮与界面语义色同步切换。
+- 提供 `prism-dark`、`dawn`、`midnight`、`cyberpunk` 四套主题，编辑区语法高亮与界面语义色同步切换。
 - 支持中文/English 界面即时切换，活动栏、资源树、Git、搜索、终端、对话框和 macOS 原生菜单同步更新，无需重启。
 - macOS Overlay 标题栏支持原生红绿灯、首次点击响应、主题底色同步、窗口缩放/全屏布局同步和项目路径复制。
 - 修复窗口失焦、长时间空闲和 WebView 动画事件丢失导致的侧栏消失、编辑区黑屏、标签切换异常等问题；关闭窗口时先清理终端，再自动完成窗口关闭，不需要二次点击。
@@ -163,10 +169,11 @@ Miro Code 1.0.0 是当前代码基线的首个可用大版本，定位为轻量�
 - 文件访问、Git、搜索、SSH 和更新说明渲染均加入路径校验、错误处理、超时清理、敏感信息隔离和 Markdown 链接过滤。
 - 采用 MIT 许可证，纯开源免费；本版本坚持离线优先，不包含联网 AI 补全、AI 对话面板、AI Agent、MCP/Skills 生态或插件市场。
 
-[2.2.1]: https://github.com/yqstart/MiroCode/releases/tag/v2.2.1
-[2.2.0]: https://github.com/yqstart/MiroCode/releases/tag/v2.2.0
-[2.1.0]: https://github.com/yqstart/MiroCode/releases/tag/v2.1.0
-[2.0.0]: https://github.com/yqstart/MiroCode/releases/tag/v2.0.0
-[1.0.2]: https://github.com/yqstart/MiroCode/releases/tag/v1.0.2
-[1.0.1]: https://github.com/yqstart/MiroCode/releases/tag/v1.0.1
-[1.0.0]: https://github.com/yqstart/MiroCode/releases/tag/v1.0.0
+[3.0.0]: https://github.com/yqstart/PrismCode/releases/tag/v3.0.0
+[2.2.1]: https://github.com/yqstart/PrismCode/releases/tag/v2.2.1
+[2.2.0]: https://github.com/yqstart/PrismCode/releases/tag/v2.2.0
+[2.1.0]: https://github.com/yqstart/PrismCode/releases/tag/v2.1.0
+[2.0.0]: https://github.com/yqstart/PrismCode/releases/tag/v2.0.0
+[1.0.2]: https://github.com/yqstart/PrismCode/releases/tag/v1.0.2
+[1.0.1]: https://github.com/yqstart/PrismCode/releases/tag/v1.0.1
+[1.0.0]: https://github.com/yqstart/PrismCode/releases/tag/v1.0.0

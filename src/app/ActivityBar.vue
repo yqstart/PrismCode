@@ -97,7 +97,7 @@ function onDocPointer(event: MouseEvent) {
   if (!scriptsOpen.value) return;
   const target = event.target as Node | null;
   if (scriptsBtn.value?.contains(target)) return;
-  const pop = document.getElementById("miro-scripts-pop");
+  const pop = document.getElementById("prism-scripts-pop");
   if (pop?.contains(target)) return;
   scriptsOpen.value = false;
 }
@@ -198,7 +198,7 @@ onBeforeUnmount(() => {
     <Transition name="popover">
       <div
         v-if="scriptsOpen"
-        id="miro-scripts-pop"
+        id="prism-scripts-pop"
         class="scripts-pop"
         :style="popStyle"
         role="dialog"
@@ -319,13 +319,13 @@ onBeforeUnmount(() => {
   transform: scale(0.96) translateY(-4px);
 }
 
-/* dot：脚本可用点脉动（已在 :root 挂 miro-status-pulse） */
+/* dot：脚本可用点脉动（已在 :root 挂 prism-status-pulse） */
 .dot {
-  animation: miro-status-pulse 2.4s ease-in-out infinite;
+  animation: prism-status-pulse 2.4s ease-in-out infinite;
 }
 
 /* badge：数字徽标入场（roving / 一致 pop） */
 .badge {
-  animation: miro-dot-pop 0.32s var(--ease-out) both;
+  animation: prism-dot-pop 0.32s var(--ease-out) both;
 }
 </style>

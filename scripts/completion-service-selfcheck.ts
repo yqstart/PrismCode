@@ -88,7 +88,7 @@ const htmlService = getLanguageService();
 // ==================== HTML + Vue data ====================
 console.log("== HTML service + Vue data ==");
 const vueService = getLanguageService();
-vueService.setDataProviders(true, [newHTMLDataProvider("miro-vue", buildVueHtmlData())]);
+vueService.setDataProviders(true, [newHTMLDataProvider("prism-vue", buildVueHtmlData())]);
 
 {
   const text = '<div v-';

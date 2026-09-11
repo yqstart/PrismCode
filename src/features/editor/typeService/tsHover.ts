@@ -4,16 +4,16 @@ import { createVueScriptContext, isInVueScript } from "@/features/editor/vueScri
 
 function renderQuickInfo(display: string, documentation: string): HTMLDivElement {
   const dom = document.createElement("div");
-  dom.className = "miro-hover-info";
+  dom.className = "prism-hover-info";
   if (display) {
     const signature = document.createElement("div");
-    signature.className = "miro-hover-signature";
+    signature.className = "prism-hover-signature";
     signature.textContent = display;
     dom.append(signature);
   }
   if (documentation) {
     const docs = document.createElement("div");
-    docs.className = "miro-hover-doc";
+    docs.className = "prism-hover-doc";
     docs.textContent = documentation;
     dom.append(docs);
   }

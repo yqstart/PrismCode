@@ -34,7 +34,7 @@ function ensureBundle(): Promise<ServiceBundle> {
       const html = htmlMod.getLanguageService();
       const vue = htmlMod.getLanguageService();
       vue.setDataProviders(true, [
-        htmlMod.newHTMLDataProvider("miro-vue", buildVueHtmlData()),
+        htmlMod.newHTMLDataProvider("prism-vue", buildVueHtmlData()),
       ]);
       return {
         html,

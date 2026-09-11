@@ -2,7 +2,7 @@
 /**
  * 前端栈 E2E 运行时证据
  *
- * 目标：用 puppeteer 加载 MiroCode 前端（mock Tauri invoke），
+ * 目标：用 puppeteer 加载 PrismCode 前端（mock Tauri invoke），
  * 模拟"20 个并发 IPC 期间连续点击 UI 元素"，证明：
  * - Vue 响应式不阻塞
  * - Pinia store 不阻塞
@@ -26,7 +26,7 @@ const HTML = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>MiroCode E2E IPC 自检</title>
+  <title>PrismCode E2E IPC 自检</title>
   <style>
     body { font-family: -apple-system, sans-serif; padding: 20px; }
     button { padding: 10px 20px; margin: 5px; font-size: 14px; }
@@ -36,7 +36,7 @@ const HTML = `<!DOCTYPE html>
   </style>
 </head>
 <body>
-  <h2>MiroCode E2E IPC 自检</h2>
+  <h2>PrismCode E2E IPC 自检</h2>
   <div class="activity-bar">
     <button id="project">Project</button>
     <button id="commit">Commit</button>

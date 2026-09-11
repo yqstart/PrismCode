@@ -1,8 +1,8 @@
-//! Miro Code 命令行入口。
+//! Prism Code 命令行入口。
 //!
 //! CLI 与 GUI 共用同一个 Tauri 可执行文件：无路径参数时正常启动窗口，
 //! 带路径参数时把文件/目录交给外部打开桥接。这样发布后的
-//! `Contents/MacOS/mirocode` 既是应用二进制，也是可安装到 PATH 的 CLI。
+//! `Contents/MacOS/prismcode` 既是应用二进制，也是可安装到 PATH 的 CLI。
 
 use crate::external_open::ExternalOpenTarget;
 use std::{
@@ -43,7 +43,7 @@ where
                 }
                 option if option.starts_with('-') => {
                     return Err(format!(
-                        "未知命令行选项：{option}\n使用 `mirocode --help` 查看用法"
+                        "未知命令行选项：{option}\n使用 `prismcode --help` 查看用法"
                     ));
                 }
                 _ => {}
@@ -63,7 +63,7 @@ where
 }
 
 pub fn help_text() -> &'static str {
-    "用法：mirocode [选项] [文件[:行[:列]] ...]\n\n选项：\n  --goto <文件[:行[:列]]>  打开并定位到指定位置\n  -h, --help               显示帮助\n  -v, --version            显示版本\n  --                       后续参数全部按路径处理"
+    "用法：prismcode [选项] [文件[:行[:列]] ...]\n\n选项：\n  --goto <文件[:行[:列]]>  打开并定位到指定位置\n  -h, --help               显示帮助\n  -v, --version            显示版本\n  --                       后续参数全部按路径处理"
 }
 
 fn parse_target_spec(raw: &str, cwd: &Path) -> Result<ExternalOpenTarget, String> {

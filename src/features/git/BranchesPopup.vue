@@ -219,7 +219,7 @@ async function onInteractiveRebase(name: string) {
 function onDoc(event: MouseEvent) {
   if (!ctx.value) return;
   const t = event.target as Node;
-  const el = document.getElementById("miro-branches-ctx");
+  const el = document.getElementById("prism-branches-ctx");
   if (el && !el.contains(t)) ctx.value = null;
 }
 
@@ -293,7 +293,7 @@ onBeforeUnmount(() => document.removeEventListener("mousedown", onDoc));
     <Teleport to="body">
       <div
         v-if="ctx"
-        id="miro-branches-ctx"
+        id="prism-branches-ctx"
         ref="ctxMenuRef"
         class="ctx"
         :style="{ left: `${ctx.x}px`, top: `${ctx.y}px` }"

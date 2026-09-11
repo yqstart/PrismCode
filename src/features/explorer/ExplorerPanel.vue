@@ -1659,7 +1659,7 @@ defineExpose({ locateActiveFile });
   font-family: var(--font-mono);
   letter-spacing: 0.02em;
   flex-shrink: 0;
-  animation: miro-dot-pop 0.32s var(--ease-out) both;
+  animation: prism-dot-pop 0.32s var(--ease-out) both;
 }
 .git-badge.st-modified {
   background: var(--warning);
@@ -1695,7 +1695,7 @@ defineExpose({ locateActiveFile });
   border-radius: 50%;
   background: var(--accent);
   flex-shrink: 0;
-  animation: miro-dot-pop 0.32s var(--ease-out) both;
+  animation: prism-dot-pop 0.32s var(--ease-out) both;
 }
 
 .menu {

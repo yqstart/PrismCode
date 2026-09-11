@@ -23,7 +23,7 @@ export async function showMoveReferencesDialog(
   options: MoveReferencesDialogOptions,
 ): Promise<ImportPatch[] | null> {
   if (!handler) {
-    console.warn("[mirocode] MoveReferencesDialog 未挂载");
+    console.warn("[prismcode] MoveReferencesDialog 未挂载");
     return null;
   }
   return handler(options);

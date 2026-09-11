@@ -154,10 +154,10 @@ mod tests {
 
     #[test]
     fn converts_file_urls_to_local_targets() {
-        let url = Url::parse("file:///tmp/Miro%20Code.ts").expect("文件 URL 应有效");
+        let url = Url::parse("file:///tmp/Prism%20Code.ts").expect("文件 URL 应有效");
         let targets = targets_from_urls(vec![url]);
         assert_eq!(targets.len(), 1);
-        assert_eq!(targets[0].path, "/tmp/Miro Code.ts");
+        assert_eq!(targets[0].path, "/tmp/Prism Code.ts");
         assert!(!targets[0].is_dir);
         assert_eq!(targets[0].line, None);
     }

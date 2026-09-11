@@ -2279,37 +2279,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "mirocode"
-version = "2.2.1"
-dependencies = [
- "base64 0.22.1",
- "chrono",
- "dispatch2",
- "git2",
- "ignore",
- "objc2",
- "objc2-app-kit",
- "objc2-foundation",
- "regex",
- "serde",
- "serde_json",
- "ssh2",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-fs",
- "tauri-plugin-opener",
- "tauri-plugin-process",
- "tauri-plugin-pty",
- "tauri-plugin-single-instance",
- "tauri-plugin-updater",
- "tauri-plugin-window-state",
- "tempfile",
- "tokio",
- "walkdir",
-]
-
-[[package]]
 name = "muda"
 version = "0.19.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2993,6 +2962,37 @@ name = "precomputed-hash"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "925383efa346730478fb4838dbe9137d2a47675ad789c546d150a6e1dd4ab31c"
+
+[[package]]
+name = "prismcode"
+version = "3.0.0"
+dependencies = [
+ "base64 0.22.1",
+ "chrono",
+ "dispatch2",
+ "git2",
+ "ignore",
+ "objc2",
+ "objc2-app-kit",
+ "objc2-foundation",
+ "regex",
+ "serde",
+ "serde_json",
+ "ssh2",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-fs",
+ "tauri-plugin-opener",
+ "tauri-plugin-process",
+ "tauri-plugin-pty",
+ "tauri-plugin-single-instance",
+ "tauri-plugin-updater",
+ "tauri-plugin-window-state",
+ "tempfile",
+ "tokio",
+ "walkdir",
+]
 
 [[package]]
 name = "proc-macro-crate"

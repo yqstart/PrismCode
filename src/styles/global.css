@@ -259,7 +259,7 @@ textarea::placeholder {
 /* ==================== 通用动效关键帧 ====================
    缓动由调用方的 animation 简写控制（这里用 --ease-out）。
    4 个关键帧供各组件 scoped 样式引用。 */
-@keyframes miro-overlay-in {
+@keyframes prism-overlay-in {
   from {
     opacity: 0;
   }
@@ -268,7 +268,7 @@ textarea::placeholder {
   }
 }
 
-@keyframes miro-dialog-in {
+@keyframes prism-dialog-in {
   from {
     opacity: 0;
     transform: translateY(6px) scale(0.98);
@@ -279,7 +279,7 @@ textarea::placeholder {
   }
 }
 
-@keyframes miro-tab-in {
+@keyframes prism-tab-in {
   from {
     opacity: 0;
     transform: translateY(2px);
@@ -290,7 +290,7 @@ textarea::placeholder {
   }
 }
 
-@keyframes miro-toast-in {
+@keyframes prism-toast-in {
   from {
     opacity: 0;
     transform: translateY(8px) scale(0.98);
@@ -302,7 +302,7 @@ textarea::placeholder {
 }
 
 /* 画布主区切换：用于 EditorArea 画布 + welcome（mode="out-in"） */
-@keyframes miro-canvas-in {
+@keyframes prism-canvas-in {
   from {
     opacity: 0;
     transform: translateY(2px);
@@ -314,7 +314,7 @@ textarea::placeholder {
 }
 
 /* CodeMirror 弹层（completions / hover / signature）——CM6 不提供 leave 钩子，仅 enter */
-@keyframes miro-tooltip-in {
+@keyframes prism-tooltip-in {
   from {
     opacity: 0;
     transform: translateY(3px) scale(0.98);
@@ -326,7 +326,7 @@ textarea::placeholder {
 }
 
 /* Popover / 浮层（find panel / context menu / dropdown）——enter 缩放+淡入 */
-@keyframes miro-popover-in {
+@keyframes prism-popover-in {
   from {
     opacity: 0;
     transform: scale(0.96);
@@ -338,7 +338,7 @@ textarea::placeholder {
 }
 
 /* StatusBar AI/LSP 启动中、ActivityBar 脚本可用点 — 状态点脉动 */
-@keyframes miro-status-pulse {
+@keyframes prism-status-pulse {
   0%,
   100% {
     opacity: 1;
@@ -349,7 +349,7 @@ textarea::placeholder {
 }
 
 /* bracket match / accepted hint 一次性高亮 */
-@keyframes miro-blink {
+@keyframes prism-blink {
   0% {
     background-color: color-mix(in srgb, var(--accent) 30%, transparent);
   }
@@ -359,7 +359,7 @@ textarea::placeholder {
 }
 
 /* dirty / 新增 dot 一次性脉动 */
-@keyframes miro-dot-pop {
+@keyframes prism-dot-pop {
   0% {
     transform: scale(0.4);
     opacity: 0;

@@ -32,7 +32,7 @@ assert.match(
 );
 assert.match(
   blameSource,
-  /cm-lineNumbers.*cm-miro-blame/s,
+  /cm-lineNumbers.*cm-prism-blame/s,
   "Git blame 触发区域应限制在行号或 blame gutter",
 );
 

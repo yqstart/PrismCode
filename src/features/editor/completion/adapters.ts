@@ -84,7 +84,7 @@ export function docToInfo(
   if (!text) return undefined;
   return () => {
     const el = document.createElement("div");
-    el.className = "miro-completion-doc";
+    el.className = "prism-completion-doc";
     try {
       // 补全文档可能来自项目文件或语言服务，统一走安全 Markdown
       // renderer，禁止 raw HTML 和危险链接绕过预览层防线。

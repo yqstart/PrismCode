@@ -45,7 +45,7 @@ async function onCheckUpdate() {
 }
 
 const themes: ThemeMeta[] = [
-  { id: "miro-dark", name: t("settings.theme.miroDark"), available: true, preview: "dark" },
+  { id: "prism-dark", name: t("settings.theme.prismDark"), available: true, preview: "dark" },
   { id: "midnight", name: t("settings.theme.midnight"), available: true, preview: "midnight" },
   { id: "cyberpunk", name: t("settings.theme.cyberpunk"), available: true, preview: "cyber" },
   { id: "dawn", name: t("settings.theme.dawn"), available: true, preview: "light" },
@@ -211,7 +211,7 @@ function onOverlayClick(event: MouseEvent) {
                     v-bind="PLAIN_INPUT_ATTRS"
                     class="ui-input"
                     type="number"
-                    name="miro-font-size"
+                    name="prism-font-size"
                     min="10"
                     max="24"
                     :value="editor.fontSize"
@@ -414,13 +414,13 @@ function onOverlayClick(event: MouseEvent) {
   place-items: center;
   background: var(--bg-overlay);
   backdrop-filter: blur(14px) saturate(1.08);
-  animation: miro-overlay-in var(--transition-normal) var(--ease-out);
+  animation: prism-overlay-in var(--transition-normal) var(--ease-out);
   padding: 24px;
 }
 
 .modal {
   width: min(960px, 100%);
-  animation: miro-dialog-in var(--transition-normal) var(--ease-out);
+  animation: prism-dialog-in var(--transition-normal) var(--ease-out);
   height: min(680px, 100%);
   display: grid;
   grid-template-columns: 196px 1fr;

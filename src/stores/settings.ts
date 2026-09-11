@@ -11,23 +11,25 @@ import {
   isEditorFontId,
 } from "@/shared/types";
 
-const STORAGE_KEY = "mirocode.settings.v1";
+const STORAGE_KEY = "prismcode.settings.v1";
+const LEGACY_STORAGE_KEY = "mirocode.settings.v1";
 
-/** 历史主题 ID → 现行 ID（曾用名 miro-dark 的旧键） */
+/** 历史主题 ID → 现行 ID */
 const THEME_MIGRATION: Record<string, ThemeId> = {
-  "adnify-dark": "miro-dark",
+  "adnify-dark": "prism-dark",
+  "miro-dark": "prism-dark",
 };
 
 /** 各主题对应的 macOS Overlay 标题栏底色（仅最顶系统栏，不含项目行） */
 const TITLEBAR_RGB: Record<ThemeId, [number, number, number]> = {
   dawn: [233, 235, 239],
-  "miro-dark": [23, 24, 28],
+  "prism-dark": [23, 24, 28],
   midnight: [20, 28, 43],
   cyberpunk: [23, 21, 31],
 };
 
 function isDarkTheme(theme: ThemeId): boolean {
-  return theme === "miro-dark" || theme === "midnight" || theme === "cyberpunk";
+  return theme === "prism-dark" || theme === "midnight" || theme === "cyberpunk";
 }
 
 /** 同步 macOS / 系统菜单栏文案到应用语言（无需重启） */
@@ -42,7 +44,9 @@ async function syncNativeMenuLocale(locale: AppSettings["locale"]) {
 
 function loadSettings(): AppSettings {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw =
+      localStorage.getItem(STORAGE_KEY) ??
+      localStorage.getItem(LEGACY_STORAGE_KEY);
     if (!raw) return structuredClone(DEFAULT_SETTINGS);
     const parsed = JSON.parse(raw) as Partial<AppSettings> & {
       layout?: Partial<AppSettings["layout"]> & {
@@ -126,7 +130,7 @@ function loadSettings(): AppSettings {
     return {
       theme:
         theme === "dawn" ||
-        theme === "miro-dark" ||
+        theme === "prism-dark" ||
         theme === "midnight" ||
         theme === "cyberpunk"
           ? theme

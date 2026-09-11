@@ -388,7 +388,7 @@ const unlocking = computed(() =>
               v-bind="PLAIN_INPUT_ATTRS"
               class="ui-input"
               type="text"
-              name="miro-ssh-name"
+              name="prism-ssh-name"
               :placeholder="t('sessions.displayNamePlaceholder')"
             />
           </label>
@@ -400,7 +400,7 @@ const unlocking = computed(() =>
                 v-bind="PLAIN_INPUT_ATTRS"
                 class="ui-input"
                 type="text"
-                name="miro-ssh-host"
+                name="prism-ssh-host"
                 placeholder="example.com"
               />
             </label>
@@ -411,7 +411,7 @@ const unlocking = computed(() =>
                 v-bind="PLAIN_INPUT_ATTRS"
                 class="ui-input"
                 type="number"
-                name="miro-ssh-port"
+                name="prism-ssh-port"
                 min="1"
                 max="65535"
               />
@@ -424,7 +424,7 @@ const unlocking = computed(() =>
               v-bind="PLAIN_INPUT_ATTRS"
               class="ui-input"
               type="text"
-              name="miro-ssh-username"
+              name="prism-ssh-username"
               placeholder="root"
             />
           </label>
@@ -443,7 +443,7 @@ const unlocking = computed(() =>
                 v-bind="PLAIN_INPUT_ATTRS"
                 class="ui-input"
                 :type="showFormPassword ? 'text' : 'password'"
-                name="miro-ssh-password"
+                name="prism-ssh-password"
               />
               <button
                 type="button"
@@ -468,7 +468,7 @@ const unlocking = computed(() =>
                 v-bind="PLAIN_INPUT_ATTRS"
                 class="ui-input"
                 type="text"
-                name="miro-ssh-key-path"
+                name="prism-ssh-key-path"
                 placeholder="~/.ssh/id_ed25519"
               />
             </label>
@@ -480,7 +480,7 @@ const unlocking = computed(() =>
                   v-bind="PLAIN_INPUT_ATTRS"
                   class="ui-input"
                   :type="showPassphrase ? 'text' : 'password'"
-                  name="miro-ssh-passphrase"
+                  name="prism-ssh-passphrase"
                 />
                 <button
                   type="button"
@@ -560,7 +560,7 @@ const unlocking = computed(() =>
                 v-bind="PLAIN_INPUT_ATTRS"
                 class="ui-input"
                 :type="showUnlockPassword ? 'text' : 'password'"
-                name="miro-ssh-unlock-password"
+                name="prism-ssh-unlock-password"
                 @keydown.enter="confirmUnlock"
               />
               <button
@@ -586,7 +586,7 @@ const unlocking = computed(() =>
                 v-bind="PLAIN_INPUT_ATTRS"
                 class="ui-input"
                 :type="showUnlockPassphrase ? 'text' : 'password'"
-                name="miro-ssh-unlock-passphrase"
+                name="prism-ssh-unlock-passphrase"
                 @keydown.enter="confirmUnlock"
               />
               <button

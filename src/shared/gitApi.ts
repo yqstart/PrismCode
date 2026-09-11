@@ -389,7 +389,7 @@ export type GitAuthPayload = {
   remember?: boolean;
 };
 
-/** 查 Miro Code 已记住的 HTTPS 用户名（按远程 host） */
+/** 查 Prism Code 已记住的 HTTPS 用户名（按远程 host） */
 export async function gitStoredUsername(url: string): Promise<string | null> {
   return ipc("git_stored_username", { url });
 }

@@ -37,7 +37,7 @@ import {
 import { languageExtensionForPath } from "@/features/editor/languages";
 import { createNavigationExtension } from "@/features/editor/navigation";
 import { editorThemeExtensions } from "@/features/editor/theme";
-import { createMiroFindPanel, openFindPanel, openFindReplacePanel } from "@/features/editor/findPanel";
+import { createPrismFindPanel, openFindPanel, openFindReplacePanel } from "@/features/editor/findPanel";
 import { formatDocumentContent } from "@/features/editor/formatting";
 import { singleTextChange } from "@/features/editor/formatting/textChange";
 import { wordAt } from "@/features/editor/documentSymbols";
@@ -396,11 +396,11 @@ function buildExtensions(): Extension[] {
     highlightActiveLine(),
     jumpHighlightExtension,
     highlightSelectionMatches(),
-    // VS Code 风格查找面板：自研 MiroFindPanel（右上角悬浮、查找/替换两行、
+    // VS Code 风格查找面板：自研 PrismFindPanel（右上角悬浮、查找/替换两行、
     // 上下箭头、Aa/.*/Ab 切换、结果计数、⌘F/⌘H/⌘G/Esc/F3 等快捷键）。
     // openFindPanel/openFindReplacePanel 已用 requestAnimationFrame 修复
     // panelByView 时序问题（openSearchPanel 后下一帧才 mount 注册）。
-    search({ top: true, createPanel: createMiroFindPanel }),
+    search({ top: true, createPanel: createPrismFindPanel }),
     createEditorKeymap({
       navigation: navHandlers,
       onRename: (v) => {
@@ -718,7 +718,7 @@ defineExpose({ scrollTo });
     <div
       ref="host"
       class="cm-host"
-      :style="{ '--miro-editor-font-family': editorFontFamily }"
+      :style="{ '--prism-editor-font-family': editorFontFamily }"
     />
   </div>
 </template>
@@ -740,7 +740,7 @@ defineExpose({ scrollTo });
   height: 100%;
   width: auto;
   overflow: hidden;
-  font-family: var(--miro-editor-font-family, var(--font-mono, ui-monospace, monospace));
+  font-family: var(--prism-editor-font-family, var(--font-mono, ui-monospace, monospace));
 }
 
 .cm-host :deep(.cm-editor) {
@@ -788,7 +788,7 @@ defineExpose({ scrollTo });
   opacity: 0.7;
 }
 
-.cm-host :deep(.miro-hover-info) {
+.cm-host :deep(.prism-hover-info) {
   max-width: 560px;
   padding: 2px 0;
   color: var(--text-primary);
@@ -796,14 +796,14 @@ defineExpose({ scrollTo });
   line-height: 1.5;
 }
 
-.cm-host :deep(.miro-hover-signature) {
+.cm-host :deep(.prism-hover-signature) {
   padding: 3px 10px 5px;
   color: var(--accent);
-  font-family: var(--miro-editor-font-family, var(--font-mono, ui-monospace, monospace));
+  font-family: var(--prism-editor-font-family, var(--font-mono, ui-monospace, monospace));
   white-space: pre-wrap;
 }
 
-.cm-host :deep(.miro-hover-doc) {
+.cm-host :deep(.prism-hover-doc) {
   max-width: 520px;
   padding: 5px 10px 3px;
   border-top: 1px solid var(--border-subtle);
@@ -812,40 +812,40 @@ defineExpose({ scrollTo });
 }
 
 /* ===== 签名帮助（VS Code 风格） ===== */
-.cm-host :deep(.miro-signature-help) {
+.cm-host :deep(.prism-signature-help) {
   font-size: 12px;
   line-height: 1.5;
   color: var(--text-primary);
   max-width: 520px;
   padding: 2px 0;
 }
-.cm-host :deep(.miro-signature-line) {
+.cm-host :deep(.prism-signature-line) {
   padding: 2px 10px;
 }
-.cm-host :deep(.miro-signature-line.active) {
+.cm-host :deep(.prism-signature-line.active) {
   background: color-mix(in srgb, var(--accent-soft) 55%, transparent);
   border-radius: 6px;
 }
-.cm-host :deep(.miro-signature-label) {
-  font-family: var(--miro-editor-font-family, var(--font-mono, ui-monospace, monospace));
+.cm-host :deep(.prism-signature-label) {
+  font-family: var(--prism-editor-font-family, var(--font-mono, ui-monospace, monospace));
   font-size: 11.5px;
   word-break: break-all;
 }
-.cm-host :deep(.miro-signature-param) {
+.cm-host :deep(.prism-signature-param) {
   color: var(--accent);
   font-weight: 600;
   margin-top: 2px;
-  font-family: var(--miro-editor-font-family, var(--font-mono, ui-monospace, monospace));
+  font-family: var(--prism-editor-font-family, var(--font-mono, ui-monospace, monospace));
   font-size: 11.5px;
 }
-.cm-host :deep(.miro-signature-doc) {
+.cm-host :deep(.prism-signature-doc) {
   color: var(--text-muted);
   margin-top: 2px;
   font-size: 11px;
 }
 
 /* ===== 补全项文档（markdown 渲染，VS Code 风格） ===== */
-.cm-host :deep(.miro-completion-doc) {
+.cm-host :deep(.prism-completion-doc) {
   font-size: 12px;
   line-height: 1.6;
   color: var(--text-secondary);
@@ -853,45 +853,45 @@ defineExpose({ scrollTo });
   max-height: 280px;
   overflow-y: auto;
 }
-.cm-host :deep(.miro-completion-doc p) {
+.cm-host :deep(.prism-completion-doc p) {
   margin: 4px 0;
 }
-.cm-host :deep(.miro-completion-doc h1),
-.cm-host :deep(.miro-completion-doc h2),
-.cm-host :deep(.miro-completion-doc h3) {
+.cm-host :deep(.prism-completion-doc h1),
+.cm-host :deep(.prism-completion-doc h2),
+.cm-host :deep(.prism-completion-doc h3) {
   margin: 6px 0 4px;
   font-size: 13px;
   color: var(--text-primary);
 }
-.cm-host :deep(.miro-completion-doc code) {
+.cm-host :deep(.prism-completion-doc code) {
   background: color-mix(in srgb, var(--text-secondary) 14%, transparent);
   border-radius: 3px;
   padding: 0 4px;
   font-size: 11px;
 }
-.cm-host :deep(.miro-completion-doc pre) {
+.cm-host :deep(.prism-completion-doc pre) {
   background: color-mix(in srgb, var(--text-secondary) 10%, transparent);
   padding: 8px;
   border-radius: 6px;
   overflow-x: auto;
   margin: 4px 0;
 }
-.cm-host :deep(.miro-completion-doc a) {
+.cm-host :deep(.prism-completion-doc a) {
   color: var(--accent);
 }
-.cm-host :deep(.miro-completion-doc ul),
-.cm-host :deep(.miro-completion-doc ol) {
+.cm-host :deep(.prism-completion-doc ul),
+.cm-host :deep(.prism-completion-doc ol) {
   padding-left: 18px;
   margin: 4px 0;
 }
 
 /* ===== CSS 颜色 swatch（VS Code 色块预览） ===== */
-.cm-host :deep(.miro-completion-color) {
+.cm-host :deep(.prism-completion-color) {
   display: flex;
   align-items: center;
   gap: 8px;
 }
-.cm-host :deep(.miro-completion-color-swatch) {
+.cm-host :deep(.prism-completion-color-swatch) {
   width: 14px;
   height: 14px;
   border-radius: 3px;
@@ -899,7 +899,7 @@ defineExpose({ scrollTo });
   display: inline-block;
   flex: 0 0 auto;
 }
-.cm-host :deep(.miro-completion-color-desc) {
+.cm-host :deep(.prism-completion-color-desc) {
   margin-top: 4px;
   color: var(--text-muted);
   font-size: 11px;
@@ -917,7 +917,7 @@ defineExpose({ scrollTo });
   pointer-events: auto;
 }
 
-.cm-host :deep(.miro-find-panel) {
+.cm-host :deep(.prism-find-panel) {
   position: absolute;
   top: 10px;
   right: 14px;
@@ -932,10 +932,10 @@ defineExpose({ scrollTo });
   gap: 6px;
 }
 
-/* 查找行与替换行：水平 flex、元素居中（f1ed485 动效改造时误删了 .miro-find-row，
+/* 查找行与替换行：水平 flex、元素居中（f1ed485 动效改造时误删了 .prism-find-row，
    导致按钮失去 flex 逐行堆叠、面板被撑大，此处恢复公共布局） */
-.cm-host :deep(.miro-find-row),
-.cm-host :deep(.miro-find-replace-row) {
+.cm-host :deep(.prism-find-row),
+.cm-host :deep(.prism-find-replace-row) {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -943,7 +943,7 @@ defineExpose({ scrollTo });
 }
 
 /* 替换行：用 max-height + opacity 过渡实现折叠/展开（不依赖 display:none 硬切） */
-.cm-host :deep(.miro-find-replace-row) {
+.cm-host :deep(.prism-find-replace-row) {
   max-height: 60px;
   opacity: 1;
   overflow: hidden;
@@ -951,19 +951,19 @@ defineExpose({ scrollTo });
     opacity var(--transition-fast) var(--ease-out),
     margin var(--transition-medium) var(--ease-out);
 }
-.cm-host :deep(.miro-find-replace-row.is-collapsed) {
+.cm-host :deep(.prism-find-replace-row.is-collapsed) {
   max-height: 0;
   opacity: 0;
   margin-top: -6px;
   pointer-events: none;
 }
 
-.cm-host :deep(.miro-find-spacer) {
+.cm-host :deep(.prism-find-spacer) {
   width: 24px;
   flex-shrink: 0;
 }
 
-.cm-host :deep(.miro-find-input) {
+.cm-host :deep(.prism-find-input) {
   flex: 1 1 auto;
   min-width: 0;
   height: 28px;
@@ -975,13 +975,13 @@ defineExpose({ scrollTo });
   font-size: 12px;
 }
 
-.cm-host :deep(.miro-find-input:focus) {
+.cm-host :deep(.prism-find-input:focus) {
   outline: none;
   border-color: color-mix(in srgb, var(--accent) 55%, var(--border-subtle));
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-soft) 70%, transparent);
 }
 
-.cm-host :deep(.miro-find-count) {
+.cm-host :deep(.prism-find-count) {
   flex: 0 0 auto;
   min-width: 52px;
   font-size: 11px;
@@ -990,7 +990,7 @@ defineExpose({ scrollTo });
   white-space: nowrap;
 }
 
-.cm-host :deep(.miro-find-btn) {
+.cm-host :deep(.prism-find-btn) {
   width: 26px;
   height: 26px;
   flex-shrink: 0;
@@ -1004,33 +1004,33 @@ defineExpose({ scrollTo });
   place-items: center;
 }
 
-.cm-host :deep(.miro-find-btn:hover) {
+.cm-host :deep(.prism-find-btn:hover) {
   background: var(--accent-soft);
   color: var(--text-primary);
 }
 
-.cm-host :deep(.miro-find-btn.active) {
+.cm-host :deep(.prism-find-btn.active) {
   background: var(--accent-soft);
   color: var(--accent);
 }
 
-.cm-host :deep(.miro-find-btn.toggle-replace) {
+.cm-host :deep(.prism-find-btn.toggle-replace) {
   width: 24px;
   font-size: 10px;
 }
 
-.cm-host :deep(.miro-find-toggle) {
+.cm-host :deep(.prism-find-toggle) {
   font-size: 11px;
   font-weight: 600;
 }
 
-.cm-host :deep(.miro-find-replace-actions) {
+.cm-host :deep(.prism-find-replace-actions) {
   display: flex;
   gap: 4px;
   flex-shrink: 0;
 }
 
-.cm-host :deep(.miro-find-text-btn) {
+.cm-host :deep(.prism-find-text-btn) {
   height: 28px;
   padding: 0 8px;
   border-radius: 6px;
@@ -1041,7 +1041,7 @@ defineExpose({ scrollTo });
   white-space: nowrap;
 }
 
-.cm-host :deep(.miro-find-text-btn:hover) {
+.cm-host :deep(.prism-find-text-btn:hover) {
   background: var(--accent-soft);
   color: var(--text-primary);
 }
@@ -1068,7 +1068,7 @@ defineExpose({ scrollTo });
 /* ===== 弹层 enter 动画（CM6 仅提供 enter 钩子，leave 即时移除） ===== */
 .cm-host :deep(.cm-tooltip-autocomplete) {
   transform-origin: var(--ease-out, 50% 0%);
-  animation: miro-tooltip-in var(--transition-medium) var(--ease-out) both;
+  animation: prism-tooltip-in var(--transition-medium) var(--ease-out) both;
 }
 
 /* completions 选项：箭头键切换时背景平滑 */
@@ -1078,37 +1078,37 @@ defineExpose({ scrollTo });
 }
 
 /* find panel 容器 popover 入场 */
-.cm-host :deep(.miro-find-panel) {
+.cm-host :deep(.prism-find-panel) {
   transform-origin: top right;
-  animation: miro-popover-in var(--transition-medium) var(--ease-out) both;
+  animation: prism-popover-in var(--transition-medium) var(--ease-out) both;
 }
 
 /* find panel 按钮：active/hover 平滑 */
-.cm-host :deep(.miro-find-btn) {
+.cm-host :deep(.prism-find-btn) {
   transition: background var(--transition-fast) var(--ease-out),
     color var(--transition-fast) var(--ease-out);
 }
-.cm-host :deep(.miro-find-text-btn) {
+.cm-host :deep(.prism-find-text-btn) {
   transition: background var(--transition-fast) var(--ease-out),
     color var(--transition-fast) var(--ease-out),
     border-color var(--transition-fast) var(--ease-out);
 }
 
 /* find panel 输入：focus 缓动 */
-.cm-host :deep(.miro-find-input) {
+.cm-host :deep(.prism-find-input) {
   transition: border-color var(--transition-fast) var(--ease-out),
     box-shadow var(--transition-fast) var(--ease-out);
 }
 
 /* 匹配数翻牌：scale 0.92 → 1，0.3s 反弹 */
-.cm-host :deep(.miro-find-count) {
+.cm-host :deep(.prism-find-count) {
   display: inline-block;
   transition: color var(--transition-fast) var(--ease-out);
 }
-.cm-host :deep(.miro-find-count.bump) {
-  animation: miro-count-bump 0.32s var(--ease-out);
+.cm-host :deep(.prism-find-count.bump) {
+  animation: prism-count-bump 0.32s var(--ease-out);
 }
-@keyframes miro-count-bump {
+@keyframes prism-count-bump {
   0% {
     transform: scale(0.92);
     opacity: 0.4;
@@ -1130,34 +1130,34 @@ defineExpose({ scrollTo });
 }
 
 /* ===== 跳转落点反馈 ===== */
-.cm-host :deep(.cm-miro-jump-line) {
+.cm-host :deep(.cm-prism-jump-line) {
   background-color: color-mix(in srgb, var(--accent) 14%, transparent) !important;
   box-shadow:
     inset 3px 0 0 var(--accent),
     inset 0 1px 0 color-mix(in srgb, var(--accent) 32%, transparent),
     inset 0 -1px 0 color-mix(in srgb, var(--accent) 32%, transparent);
-  animation: miro-jump-line 1.6s var(--ease-out) both;
+  animation: prism-jump-line 1.6s var(--ease-out) both;
 }
 
-.cm-host :deep(.cm-miro-jump-target) {
+.cm-host :deep(.cm-prism-jump-target) {
   background-color: var(--accent) !important;
   color: var(--accent-fg) !important;
   border-radius: 3px;
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 28%, transparent);
-  animation: miro-jump-target 1.4s var(--ease-out) both;
+  animation: prism-jump-target 1.4s var(--ease-out) both;
 }
 
-.cm-host :deep(.cm-miro-jump-gutter) {
+.cm-host :deep(.cm-prism-jump-gutter) {
   background-color: color-mix(in srgb, var(--accent) 18%, transparent) !important;
   box-shadow: inset 3px 0 0 var(--accent);
 }
 
-.cm-host :deep(.cm-lineNumbers .cm-miro-jump-gutter) {
+.cm-host :deep(.cm-lineNumbers .cm-prism-jump-gutter) {
   color: var(--accent) !important;
   font-weight: 700;
 }
 
-@keyframes miro-jump-line {
+@keyframes prism-jump-line {
   0% {
     background-color: color-mix(in srgb, var(--accent) 27%, transparent);
   }
@@ -1166,7 +1166,7 @@ defineExpose({ scrollTo });
   }
 }
 
-@keyframes miro-jump-target {
+@keyframes prism-jump-target {
   0% {
     box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 46%, transparent),
       0 0 16px color-mix(in srgb, var(--accent) 36%, transparent);
@@ -1177,8 +1177,8 @@ defineExpose({ scrollTo });
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cm-host :deep(.cm-miro-jump-line),
-  .cm-host :deep(.cm-miro-jump-target) {
+  .cm-host :deep(.cm-prism-jump-line),
+  .cm-host :deep(.cm-prism-jump-target) {
     animation: none;
   }
 }
@@ -1196,10 +1196,10 @@ defineExpose({ scrollTo });
     box-shadow var(--transition-fast) var(--ease-out);
   border-radius: 2px;
 }
-.cm-host :deep(.cm-matchingBracket.miro-bracket-pulse) {
-  animation: miro-bracket-pulse 0.32s var(--ease-out);
+.cm-host :deep(.cm-matchingBracket.prism-bracket-pulse) {
+  animation: prism-bracket-pulse 0.32s var(--ease-out);
 }
-@keyframes miro-bracket-pulse {
+@keyframes prism-bracket-pulse {
   0% {
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
   }
@@ -1211,9 +1211,9 @@ defineExpose({ scrollTo });
 /* lint 雪佛龙下划线：出现时淡入（lintGutter 注入的 marker） */
 .cm-host :deep(.cm-lintRange-error),
 .cm-host :deep(.cm-lintRange-warning) {
-  animation: miro-lint-in 0.4s var(--ease-out) both;
+  animation: prism-lint-in 0.4s var(--ease-out) both;
 }
-@keyframes miro-lint-in {
+@keyframes prism-lint-in {
   from {
     opacity: 0;
   }
@@ -1228,15 +1228,15 @@ defineExpose({ scrollTo });
   font-style: italic;
   white-space: pre-wrap;
   color: var(--text-muted);
-  animation: miro-ghost-in 0.22s var(--ease-out) both;
+  animation: prism-ghost-in 0.22s var(--ease-out) both;
 }
 .cm-host :deep(.cm-ghost-text.just-accepted) {
-  animation: miro-ghost-accepted 0.28s var(--ease-out) both;
+  animation: prism-ghost-accepted 0.28s var(--ease-out) both;
 }
 .cm-host :deep(.cm-ghost-text.just-dismissed) {
-  animation: miro-ghost-dismissed 0.22s var(--ease-out) both;
+  animation: prism-ghost-dismissed 0.22s var(--ease-out) both;
 }
-@keyframes miro-ghost-in {
+@keyframes prism-ghost-in {
   from {
     opacity: 0;
   }
@@ -1244,7 +1244,7 @@ defineExpose({ scrollTo });
     opacity: 0.4;
   }
 }
-@keyframes miro-ghost-accepted {
+@keyframes prism-ghost-accepted {
   0% {
     opacity: 0.4;
   }
@@ -1256,7 +1256,7 @@ defineExpose({ scrollTo });
     opacity: 0;
   }
 }
-@keyframes miro-ghost-dismissed {
+@keyframes prism-ghost-dismissed {
   from {
     opacity: 0.4;
   }

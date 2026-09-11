@@ -78,6 +78,10 @@ export async function checkForAppUpdate(
     if (mode === "manual") notify?.(t("update.browserPreview"));
     return "skipped";
   }
+  if (import.meta.env.DEV) {
+    if (mode === "manual") notify?.(t("update.devBuild"));
+    return "skipped";
+  }
   if (checking || installing) {
     if (mode === "manual") notify?.(t("update.checking"));
     return "skipped";
@@ -151,7 +155,7 @@ export async function checkForAppUpdate(
     if (mode === "manual") {
       notify?.(t("update.checkFailed", { message: msg }), 4200);
     } else {
-      console.warn("[mirocode] 自动检查更新失败", error);
+      console.warn("[prismcode] 自动检查更新失败", error);
     }
     return "error";
   } finally {

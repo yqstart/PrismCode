@@ -49,11 +49,11 @@ export function createJumpHighlightTarget(
 
 export const setJumpHighlightEffect = StateEffect.define<JumpHighlightTarget | null>();
 
-const jumpLineDecoration = Decoration.line({ class: "cm-miro-jump-line" });
-const jumpTargetDecoration = Decoration.mark({ class: "cm-miro-jump-target" });
+const jumpLineDecoration = Decoration.line({ class: "cm-prism-jump-line" });
+const jumpTargetDecoration = Decoration.mark({ class: "cm-prism-jump-target" });
 
 class JumpGutterMarker extends GutterMarker {
-  elementClass = "cm-miro-jump-gutter";
+  elementClass = "cm-prism-jump-gutter";
 
   eq(other: GutterMarker): boolean {
     return other === this;

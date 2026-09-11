@@ -53,7 +53,7 @@ function assert(name: string, condition: boolean, detail?: unknown): void {
   }
 }
 
-const storeKey = "mirocode.securityScopedBookmarks.v1";
+const storeKey = "prismcode.securityScopedBookmarks.v1";
 const root = "/workspace/demo";
 const staleRoot = "/workspace/stale";
 stored.set(storeKey, JSON.stringify({ [root]: "bookmark-v1" }));

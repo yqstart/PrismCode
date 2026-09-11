@@ -1,6 +1,6 @@
-// Miro Code 验收示例 — TypeScript
+// Prism Code 验收示例 — TypeScript
 export function greet(name: string): string {
   return `Hello, ${name}`;
 }
 
-console.log(greet("Miro"));
+console.log(greet("Prism"));

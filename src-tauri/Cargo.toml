@@ -1,13 +1,13 @@
 [package]
-name = "mirocode"
-version = "2.2.1"
-description = "Miro Code — 轻量化桌面代码编辑器"
-authors = ["MiroCode"]
+name = "prismcode"
+version = "3.0.0"
+description = "Prism Code — 轻量化桌面代码编辑器"
+authors = ["PrismCode"]
 edition = "2021"
 license = "MIT"
 
 [lib]
-name = "mirocode_lib"
+name = "prismcode_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [features]

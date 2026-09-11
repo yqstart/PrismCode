@@ -1,6 +1,6 @@
 app:
-  name: Miro Code
-  theme: miro-dark
+  name: Prism Code
+  theme: prism-dark
 features:
   - search
   - git

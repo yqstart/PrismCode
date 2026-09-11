@@ -22,7 +22,7 @@ if (!tag) {
   process.exit(1);
 }
 
-const repo = env.GITHUB_REPOSITORY || "yqstart/MiroCode";
+const repo = env.GITHUB_REPOSITORY || "yqstart/PrismCode";
 const token = env.GITHUB_TOKEN;
 if (!token) {
   console.error("缺少 GITHUB_TOKEN 环境变量");
@@ -35,7 +35,7 @@ const MIRROR_BASE = "https://ghfast.top/https://github.com";
 const API = "https://api.github.com";
 const headers = {
   Authorization: `Bearer ${token}`,
-  "User-Agent": "MiroCode-release",
+  "User-Agent": "PrismCode-release",
   Accept: "application/vnd.github+json",
 };
 

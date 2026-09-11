@@ -1,6 +1,6 @@
 import changelogRaw from "../../CHANGELOG.md?raw";
 
-const GITHUB_REPO = "yqstart/MiroCode";
+const GITHUB_REPO = "yqstart/PrismCode";
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

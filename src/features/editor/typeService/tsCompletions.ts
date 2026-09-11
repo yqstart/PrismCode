@@ -88,7 +88,7 @@ export function createTsCompletionSource(
       // 文档懒加载（选中时查 completionEntryDetails）
       cm.info = () => {
         const el = document.createElement("div");
-        el.className = "miro-completion-doc";
+        el.className = "prism-completion-doc";
         try {
           const details = tsService.completionDetails(serviceFilePath, pos, e.name);
           el.textContent = details?.documentation || e.kindModifiers || e.name;

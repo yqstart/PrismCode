@@ -1112,7 +1112,7 @@ export const useEditorStore = defineStore("editor", () => {
   // 切换模式不存到 EditorTab，避免序列化与 watcher 关注列表膨胀；
   // 直接走 localStorage（按完整路径 key），切回同一文件自动恢复上次选择。
   // 默认 'preview'，与首次打开行为一致。
-  const MD_MODE_KEY = (path: string) => `mirocode.md-mode:${path}`;
+  const MD_MODE_KEY = (path: string) => `prismcode.md-mode:${path}`;
 
   /** 读取某路径上次的 MD 模式；非 MD 路径或无记录返回 'preview' */
   function getMdMode(path: string): "preview" | "edit" {

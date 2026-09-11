@@ -131,13 +131,13 @@ onUnmounted(() => {
   place-items: center;
   background: var(--bg-overlay);
   backdrop-filter: blur(4px);
-  animation: miro-overlay-in var(--transition-normal) var(--ease-out);
+  animation: prism-overlay-in var(--transition-normal) var(--ease-out);
   padding: 24px;
 }
 
 .dialog {
   width: min(560px, 100%);
-  animation: miro-dialog-in var(--transition-normal) var(--ease-out);
+  animation: prism-dialog-in var(--transition-normal) var(--ease-out);
   max-height: min(78vh, 640px);
   display: flex;
   flex-direction: column;
