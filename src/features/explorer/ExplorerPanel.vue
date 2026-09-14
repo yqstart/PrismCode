@@ -157,6 +157,14 @@ const switchCandidates = computed(() =>
 
 /** Tauri macOS WKWebView 的 HTML5 DnD 不可靠，改用 pointer 拖拽 */
 const DRAG_THRESHOLD_PX = 5;
+/** 拖拽边缘自动滚动：指针进入容器顶部/底部该距离内开始滚动 */
+const DRAG_SCROLL_EDGE_PX = 32;
+const DRAG_SCROLL_MIN_PX = 2;
+const DRAG_SCROLL_MAX_PX = 12;
+/** 指针超出容器上下边界仍可滚动的最大距离 */
+const DRAG_SCROLL_OUTER_PX = 48;
+/** 悬停折叠目录自动展开的延迟 */
+const DRAG_HOVER_EXPAND_MS = 700;
 const dragSource = ref<{ path: string; isDir: boolean } | null>(null);
 const dropHoverPath = ref<string | null>(null);
 const dropValid = ref(false);
@@ -172,7 +180,13 @@ type PointerDragSession = {
   started: boolean;
 };
 
+type DropTarget = { path: string; isDir: boolean; expanded?: boolean };
+
 let pointerDrag: PointerDragSession | null = null;
+let dragScrollRaf: number | null = null;
+let lastDragPoint: { x: number; y: number } | null = null;
+let hoverExpandTimer: number | null = null;
+let hoverExpandPath: string | null = null;
 
 function resolveDropParent(targetPath: string, targetIsDir: boolean): string {
   return targetIsDir ? targetPath : dirname(targetPath);
@@ -194,16 +208,16 @@ function canDropOn(
   );
 }
 
-function lookupTreeNode(path: string): { path: string; isDir: boolean } | null {
+function lookupTreeNode(path: string): DropTarget | null {
   const node = flatTree.value.find((n) => n.path === path);
   if (!node) return null;
-  return { path: node.path, isDir: node.isDir };
+  return { path: node.path, isDir: node.isDir, expanded: node.expanded };
 }
 
 function resolveDropTargetAt(
   clientX: number,
   clientY: number,
-): { path: string; isDir: boolean } | null {
+): DropTarget | null {
   const el = document.elementFromPoint(clientX, clientY);
   if (!el) return null;
   const row = el.closest("[data-tree-path]") as HTMLElement | null;
@@ -212,25 +226,120 @@ function resolveDropTargetAt(
   }
   // 落到树空白处 → 工作区根目录
   if (el.closest(".tree") && rootPath.value) {
-    return { path: rootPath.value, isDir: true };
+    return { path: rootPath.value, isDir: true, expanded: true };
   }
   return null;
 }
 
-function updateDropHover(clientX: number, clientY: number) {
+function updateDropHover(
+  clientX: number,
+  clientY: number,
+): DropTarget | null {
   if (!dragSource.value) {
     dropHoverPath.value = null;
     dropValid.value = false;
-    return;
+    return null;
   }
   const target = resolveDropTargetAt(clientX, clientY);
   if (!target || target.path === dragSource.value.path) {
     dropHoverPath.value = null;
     dropValid.value = false;
-    return;
+    return null;
   }
   dropHoverPath.value = target.path;
   dropValid.value = canDropOn(dragSource.value, target.path, target.isDir);
+  return target;
+}
+
+/** 拖拽悬停折叠目录：延迟自动展开，松手可直接放入其子目录 */
+function scheduleHoverExpand(target: DropTarget | null) {
+  const foldPath =
+    target &&
+    target.isDir &&
+    !target.expanded &&
+    target.path !== dragSource.value?.path
+      ? target.path
+      : null;
+  if (foldPath === hoverExpandPath) return;
+  clearHoverExpand();
+  hoverExpandPath = foldPath;
+  if (!foldPath) return;
+  hoverExpandTimer = window.setTimeout(() => {
+    hoverExpandTimer = null;
+    hoverExpandPath = null;
+    if (!lastDragPoint || !dragSource.value) return;
+    // 触发时按指针当前位置重算：滚动可能已把目标移走
+    const current = resolveDropTargetAt(lastDragPoint.x, lastDragPoint.y);
+    if (
+      current &&
+      current.path === foldPath &&
+      current.isDir &&
+      !current.expanded
+    ) {
+      void workspace.toggleExpand(foldPath);
+    }
+  }, DRAG_HOVER_EXPAND_MS);
+}
+
+function clearHoverExpand() {
+  if (hoverExpandTimer !== null) {
+    window.clearTimeout(hoverExpandTimer);
+    hoverExpandTimer = null;
+  }
+  hoverExpandPath = null;
+}
+
+/** 拖拽边缘自动滚动：指针贴近容器顶部/底部时滚动树，露出视口外的目录 */
+function startDragScrollLoop() {
+  if (dragScrollRaf !== null) return;
+  dragScrollRaf = requestAnimationFrame(dragScrollStep);
+}
+
+function stopDragScrollLoop() {
+  if (dragScrollRaf !== null) {
+    cancelAnimationFrame(dragScrollRaf);
+    dragScrollRaf = null;
+  }
+}
+
+function dragScrollStep() {
+  dragScrollRaf = null;
+  const container = treeBodyRef.value;
+  if (
+    !pointerDrag?.started ||
+    !dragSource.value ||
+    !container ||
+    !lastDragPoint
+  ) {
+    return;
+  }
+  const rect = container.getBoundingClientRect();
+  const y = lastDragPoint.y;
+  let delta = 0;
+  if (y < rect.top + DRAG_SCROLL_EDGE_PX && y > rect.top - DRAG_SCROLL_OUTER_PX) {
+    const proximity =
+      y <= rect.top ? 1 : 1 - (y - rect.top) / DRAG_SCROLL_EDGE_PX;
+    delta = -(
+      DRAG_SCROLL_MIN_PX +
+      proximity * (DRAG_SCROLL_MAX_PX - DRAG_SCROLL_MIN_PX)
+    );
+  } else if (
+    y > rect.bottom - DRAG_SCROLL_EDGE_PX &&
+    y < rect.bottom + DRAG_SCROLL_OUTER_PX
+  ) {
+    const proximity =
+      y >= rect.bottom ? 1 : 1 - (rect.bottom - y) / DRAG_SCROLL_EDGE_PX;
+    delta =
+      DRAG_SCROLL_MIN_PX +
+      proximity * (DRAG_SCROLL_MAX_PX - DRAG_SCROLL_MIN_PX);
+  }
+  if (delta !== 0) {
+    container.scrollTop += delta;
+    scheduleHoverExpand(
+      updateDropHover(lastDragPoint.x, lastDragPoint.y),
+    );
+  }
+  dragScrollRaf = requestAnimationFrame(dragScrollStep);
 }
 
 function clearPointerDragListeners() {
@@ -240,6 +349,9 @@ function clearPointerDragListeners() {
 }
 
 function resetDragChrome() {
+  stopDragScrollLoop();
+  clearHoverExpand();
+  lastDragPoint = null;
   dragSource.value = null;
   dropHoverPath.value = null;
   dropValid.value = false;
@@ -273,7 +385,9 @@ function onWindowPointerMove(event: PointerEvent) {
     document.body.style.userSelect = "none";
   }
   event.preventDefault();
-  updateDropHover(event.clientX, event.clientY);
+  lastDragPoint = { x: event.clientX, y: event.clientY };
+  startDragScrollLoop();
+  scheduleHoverExpand(updateDropHover(event.clientX, event.clientY));
 }
 
 async function onWindowPointerUp(event: PointerEvent) {
@@ -281,6 +395,9 @@ async function onWindowPointerUp(event: PointerEvent) {
   const session = pointerDrag;
   pointerDrag = null;
   clearPointerDragListeners();
+  stopDragScrollLoop();
+  clearHoverExpand();
+  lastDragPoint = null;
 
   if (!session.started) {
     resetDragChrome();
@@ -687,12 +804,10 @@ async function runMenu(action: string) {
       return;
     }
     if (action === "paste") {
-      const result = await workspace.pasteInto(parent);
-      if (result?.cut) {
-        // 剪切粘贴同样属于「移动文件」：走统一的移动后处理，
-        // 包含标签前缀更新与按 always/prompt/never 设置更新相对 import。
-        await afterMove(result);
-      }
+      // 右键菜单粘贴同样走统一入口：内部剪贴板优先，为空读系统剪贴板。
+      // 剪切粘贴属于「移动文件」，走统一的移动后处理（含标签前缀更新与
+      // 按 always/prompt/never 设置更新相对 import）。
+      await pasteAtParent(parent);
       return;
     }
     if (action === "copy-abs-path") {
@@ -767,7 +882,75 @@ async function deleteSelectedPaths(
   }
 }
 
+/**
+ * 粘贴落点：选中目录进该目录，选中文件进其父目录，无选中进工作区根。
+ * 与工具栏新建（resolveCreateParent）同规则，快捷键与右键菜单共用。
+ */
+function resolvePasteParent(): string | null {
+  const selected = selectedPath.value;
+  if (!selected || selected === rootPath.value) return rootPath.value;
+  const inTree = flatTree.value.find((n) => n.path === selected);
+  if (inTree?.isDir) return selected;
+  if (selected in childrenMap.value) return selected;
+  return dirname(selected);
+}
+
+/**
+ * 统一粘贴：内部剪贴板优先（复制/剪切语义，走 import 更新），
+ * 为空时读系统剪贴板粘贴外部文件。右键菜单与 ⌘/Ctrl+V 共用。
+ */
+async function pasteAtParent(parent: string) {
+  if (clipboard.value) {
+    const result = await workspace.pasteInto(parent);
+    if (result?.cut) await afterMove(result);
+    return;
+  }
+  await workspace.pasteExternal(parent);
+}
+
+/** 复制/剪切落点：焦点路径即操作对象（右键菜单 setClipboard 单路径同语义）。 */
+function copyOrCutSelected(mode: "copy" | "cut") {
+  const selected = selectedPath.value;
+  if (!selected || !rootPath.value) return;
+  const inTree = flatTree.value.find((n) => n.path === selected);
+  const isDir = inTree?.isDir ?? selected in childrenMap.value;
+  if (mode === "cut" && selected === rootPath.value) {
+    workspace.showNotice(t("explorer.cannotCutRoot"));
+    return;
+  }
+  workspace.setClipboard(mode, selected, isDir);
+}
+
 function onExplorerKeydown(event: KeyboardEvent) {
+  const mod = event.metaKey || event.ctrlKey;
+  // 资源树复制/剪切/粘贴：⌘/Ctrl+C/X/V。文本输入区与弹层内不拦截，
+  // 让原生编辑行为优先；只有 activePanel 为 explorer 且焦点在树内才接管。
+  if (
+    mod &&
+    !event.altKey &&
+    !event.shiftKey &&
+    (event.key.toLowerCase() === "c" ||
+      event.key.toLowerCase() === "x" ||
+      event.key.toLowerCase() === "v") &&
+    settings.layout.activePanel === "explorer" &&
+    isExplorerTarget(event.target) &&
+    !isTextEditingTarget(event.target)
+  ) {
+    if (event.defaultPrevented || !rootPath.value) return;
+    event.preventDefault();
+    event.stopPropagation();
+    closeMenu();
+    const key = event.key.toLowerCase();
+    if (key === "c" || key === "x") {
+      if (!selectedPath.value) return;
+      copyOrCutSelected(key === "c" ? "copy" : "cut");
+      return;
+    }
+    const parent = resolvePasteParent();
+    if (!parent) return;
+    void pasteAtParent(parent);
+    return;
+  }
   if (
     event.defaultPrevented ||
     (event.key !== "Delete" && event.code !== "Delete") ||

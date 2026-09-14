@@ -9,11 +9,14 @@ import {
 import {
   basename,
   copyEntry,
+  copyExternalEntry,
   createEntry,
   deleteEntry,
   dirname,
   joinPath,
   listDir,
+  nextCopyName,
+  readSystemClipboardFiles,
   normalizeAbsPath,
   pathExists,
   renameEntry,
@@ -904,10 +907,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
       let n = 1;
       while (await pathExists(root, target)) {
         if (!isCurrent()) return;
-        const stem = name.includes(".")
-          ? name.replace(/(\.[^.]+)?$/, `-copy${n}$1`)
-          : `${name}-copy${n}`;
-        target = joinPath(parent, stem);
+        target = joinPath(parent, nextCopyName(name, n));
         n += 1;
         if (n > 50) throw new Error("目标名称冲突过多");
       }
@@ -945,6 +945,69 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     } catch (error) {
       if (!isCurrent()) return;
       showNotice(error instanceof Error ? error.message : String(error), 3200);
+    }
+  }
+
+  /**
+   * 从系统剪贴板粘贴外部文件/目录（Finder / 资源管理器复制后 ⌘/Ctrl+V）。
+   * 与 pasteInto 的区别：源在工作区外，多源批量复制、目标走 -copyN 避让；
+   * 外部粘贴永远是复制语义，不碰内部剪贴板、不做 import 更新。
+   * 返回成功复制的目标路径列表；剪贴板为空或失败返回 null 并 toast 说明。
+   */
+  async function pasteExternal(parent: string): Promise<string[] | null> {
+    const root = rootPath.value;
+    if (!root) return null;
+    const epoch = workspaceEpoch;
+    const isCurrent = () => rootPath.value === root && workspaceEpoch === epoch;
+    let sources: string[];
+    try {
+      sources = await readSystemClipboardFiles();
+    } catch (error) {
+      if (!isCurrent()) return null;
+      showNotice(error instanceof Error ? error.message : String(error), 3200);
+      return null;
+    }
+    if (!sources.length) {
+      showNotice("系统剪贴板中没有可粘贴的文件");
+      return null;
+    }
+    const pasted: string[] = [];
+    try {
+      for (const source of sources) {
+        if (!isCurrent()) return null;
+        const name = basename(source);
+        if (!name) continue;
+        let target = joinPath(parent, name);
+        let n = 1;
+        while (await pathExists(root, target)) {
+          if (!isCurrent()) return null;
+          target = joinPath(parent, nextCopyName(name, n));
+          n += 1;
+          if (n > 50) throw new Error("目标名称冲突过多");
+        }
+        if (!isCurrent()) return null;
+        markSelfWrite(target);
+        markSelfWrite(parent);
+        await copyExternalEntry(root, source, target);
+        pasted.push(target);
+      }
+      if (!isCurrent()) return null;
+      await loadChildren(parent);
+      if (!isCurrent()) return null;
+      expanded.value = new Set([...expanded.value, parent]);
+      setSelection(pasted);
+      showNotice(
+        pasted.length === 1 ? "已粘贴" : "已粘贴 " + pasted.length + " 个项目",
+      );
+      return pasted;
+    } catch (error) {
+      if (!isCurrent()) return null;
+      if (pasted.length) {
+        await loadChildren(parent);
+        setSelection(pasted);
+      }
+      showNotice(error instanceof Error ? error.message : String(error), 3200);
+      return pasted.length ? pasted : null;
     }
   }
 
@@ -1239,6 +1302,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     removePaths,
     setClipboard,
     pasteInto,
+    pasteExternal,
     movePath,
     selectPath,
     selectPaths,

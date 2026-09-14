@@ -1,3 +1,4 @@
+pub mod clipboard;
 pub mod dock_menu;
 pub mod fs;
 pub mod git;

@@ -4,6 +4,18 @@
 
 ## [Unreleased]
 
+## [3.1.0] - 2026-09-14
+
+### 新增
+
+- 资源树复制 / 剪切 / 粘贴支持 `⌘/Ctrl+C/X/V` 快捷键；从 Finder / 文件资源管理器复制的文件可在树中直接粘贴（重名自动 `-copyN` 避让），落点跟随当前选中（目录进其内部，文件进其父目录）。
+
+### 改进
+
+- 资源树文件拖拽支持边缘自动滚动（指针贴近顶部 / 底部时滚动树）与悬停折叠目录自动展开，视口外的目录可直接拖放到达。
+- 四套主题重调：次 / 辅助文案对比度加深，三深色按底色相区分（dark 中性灰、midnight 海军蓝、cyberpunk 紫黑）；终端配色与编辑器高亮同步，Git Log 拓扑与徽标改走主题变量。
+- 编辑器 Git 改动与诊断 gutter 按需收起：无内容时整列 0 宽，有标记时展开，窄窗口不再留空白。
+
 ## [3.0.0] - 2026-09-11
 
 ### 变更
@@ -169,6 +181,7 @@ Prism Code 1.0.0 是当前代码基线的首个可用大版本，定位为轻量
 - 文件访问、Git、搜索、SSH 和更新说明渲染均加入路径校验、错误处理、超时清理、敏感信息隔离和 Markdown 链接过滤。
 - 采用 MIT 许可证，纯开源免费；本版本坚持离线优先，不包含联网 AI 补全、AI 对话面板、AI Agent、MCP/Skills 生态或插件市场。
 
+[3.1.0]: https://github.com/yqstart/PrismCode/releases/tag/v3.1.0
 [3.0.0]: https://github.com/yqstart/PrismCode/releases/tag/v3.0.0
 [2.2.1]: https://github.com/yqstart/PrismCode/releases/tag/v2.2.1
 [2.2.0]: https://github.com/yqstart/PrismCode/releases/tag/v2.2.0

@@ -58,6 +58,33 @@ export async function pathExists(root: string, path: string): Promise<boolean> {
   return invoke("path_exists", { root, path });
 }
 
+/**
+ * 复制/粘贴命名冲突时的 `-copyN` 候选名。
+ * 内部粘贴与外部粘贴两条链路共用同一规则，自测锁定，改一处必须两处生效。
+ */
+export function nextCopyName(name: string, n: number): string {
+  return name.includes(".")
+    ? name.replace(/(\.[^.]+)?$/, "-copy" + n + "$1")
+    : `${name}-copy${n}`;
+}
+
+/**
+ * 读系统剪贴板中的文件路径列表（Finder / 资源管理器复制的文件）。
+ * 无文件时返回空数组；Linux 等未实现平台同样返回空数组。
+ */
+export async function readSystemClipboardFiles(): Promise<string[]> {
+  return invoke("read_system_clipboard_files");
+}
+
+/** 把工作区外的文件/目录复制进工作区（源为绝对路径，不受工作区边界限制）。 */
+export async function copyExternalEntry(
+  root: string,
+  from: string,
+  to: string,
+): Promise<void> {
+  return invoke("copy_external_entries", { root, from, to });
+}
+
 export function joinPath(parent: string, name: string): string {
   if (parent.endsWith("/") || parent.endsWith("\\")) {
     return `${parent}${name}`;

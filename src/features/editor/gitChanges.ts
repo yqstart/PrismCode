@@ -82,9 +82,16 @@ class ChangeMarker extends GutterMarker {
 }
 
 const changeTheme = EditorView.theme({
+  // 干净文件时整列收起（0 宽）；有改动 marker 时 :has 命中再撑到 6px。
+  // 注意：此处不能配 initialSpacer——spacer 自带 marker 会让 :has 永远命中。
+  // 也不用 display:none——CM 基础样式是 display:flex !important，普通声明盖不住。
   ".cm-prism-git-changes": {
-    width: "6px",
+    width: "0",
+    overflow: "hidden",
     flexShrink: "0",
+  },
+  ".cm-prism-git-changes:has(.cm-prism-git-change)": {
+    width: "6px",
   },
   ".cm-prism-git-changes .cm-gutterElement": {
     padding: "0",
@@ -193,7 +200,6 @@ export function gitChangesExtension(opts: GitChangesOptions): Extension {
         const kind = map.get(lineNo);
         return kind ? new ChangeMarker(kind) : null;
       },
-      initialSpacer: () => new ChangeMarker("added"),
       domEventHandlers: {
         mousedown(view, line, event) {
           if ((event as MouseEvent).button !== 0) return false;

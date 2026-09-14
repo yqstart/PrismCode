@@ -350,6 +350,8 @@ pub fn run() {
             commands::fs::delete_entry,
             commands::fs::copy_entry,
             commands::fs::path_exists,
+            commands::clipboard::read_system_clipboard_files,
+            commands::clipboard::copy_external_entries,
             commands::fs::snippets_read_global,
             commands::search::search_files,
             commands::search::search_content,

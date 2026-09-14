@@ -27,10 +27,10 @@
 
 | Theme ID | 显示名 | 角色 | 强调色 |
 |---|---|---|---|
-| `prism-dark` | Prism Dark | 石墨深色 | 紫 `#a78bfa` |
+| `prism-dark` | Prism Dark | 中性石墨深色 | 紫 `#a78bfa` |
 | `dawn` | Prism Light | **浅色** | 蓝 `#4f6fe8` |
-| `midnight` | Prism Midnight | 深蓝深色 | 青蓝 `#66c7f3` |
-| `cyberpunk` | Prism Cyberpunk | 中性底霓虹深色（应用默认） | 青 `#63e6f3` |
+| `midnight` | Prism Midnight | 海军蓝深色 | 矢车菊蓝 `#5ea1ff` |
+| `cyberpunk` | Prism Cyberpunk | 紫黑底霓虹深色（应用默认） | 霓虹青 `#5eead4` |
 
 切换方式：设置 → 编辑器 → 外观主题（四宫格卡片）；状态栏主题名弹出菜单；状态栏主题名**右键**循环切换。UI 与编辑器高亮同源切换。
 
@@ -44,21 +44,21 @@
 
 | Token | 值 | 用途 |
 |---|---|---|
-| `--bg-app` | `#101114` | 应用底（最深） |
-| `--bg-header` | `#17181c` | 标题栏 / 活动栏 |
-| `--bg-panel` | `#1b1c21` | 侧栏 / 面板 |
-| `--bg-elevated` | `#23252c` | 卡片 / 浮起容器 |
-| `--bg-editor` | `#101114` | CodeMirror 区 |
-| `--bg-terminal` | `#0b0c10` | xterm 区 |
-| `--bg-inset` | `#0d0e12` | 输入 / 内嵌控件底 |
-| `--bg-hover` / `--bg-active` | `rgba(255,255,255,.055)` / `rgba(167,139,250,.12)` | 悬停 / 激活底 |
+| `--bg-app` | `#141519` | 应用底（最深） |
+| `--bg-header` | `#1b1d22` | 标题栏 / 活动栏 |
+| `--bg-panel` | `#1f2026` | 侧栏 / 面板 |
+| `--bg-elevated` | `#26272e` | 卡片 / 浮起容器 |
+| `--bg-editor` | `#141519` | CodeMirror 区 |
+| `--bg-terminal` | `#0e0f13` | xterm 区 |
+| `--bg-inset` | `#101116` | 输入 / 内嵌控件底 |
+| `--bg-hover` / `--bg-active` | `rgba(255,255,255,.06)` / `rgba(167,139,250,.14)` | 悬停 / 激活底 |
 | `--bg-overlay` | `rgba(7,8,12,.72)` | 弹层遮罩 |
-| `--border-subtle` | `rgba(255,255,255,.07)` | 细半透明白边 |
+| `--border-subtle` | `rgba(255,255,255,.08)` | 细半透明白边 |
 | `--text-primary` | `#f4f4f5` | 主文案 |
-| `--text-secondary` | `#b9bbc5` | 次文案 |
-| `--text-muted` | `#858894` | 辅助文案 |
+| `--text-secondary` | `#c3c7d1` | 次文案 |
+| `--text-muted` | `#a2a7b4` | 辅助文案（面板底对比度 ≥ 4.5） |
 | `--accent` | `#a78bfa` | 主强调（紫） |
-| `--accent-soft` | `rgba(167,139,250,.14)` | 选中行 / 轻提示底 |
+| `--accent-soft` | `rgba(167,139,250,.15)` | 选中行 / 轻提示底 |
 | `--accent-fg` | `#17131f` | 强调色上的字 |
 | `--success` / `--warning` / `--danger` | `#4ade80` / `#f6c453` / `#f87171` | 状态色 |
 | `--focus-ring` | `rgba(167,139,250,.55)` | 焦点 |
@@ -70,24 +70,24 @@
 
 | Token | 值 | 用途 |
 |---|---|---|
-| `--bg-app` | `#f3f4f6` | 应用底（雾白） |
-| `--bg-header` | `#e9ebef` | 标题栏 / 活动栏 |
-| `--bg-panel` | `#f8f9fb` | 侧栏 / 面板 |
+| `--bg-app` | `#eef0f4` | 应用底（雾白） |
+| `--bg-header` | `#e2e6ec` | 标题栏 / 活动栏 |
+| `--bg-panel` | `#f7f8fa` | 侧栏 / 面板 |
 | `--bg-elevated` | `#ffffff` | 卡片 |
 | `--bg-editor` | `#ffffff` | 编辑区 |
-| `--bg-terminal` | `#eef0f3` | 终端底 |
-| `--bg-inset` | `#f6f7f9` | 输入 / 内嵌控件底 |
-| `--bg-hover` / `--bg-active` | `rgba(15,23,42,.05)` / `rgba(79,111,232,.1)` | 悬停 / 激活底 |
+| `--bg-terminal` | `#e9edf2` | 终端底 |
+| `--bg-inset` | `#f1f3f6` | 输入 / 内嵌控件底 |
+| `--bg-hover` / `--bg-active` | `rgba(15,23,42,.05)` / `rgba(79,111,232,.12)` | 悬停 / 激活底 |
 | `--bg-overlay` | `rgba(15,23,42,.42)` | 遮罩 |
-| `--border-subtle` | `rgba(15,23,42,.09)` | 细半透明黑边 |
-| `--text-primary` | `#20242d` | 主文案 |
-| `--text-secondary` | `#4b5563` | 次文案 |
-| `--text-muted` | `#7c8491` | 辅助文案 |
+| `--border-subtle` | `rgba(15,23,42,.1)` | 细半透明黑边 |
+| `--text-primary` | `#1c2029` | 主文案 |
+| `--text-secondary` | `#475062` | 次文案 |
+| `--text-muted` | `#5b6472` | 辅助文案（白底对比度 ≥ 4.5） |
 | `--accent` | `#4f6fe8` | 主强调（蓝） |
-| `--accent-soft` | `rgba(79,111,232,.11)` | 选中底 |
+| `--accent-soft` | `rgba(79,111,232,.12)` | 选中底 |
 | `--accent-fg` | `#ffffff` | 强调色上的字 |
-| `--success` | `#059669` | 成功 |
-| `--warning` | `#d97706` | 警告 |
+| `--success` | `#047857` | 成功（白底可读加深） |
+| `--warning` | `#b45309` | 警告（白底可读加深） |
 | `--danger` | `#dc2626` | 错误 |
 | `--focus-ring` | `rgba(79,111,232,.42)` | 焦点 |
 | `--shadow-card` | `0 1px 2px rgba(15,23,42,.04), 0 0 0 1px rgba(15,23,42,.035)` | 浅色卡片浮起 |
@@ -98,24 +98,24 @@
 
 | Token | 值 | 用途 |
 |---|---|---|
-| `--bg-app` | `#0e1421` | 应用底 |
-| `--bg-header` | `#141c2b` | 标题栏 / 活动栏 |
-| `--bg-panel` | `#182336` | 侧栏 / 面板 |
-| `--bg-elevated` | `#222e45` | 卡片 |
-| `--bg-editor` | `#0e1421` | 编辑区 |
-| `--bg-terminal` | `#0a1020` | 终端底 |
-| `--bg-inset` | `#0b1120` | 输入 / 内嵌控件底 |
-| `--bg-hover` / `--bg-active` | `rgba(255,255,255,.055)` / `rgba(102,199,243,.12)` | 悬停 / 激活底 |
+| `--bg-app` | `#0b1322` | 应用底 |
+| `--bg-header` | `#111b30` | 标题栏 / 活动栏 |
+| `--bg-panel` | `#182a44` | 侧栏 / 面板 |
+| `--bg-elevated` | `#24344f` | 卡片 |
+| `--bg-editor` | `#0b1322` | 编辑区 |
+| `--bg-terminal` | `#080e1b` | 终端底 |
+| `--bg-inset` | `#0a1120` | 输入 / 内嵌控件底 |
+| `--bg-hover` / `--bg-active` | `rgba(255,255,255,.06)` / `rgba(94,161,255,.14)` | 悬停 / 激活底 |
 | `--bg-overlay` | `rgba(5,10,20,.74)` | 遮罩 |
-| `--border-subtle` | `rgba(255,255,255,.075)` | 半透明白边 |
-| `--text-primary` | `#f1f5f9` | 主文案 |
-| `--text-secondary` | `#b9c5d6` | 次文案 |
-| `--text-muted` | `#8290a6` | 辅助文案 |
-| `--accent` | `#66c7f3` | 主强调（青蓝） |
-| `--accent-soft` | `rgba(102,199,243,.15)` | 选中底 |
-| `--accent-fg` | `#0c1722` | 强调色上的字 |
+| `--border-subtle` | `rgba(148,184,255,.12)` | 淡蓝半透明边（区分 cyberpunk 紫边） |
+| `--text-primary` | `#eef4fc` | 主文案 |
+| `--text-secondary` | `#bccadf` | 次文案 |
+| `--text-muted` | `#96a3ba` | 辅助文案（面板底对比度 ≥ 4.5） |
+| `--accent` | `#5ea1ff` | 主强调（矢车菊蓝） |
+| `--accent-soft` | `rgba(94,161,255,.16)` | 选中底 |
+| `--accent-fg` | `#0a1424` | 强调色上的字 |
 | `--success` / `--warning` / `--danger` | `#34d399` / `#fbbf24` / `#f87171` | 状态色 |
-| `--focus-ring` | `rgba(102,199,243,.48)` | 焦点 |
+| `--focus-ring` | `rgba(94,161,255,.5)` | 焦点 |
 | `--shadow-card` | `0 1px 2px rgba(0,0,0,.3), 0 0 0 1px rgba(255,255,255,.025)` | 轻浮起 |
 | `--shadow-popover` | `0 16px 36px rgba(0,0,0,.48), 0 3px 10px rgba(0,0,0,.28)` | 弹层 |
 | `--shadow-modal` | `0 28px 72px rgba(0,0,0,.62), 0 8px 24px rgba(0,0,0,.34)` | 弹层更强 |
@@ -124,24 +124,24 @@
 
 | Token | 值 | 用途 |
 |---|---|---|
-| `--bg-app` | `#101017` | 应用底 |
-| `--bg-header` | `#17151f` | 标题栏 / 活动栏 |
-| `--bg-panel` | `#1e1b28` | 侧栏 / 面板 |
-| `--bg-elevated` | `#282435` | 卡片 |
-| `--bg-editor` | `#101017` | 编辑区 |
-| `--bg-terminal` | `#0a0b10` | 终端底 |
-| `--bg-inset` | `#0d0e14` | 输入 / 内嵌控件底 |
-| `--bg-hover` / `--bg-active` | `rgba(255,255,255,.06)` / `rgba(99,230,243,.12)` | 悬停 / 激活底 |
+| `--bg-app` | `#0e0c16` | 应用底 |
+| `--bg-header` | `#171425` | 标题栏 / 活动栏 |
+| `--bg-panel` | `#221d33` | 侧栏 / 面板 |
+| `--bg-elevated` | `#2c2640` | 卡片 |
+| `--bg-editor` | `#0e0c16` | 编辑区 |
+| `--bg-terminal` | `#090811` | 终端底 |
+| `--bg-inset` | `#100e1a` | 输入 / 内嵌控件底 |
+| `--bg-hover` / `--bg-active` | `rgba(255,255,255,.065)` / `rgba(94,234,212,.13)` | 悬停 / 激活底 |
 | `--bg-overlay` | `rgba(7,8,14,.76)` | 遮罩 |
-| `--border-subtle` | `rgba(255,255,255,.08)` | 半透明白边 |
-| `--text-primary` | `#f7f5fb` | 主文案 |
-| `--text-secondary` | `#c2bdcf` | 次文案 |
-| `--text-muted` | `#8c869b` | 辅助文案 |
-| `--accent` | `#63e6f3` | 主强调（青） |
-| `--accent-soft` | `rgba(99,230,243,.15)` | 选中底 |
-| `--accent-fg` | `#0b1720` | 强调色上的字 |
+| `--border-subtle` | `rgba(196,181,253,.13)` | 淡紫半透明边（区分 midnight 蓝边） |
+| `--text-primary` | `#f6f3fc` | 主文案 |
+| `--text-secondary` | `#c6c0d8` | 次文案 |
+| `--text-muted` | `#a09cb4` | 辅助文案（面板底对比度 ≥ 4.5） |
+| `--accent` | `#5eead4` | 主强调（霓虹青） |
+| `--accent-soft` | `rgba(94,234,212,.15)` | 选中底 |
+| `--accent-fg` | `#06231e` | 强调色上的字 |
 | `--success` / `--warning` / `--danger` | `#34d399` / `#fbbf24` / `#fb7185` | 状态色 |
-| `--focus-ring` | `rgba(99,230,243,.52)` | 焦点 |
+| `--focus-ring` | `rgba(94,234,212,.52)` | 焦点 |
 | `--shadow-card` | `0 1px 2px rgba(0,0,0,.34), 0 0 0 1px rgba(255,255,255,.028)` | 轻浮起 |
 | `--shadow-popover` | `0 16px 36px rgba(0,0,0,.54), 0 3px 10px rgba(0,0,0,.3)` | 弹层 |
 | `--shadow-modal` | `0 28px 72px rgba(0,0,0,.68), 0 8px 24px rgba(0,0,0,.38)` | 弹层更强 |
@@ -158,10 +158,10 @@
 
 | 主题 | 背景 | 前景 | 选区 | 选区匹配 | 光标 |
 |---|---|---|---|---|---|
-| prism-dark | `#101114` | `#f4f4f5` | `rgba(167,139,250,.55)` | `rgba(167,139,250,.18)` | `#a78bfa` |
-| dawn | `#ffffff` | `#20242d` | `rgba(79,111,232,.28)` | `rgba(79,111,232,.11)` | `#4f6fe8` |
-| midnight | `#0e1421` | `#f1f5f9` | `rgba(102,199,243,.36)` | `rgba(102,199,243,.14)` | `#66c7f3` |
-| cyberpunk | `#101017` | `#f7f5fb` | `rgba(99,230,243,.36)` | `rgba(99,230,243,.14)` | `#63e6f3` |
+| prism-dark | `#141519` | `#f4f4f5` | `rgba(167,139,250,.55)` | `rgba(167,139,250,.18)` | `#a78bfa` |
+| dawn | `#ffffff` | `#1c2029` | `rgba(79,111,232,.28)` | `rgba(79,111,232,.11)` | `#4f6fe8` |
+| midnight | `#0b1322` | `#eef4fc` | `rgba(94,161,255,.38)` | `rgba(94,161,255,.14)` | `#5ea1ff` |
+| cyberpunk | `#0e0c16` | `#f6f3fc` | `rgba(94,234,212,.38)` | `rgba(94,234,212,.14)` | `#5eead4` |
 
 > 选区（selection）对比度**必须**高于选区匹配（selectionMatch）与搜索结果，避免「选中反而更暗」（雷区）。
 
@@ -171,15 +171,15 @@
 |---|---|---|
 | keyword | 淡紫 `#c792ea` | 深蓝 `#1d4ed8` |
 | string | 暖绿 `#c3e88d` | 深绿 `#047857` |
-| comment | 中灰 `#a8b4c4`（斜体） | 中灰 `#6b7280`（斜体） |
-| function | 蓝 `#82aaff` | 靛紫 `#6d28d9` |
+| comment | 灰 `#8b93a1`（斜体） | 灰 `#5b6472`（斜体） |
+| function | 蓝 `#a5b4fc` | 靛紫 `#6d28d9` |
 | number / bool | 琥珀 `#f78c6c` | 深琥珀 `#c2410c` |
 | property / tag | 黄 `#ffcb6b` / 红 `#f07178` | 青 `#0e7490` / 蓝 `#1d4ed8` |
-| variableName | 近白 `#eeffff` | 深灰 `#1c1c21` |
+| variableName | 近白 `#ffffff` | 深灰 `#1c2029` |
 | punctuation / operator | 青 `#89ddff` | 灰 `#6b7280` / `#374151` |
 | invalid | 红 `#ff5370` | 红 `#dc2626` |
 
-Midnight / Cyberpunk 各自维护完整 `HighlightStyle`（青蓝 / 霓虹粉青系），见 `theme.ts`。
+Midnight / Cyberpunk 各自维护完整 `HighlightStyle`（矢车菊蓝 / 霓虹青系），见 `theme.ts`。
 
 ---
 
@@ -349,7 +349,8 @@ Midnight / Cyberpunk 各自维护完整 `HighlightStyle`（青蓝 / 霓虹粉青
 ## 9. 验收对照
 
 1. 四套主题均可真实切换，UI 与编辑器高亮同步
-2. 深色强调色为紫系，浅色为蓝系；Midnight 青蓝系、Cyberpunk 霓虹系
+2. 深色强调色为紫系，浅色为蓝系；Midnight 矢车菊蓝系、Cyberpunk 霓虹青系；三深色底（中性灰 / 海军蓝 / 紫黑）一眼可辨
 3. 卡片圆角与留白符合规范，不出现尖锐直角密集表单
 4. 选区对比度高于选区匹配 / 搜索结果
-5. 无紫色浅色主题、无奶油风衬线海报风等偏离基准的风格漂移
+5. 正文 / 次文本 / 注释对比度达标（muted 在面板底 ≥ 4.5）；Git 徽标与拓扑节点走语义变量，浅色下可读
+6. 无紫色浅色主题、无奶油风衬线海报风等偏离基准的风格漂移

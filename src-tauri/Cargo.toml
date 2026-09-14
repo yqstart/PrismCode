@@ -1,6 +1,6 @@
 [package]
 name = "prismcode"
-version = "3.0.0"
+version = "3.1.0"
 description = "Prism Code — 轻量化桌面代码编辑器"
 authors = ["PrismCode"]
 edition = "2021"
@@ -42,8 +42,11 @@ tauri-plugin-pty = { path = "vendor/tauri-plugin-pty" }
 [target.'cfg(target_os = "macos")'.dependencies]
 dispatch2 = "0.3.1"
 objc2 = "0.6.4"
-objc2-app-kit = { version = "0.3.2", features = ["NSColor", "NSWindow", "NSView", "NSButton", "objc2-core-foundation"] }
-objc2-foundation = { version = "0.3.2", features = ["NSGeometry"] }
+objc2-app-kit = { version = "0.3.2", features = ["NSColor", "NSWindow", "NSView", "NSButton", "NSPasteboard", "objc2-core-foundation"] }
+objc2-foundation = { version = "0.3.2", features = ["NSGeometry", "NSArray", "NSString", "NSURL", "NSDictionary", "NSSet", "NSFileWrapper", "NSData", "NSError"] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+clipboard-win = { version = "5", features = ["std"] }
 
 [target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
 tauri-plugin-process = "2.3.1"

@@ -260,7 +260,7 @@ fn copy_entry_blocking(root: String, from: String, to: String) -> Result<(), Str
 
 /// 目标尚不存在时，按最近的现存祖先解析其真实路径，识别通过符号链接
 /// 指向源目录的复制目标，避免递归复制把新文件继续纳入 WalkDir。
-fn canonicalize_for_creation(path: &Path) -> Result<PathBuf, String> {
+pub(crate) fn canonicalize_for_creation(path: &Path) -> Result<PathBuf, String> {
     let mut existing = path;
     let mut missing = Vec::new();
     loop {

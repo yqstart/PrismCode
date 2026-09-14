@@ -1,7 +1,7 @@
 {
   "name": "prismcode",
   "private": true,
-  "version": "3.0.0",
+  "version": "3.1.0",
   "license": "MIT",
   "type": "module",
   "scripts": {
@@ -29,6 +29,7 @@
     "test:startup-bundle": "node --experimental-strip-types scripts/workspace-open-performance-selfcheck.ts --bundle",
     "test:search-keyboard": "node --experimental-strip-types scripts/search-keyboard-selfcheck.ts",
     "test:explorer-selection": "node --experimental-strip-types scripts/explorer-selection-selfcheck.ts",
+    "test:explorer-paste": "node --experimental-strip-types scripts/explorer-paste-selfcheck.ts",
     "test:usability": "node --experimental-strip-types scripts/usability-workflows-selfcheck.ts",
     "test:editor-keymap": "node --experimental-strip-types scripts/editor-keymap-selfcheck.ts",
     "test:formatting": "node --experimental-strip-types scripts/formatting-selfcheck.ts",

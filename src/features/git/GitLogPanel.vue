@@ -1669,8 +1669,8 @@ watch(selectedId, (id) => {
   vector-effect: non-scaling-stroke;
 }
 .graph-node {
-  fill: #60a5fa;
-  stroke: color-mix(in srgb, #60a5fa 35%, transparent);
+  fill: color-mix(in srgb, var(--accent) 72%, var(--text-primary));
+  stroke: color-mix(in srgb, var(--accent) 35%, transparent);
   stroke-width: 3;
 }
 .graph-node.head {
@@ -1684,8 +1684,8 @@ watch(selectedId, (id) => {
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: #a78bfa;
-  box-shadow: 0 0 0 2px color-mix(in srgb, #a78bfa 24%, transparent);
+  background: var(--text-muted);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--text-muted) 30%, transparent);
 }
 .desc-c {
   gap: 5px;
@@ -1729,25 +1729,25 @@ watch(selectedId, (id) => {
   white-space: nowrap;
 }
 .ref.local {
-  background: color-mix(in srgb, #3b82f6 18%, transparent);
-  color: #3b82f6;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: color-mix(in srgb, var(--accent) 78%, var(--text-primary));
 }
 .ref.remote {
   background: color-mix(in srgb, var(--text-muted) 16%, transparent);
   color: var(--text-secondary);
 }
 .ref.remote-head {
-  border: 1px solid color-mix(in srgb, #3b82f6 50%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
   background: transparent;
-  color: #3b82f6;
+  color: color-mix(in srgb, var(--accent) 78%, var(--text-primary));
 }
 .ref.tag {
-  background: color-mix(in srgb, #f59e0b 18%, transparent);
-  color: #d97706;
+  background: color-mix(in srgb, var(--warning) 18%, transparent);
+  color: color-mix(in srgb, var(--warning) 72%, var(--text-primary));
 }
 .ref.stash {
-  background: color-mix(in srgb, #a78bfa 20%, transparent);
-  color: #a78bfa;
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  color: color-mix(in srgb, var(--accent) 78%, var(--text-primary));
 }
 .badge {
   display: inline-flex;

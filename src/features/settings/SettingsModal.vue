@@ -599,19 +599,19 @@ function onOverlayClick(event: MouseEvent) {
 }
 
 .preview[data-kind="dark"] {
-  background: linear-gradient(135deg, #1d1e25, #101114);
+  background: linear-gradient(135deg, #26272e, #141519);
 }
 
 .preview[data-kind="midnight"] {
-  background: linear-gradient(135deg, #1d2a42, #0e1421);
+  background: linear-gradient(135deg, #24344f, #0b1322);
 }
 
 .preview[data-kind="cyber"] {
-  background: linear-gradient(135deg, #2b2438, #11161e 72%);
+  background: linear-gradient(135deg, #2c2640, #0e0c16 72%);
 }
 
 .preview[data-kind="light"] {
-  background: linear-gradient(135deg, #ffffff, #eef1f7);
+  background: linear-gradient(135deg, #ffffff, #e2e6ec);
   border-color: var(--border-subtle);
 }
 
@@ -629,11 +629,11 @@ function onOverlayClick(event: MouseEvent) {
 }
 
 .preview[data-kind="midnight"] .preview-bar {
-  background: #66c7f3;
+  background: #5ea1ff;
 }
 
 .preview[data-kind="cyber"] .preview-bar {
-  background: #63e6f3;
+  background: #5eead4;
 }
 
 .preview[data-kind="light"] .preview-bar {

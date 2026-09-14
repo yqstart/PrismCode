@@ -7,7 +7,7 @@ import "./styles/global.css";
 // CSS 加载与 pinia 启动之间存在窗口期（data-theme 尚未挂上）；
 // 在 #app 落地前先用默认深色背景兜底，避免一帧白屏。
 // 真正的 data-theme 由 settings store 启动后注入。
-document.documentElement.style.background = "#101114";
+document.documentElement.style.background = "#141519";
 document.documentElement.style.colorScheme = "dark";
 
 // 禁用 WebView 原生右键菜单；各处自定义菜单自行 preventDefault 后展示

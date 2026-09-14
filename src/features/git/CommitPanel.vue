@@ -1064,7 +1064,7 @@ function onCommitKeydown(event: KeyboardEvent) {
   flex-shrink: 0;
   font-size: 11px;
   font-family: var(--font-mono);
-  color: #a78bfa;
+  color: var(--accent);
 }
 
 .stash-msg {
