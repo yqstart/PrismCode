@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { Columns2, Eye, FileCode, GitCommitHorizontal, PenLine, Pin, Server, X } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
 import CodeMirrorEditor from "@/features/editor/CodeMirrorEditor.vue";
 import ImagePreview from "@/features/editor/ImagePreview.vue";
 import { renderMarkdown } from "@/features/editor/markdown/preview";
+import { buildPreviewFindRegExp } from "@/features/editor/markdown/previewFind";
 import FileTypeIcon from "@/shared/FileTypeIcon.vue";
 import { basename, relativeToRoot } from "@/shared/fs";
 import { isRasterImagePath, isSvgPath } from "@/shared/media";
@@ -44,7 +45,7 @@ const gitLog = useGitLogStore();
 const workspace = useWorkspaceStore();
 const git = useGitStore();
 const settings = useSettingsStore();
-const { tabs, activePath, activeTab, blameVisible } = storeToRefs(editor);
+const { tabs, activePath, activeTab, blameVisible, findRequest } = storeToRefs(editor);
 const { rootPath } = storeToRefs(workspace);
 const { snapshot: gitSnapshot } = storeToRefs(git);
 const { isFocused: sessionsFocused } = storeToRefs(sessions);
@@ -148,6 +149,214 @@ const previewHtml = computed(() => {
   }
   return renderMarkdown(activeTab.value.content);
 });
+/** MD 预览容器（滚动）与渲染根：容器复用去 key，切文件只换 v-html（无闪屏） */
+const mdPreviewRef = ref<HTMLElement | null>(null);
+const mdContentRef = ref<HTMLElement | null>(null);
+
+/** MD 预览内查找（只读浮层，无替换行；⌘F 经 findRequest 信号路由到此） */
+const mdFindOpen = ref(false);
+const mdFindQuery = ref("");
+const mdFindCase = ref(false);
+const mdFindRegex = ref(false);
+const mdFindWord = ref(false);
+const mdFindIndex = ref(0);
+const mdFindTotal = ref(0);
+const mdFindInputRef = ref<HTMLInputElement | null>(null);
+let mdFindMarks: HTMLElement[] = [];
+let mdFindTimer: ReturnType<typeof setTimeout> | null = null;
+
+const mdFindVisible = computed(
+  () =>
+    mdFindOpen.value &&
+    showFileEditor.value &&
+    isMarkdown.value &&
+    markdownPreview.value,
+);
+
+const mdFindCountText = computed(() => {
+  if (!mdFindQuery.value.trim()) return "—";
+  if (!mdFindTotal.value) return t("editorFind.noResults");
+  return t("editorFind.matchCount", {
+    current: mdFindIndex.value + 1,
+    total: mdFindTotal.value,
+  });
+});
+
+function clearMdFindMarks(): void {
+  const root = mdContentRef.value;
+  mdFindMarks = [];
+  if (!root) return;
+  // v-html 重渲染会整块替换 innerHTML，旧 mark 随之消失；这里只处理存量
+  const marks = root.querySelectorAll("mark.md-find-match");
+  marks.forEach((m) => {
+    const parent = m.parentNode;
+    if (parent) parent.replaceChild(document.createTextNode(m.textContent ?? ""), m);
+  });
+  root.normalize();
+}
+
+function setMdFindCurrent(index: number, scroll: boolean): void {
+  mdFindIndex.value = index;
+  mdFindMarks.forEach((m, i) => m.classList.toggle("is-current", i === index));
+  if (scroll) mdFindMarks[index]?.scrollIntoView({ block: "center" });
+}
+
+function applyMdFind(reveal: boolean): void {
+  clearMdFindMarks();
+  mdFindTotal.value = 0;
+  mdFindIndex.value = 0;
+  const root = mdContentRef.value;
+  const query = mdFindQuery.value;
+  if (!mdFindOpen.value || !root || !query.trim()) return;
+  const re = buildPreviewFindRegExp(query, {
+    caseSensitive: mdFindCase.value,
+    regexp: mdFindRegex.value,
+    wholeWord: mdFindWord.value,
+  });
+  if (!re) return;
+  // 先收齐文本节点再包 mark：边走边改 DOM 会使 TreeWalker 漏节点
+  const nodes: Text[] = [];
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let node: Node | null;
+  while ((node = walker.nextNode())) nodes.push(node as Text);
+  const marks: HTMLElement[] = [];
+  for (const textNode of nodes) {
+    const text = textNode.data;
+    re.lastIndex = 0;
+    let frag: DocumentFragment | null = null;
+    let last = 0;
+    for (;;) {
+      const m = re.exec(text);
+      if (!m) break;
+      if (m[0].length === 0) {
+        // 零宽匹配不收录，手动推进（与 previewFind 纯函数一致）
+        re.lastIndex += 1;
+        if (re.lastIndex > text.length) break;
+        continue;
+      }
+      if (!frag) frag = document.createDocumentFragment();
+      if (m.index > last)
+        frag.appendChild(document.createTextNode(text.slice(last, m.index)));
+      const mark = document.createElement("mark");
+      mark.className = "md-find-match";
+      mark.textContent = m[0];
+      frag.appendChild(mark);
+      marks.push(mark);
+      last = m.index + m[0].length;
+    }
+    if (frag) {
+      if (last < text.length)
+        frag.appendChild(document.createTextNode(text.slice(last)));
+      textNode.parentNode?.replaceChild(frag, textNode);
+    }
+    if (marks.length >= 10000) break;
+  }
+  mdFindMarks = marks;
+  mdFindTotal.value = marks.length;
+  if (marks.length) setMdFindCurrent(0, reveal);
+}
+
+function stepMdFind(delta: 1 | -1): void {
+  if (!mdFindMarks.length) return;
+  const next =
+    (mdFindIndex.value + delta + mdFindMarks.length) % mdFindMarks.length;
+  setMdFindCurrent(next, true);
+}
+
+function openMdFind(): void {
+  if (!isMarkdown.value || !markdownPreview.value) return;
+  mdFindOpen.value = true;
+  nextTick(() => {
+    // 有旧查询直接沿用并定位首处（对齐 CM 面板 mount 行为），无查询只聚焦
+    applyMdFind(true);
+    mdFindInputRef.value?.focus();
+    mdFindInputRef.value?.select();
+  });
+}
+
+function closeMdFind(): void {
+  mdFindOpen.value = false;
+  if (mdFindTimer !== null) {
+    clearTimeout(mdFindTimer);
+    mdFindTimer = null;
+  }
+  clearMdFindMarks();
+}
+
+function onMdFindInput(): void {
+  if (mdFindTimer !== null) clearTimeout(mdFindTimer);
+  // 输入防抖 120ms（对齐 CM 查找面板 scheduleCommit），避免大文档每键全量走 DOM
+  mdFindTimer = setTimeout(() => {
+    mdFindTimer = null;
+    applyMdFind(true);
+  }, 120);
+}
+
+function toggleMdFindOpt(which: "case" | "regex" | "word"): void {
+  if (which === "case") mdFindCase.value = !mdFindCase.value;
+  else if (which === "regex") mdFindRegex.value = !mdFindRegex.value;
+  else mdFindWord.value = !mdFindWord.value;
+  applyMdFind(true);
+}
+function onMdFindKeydown(event: KeyboardEvent): void {
+  const mod = event.metaKey || event.ctrlKey;
+  // 焦点在浮层输入框时 AppShell 的 ⌘F 兜底因 editable 守卫直接返回，
+  // 这里自己接住：重新聚焦并全选（对齐 CM 查找面板重复 ⌘F 行为）
+  if (mod && !event.shiftKey && !event.altKey && event.key.toLowerCase() === "f") {
+    event.preventDefault();
+    mdFindInputRef.value?.focus();
+    mdFindInputRef.value?.select();
+    return;
+  }
+  if (event.key === "Escape") {
+    event.preventDefault();
+    closeMdFind();
+    return;
+  }
+  // 焦点常驻输入框，Enter / F3 / ⌘G 直接导航，无需窗口级监听
+  if (event.key === "Enter" || event.key === "F3") {
+    event.preventDefault();
+    stepMdFind(event.shiftKey ? -1 : 1);
+    return;
+  }
+  if (mod && !event.altKey && (event.key === "g" || event.key === "G")) {
+    event.preventDefault();
+    stepMdFind(event.shiftKey ? -1 : 1);
+  }
+}
+
+// ⌘F 信号路由：MD 预览态由本浮层消费，其余态放行给 CodeMirror 查找面板
+watch(findRequest, (req) => {
+  if (!req || req.path !== activePath.value) return;
+  if (
+    !isMarkdown.value ||
+    !markdownPreview.value ||
+    !showFileEditor.value ||
+    sshFocused.value ||
+    compareFocused.value ||
+    gitLogFocused.value
+  )
+    return;
+  openMdFind();
+});
+
+// 预览内容变化（切文件/外部修改）后重打高亮；不滚动（切文件由 path watcher 回顶）
+watch(previewHtml, () => {
+  if (!mdFindOpen.value) return;
+  nextTick(() => applyMdFind(false));
+});
+
+// 浮层从隐藏恢复（SSH/GitLog 切回）时 DOM 已重建，重打高亮
+watch(mdFindVisible, (visible) => {
+  if (!visible) return;
+  nextTick(() => applyMdFind(false));
+});
+
+// 编辑→预览切回时重打高亮；离开预览态无需清 mark（DOM 随分支卸载）
+watch(markdownPreview, (on) => {
+  if (!mdFindOpen.value || !on) return;
+  nextTick(() => applyMdFind(false));
+});
 
 const hasAnyTab = computed(
   () =>
@@ -179,6 +388,8 @@ watch(
     markdownPreviewMode.value = editor.getMdMode(next ?? "");
     // SVG：保持旧行为（每次切文件重置为预览）
     svgPreview.value = true;
+    // 预览容器复用（去 key 防闪屏）：同一元素切文件后回到顶部
+    if (mdPreviewRef.value) mdPreviewRef.value.scrollTop = 0;
   },
 );
 
@@ -280,6 +491,38 @@ function onTabsWheel(event: WheelEvent) {
       : event.deltaX;
   if (!delta) return;
   el.scrollLeft += delta;
+}
+
+/**
+ * 标签离场定位：`.tab-leave-active` 需要 `position: absolute` 才能让相邻标签
+ * 立即补位（配合 `.tab-move` 补间）。但绝对定位元素在 flex 容器里没有 inset
+ * 时，静止位置按容器起点算——被关闭的标签会飞到标签条最左端、盖在第一个标签
+ * 上淡出（表现为「第一个标签闪一下」）。所以离场前记下原位，离场时写回。
+ */
+const leavingTabOrigin = new WeakMap<HTMLElement, { left: number; top: number }>();
+
+function onTabBeforeLeave(el: Element) {
+  const node = el as HTMLElement;
+  // 此刻元素仍在文档流中，offsetLeft/offsetTop 就是它在标签条内的真实位置
+  leavingTabOrigin.set(node, { left: node.offsetLeft, top: node.offsetTop });
+}
+
+function onTabLeave(el: Element) {
+  const node = el as HTMLElement;
+  const origin = leavingTabOrigin.get(node);
+  leavingTabOrigin.delete(node);
+  if (!origin) return;
+  node.style.left = `${origin.left}px`;
+  node.style.top = `${origin.top}px`;
+}
+
+/** 离场被打断（同一路径在动画结束前被重新打开）时元素会被复用，
+ *  `.tab` 自身是 relative，残留的 left/top 会把标签挤偏，必须清掉。 */
+function onTabLeaveCancelled(el: Element) {
+  const node = el as HTMLElement;
+  leavingTabOrigin.delete(node);
+  node.style.left = "";
+  node.style.top = "";
 }
 
 const editorCtx = ref<{ x: number; y: number; absPath: string } | null>(null);
@@ -494,9 +737,13 @@ function toggleBlameFromEditor() {
 }
 
 onMounted(() => window.addEventListener("mousedown", onDocMouseDown, true));
-onBeforeUnmount(() =>
-  window.removeEventListener("mousedown", onDocMouseDown, true),
-);
+onBeforeUnmount(() => {
+  window.removeEventListener("mousedown", onDocMouseDown, true);
+  if (mdFindTimer !== null) {
+    clearTimeout(mdFindTimer);
+    mdFindTimer = null;
+  }
+});
 </script>
 
 <template>
@@ -507,6 +754,9 @@ onBeforeUnmount(() =>
         tag="div"
         class="tabs-scroll"
         @wheel.prevent="onTabsWheel"
+        @before-leave="onTabBeforeLeave"
+        @leave="onTabLeave"
+        @leave-cancelled="onTabLeaveCancelled"
       >
         <button
           v-for="tab in tabs"
@@ -661,11 +911,11 @@ onBeforeUnmount(() =>
           />
           <div
             v-else-if="markdownPreview && isMarkdown"
-            :key="`md-${activeTab.path}`"
+            ref="mdPreviewRef"
             class="md-preview"
             @contextmenu="onEditorContextMenu"
           >
-            <div class="md-preview-content" v-html="previewHtml" />
+            <div ref="mdContentRef" class="md-preview-content" v-html="previewHtml" />
           </div>
         </template>
         <div
@@ -686,6 +936,86 @@ onBeforeUnmount(() =>
           </div>
         </div>
       </Transition>
+      <!-- MD 预览内查找：只读浮层（无替换行），⌘F 经 findRequest 路由打开 -->
+      <div
+        v-if="mdFindVisible"
+        class="md-find-panel"
+        role="search"
+        @keydown="onMdFindKeydown"
+      >
+        <div class="md-find-row">
+          <input
+            ref="mdFindInputRef"
+            v-model="mdFindQuery"
+            type="text"
+            class="md-find-input"
+            :placeholder="t('editorFind.findPlaceholder')"
+            :aria-label="t('editorFind.findPlaceholder')"
+            @input="onMdFindInput"
+          />
+          <span class="md-find-count">{{ mdFindCountText }}</span>
+          <button
+            type="button"
+            class="md-find-btn"
+            :title="t('editorFind.previous')"
+            :aria-label="t('editorFind.previous')"
+            @click="stepMdFind(-1)"
+          >
+            ↑
+          </button>
+          <button
+            type="button"
+            class="md-find-btn"
+            :title="t('editorFind.next')"
+            :aria-label="t('editorFind.next')"
+            @click="stepMdFind(1)"
+          >
+            ↓
+          </button>
+          <button
+            type="button"
+            class="md-find-btn md-find-toggle"
+            :class="{ active: mdFindCase }"
+            :title="t('search.caseSensitive')"
+            :aria-label="t('search.caseSensitive')"
+            :aria-pressed="mdFindCase ? 'true' : 'false'"
+            @click="toggleMdFindOpt('case')"
+          >
+            Aa
+          </button>
+          <button
+            type="button"
+            class="md-find-btn md-find-toggle"
+            :class="{ active: mdFindRegex }"
+            :title="t('search.regex')"
+            :aria-label="t('search.regex')"
+            :aria-pressed="mdFindRegex ? 'true' : 'false'"
+            @click="toggleMdFindOpt('regex')"
+          >
+            .*
+          </button>
+          <button
+            type="button"
+            class="md-find-btn md-find-toggle"
+            :class="{ active: mdFindWord }"
+            :title="t('editorFind.wholeWord')"
+            :aria-label="t('editorFind.wholeWord')"
+            :aria-pressed="mdFindWord ? 'true' : 'false'"
+            @click="toggleMdFindOpt('word')"
+          >
+            Ab
+          </button>
+          <button
+            type="button"
+            class="md-find-btn"
+            :title="t('common.close')"
+            :aria-label="t('common.close')"
+            @click="closeMdFind"
+          >
+            ×
+          </button>
+        </div>
+      </div>
 
       <!-- MD 预览/编辑右上角 Segmented Control：定位在 tab 下方的实际编辑内容区内 -->
       <div
@@ -831,6 +1161,9 @@ onBeforeUnmount(() =>
 }
 
 .tabs-scroll {
+  /* 兼作离场标签（.tab-leave-active 绝对定位）的包含块与 offsetParent：
+     保证 onTabBeforeLeave 记录的 offsetLeft/offsetTop 就是 left/top 的坐标系原值 */
+  position: relative;
   flex: 1;
   min-width: 0;
   height: 100%;
@@ -937,6 +1270,7 @@ onBeforeUnmount(() =>
 }
 .tab-leave-active {
   animation: prism-tab-out 160ms var(--ease-out);
+  /* 脱流以便相邻标签立即补位；left/top 由 onTabLeave 写回原位（见脚本注释） */
   position: absolute;
 }
 @keyframes prism-tab-in {
@@ -1069,8 +1403,9 @@ onBeforeUnmount(() =>
 
 /* 画布全部直接子视图（SSH/GitLog/Compare/编辑器/welcome）统一绝对定位叠放：
    同时过渡模式下新旧分支共存，靠 z-index 分层（enter 在上）。
-   旧视图即使动画卡住留在 DOM，也被上层新视图盖住，不影响显示与操作。 */
-.canvas > :not(.md-mode-toggle) {
+   旧视图即使动画卡住留在 DOM，也被上层新视图盖住，不影响显示与操作。
+   .md-mode-toggle / .md-find-panel 是浮层，自带 absolute 定位，不进全屏叠放。 */
+.canvas > :not(.md-mode-toggle):not(.md-find-panel) {
   position: absolute;
   inset: 0;
 }
@@ -1380,6 +1715,93 @@ onBeforeUnmount(() =>
 [data-theme="dawn"] .md-preview-content :deep(.tk-comment) { color: #008000; }
 [data-theme="dawn"] .md-preview-content :deep(.tk-number)  { color: #098658; }
 [data-theme="dawn"] .md-preview-content :deep(.tk-type)    { color: #267f99; }
+/* ==================== MD 预览内查找 ====================
+   浮层复用 .canvas 绝对定位（与 Segmented Control 同层，不进 canvas 过渡）；
+   控件尺寸/配色对齐 CM 查找面板（.prism-find-*），只读故无替换行。 */
+.md-find-panel {
+  position: absolute;
+  top: 10px;
+  right: 76px;
+  width: min(520px, calc(100% - 104px));
+  padding: 6px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-modal);
+  z-index: 6;
+  transform-origin: top right;
+  animation: prism-popover-in var(--transition-medium) var(--ease-out) both;
+}
+.md-find-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.md-find-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-app);
+  color: var(--text-primary);
+  font-size: 12px;
+  transition: border-color var(--transition-fast) var(--ease-out),
+    box-shadow var(--transition-fast) var(--ease-out);
+}
+.md-find-input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border-subtle));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-soft) 70%, transparent);
+}
+.md-find-count {
+  flex: 0 0 auto;
+  min-width: 52px;
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+  white-space: nowrap;
+}
+.md-find-btn {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  transition: background var(--transition-fast) var(--ease-out),
+    color var(--transition-fast) var(--ease-out);
+}
+.md-find-btn:hover {
+  background: var(--accent-soft);
+  color: var(--text-primary);
+}
+.md-find-btn.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.md-find-btn.md-find-toggle {
+  font-size: 11px;
+  font-weight: 600;
+}
+/* 命中：弱高亮；当前命中：强高亮 + 描边（对齐 .cm-searchMatch(-selected)） */
+.md-preview-content :deep(mark.md-find-match) {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+.md-preview-content :deep(mark.md-find-match.is-current) {
+  background: color-mix(in srgb, var(--accent) 55%, transparent);
+  outline: 1px solid color-mix(in srgb, var(--accent) 70%, transparent);
+}
 
 /* ==================== MD 预览/编辑右上角 Segmented Control ====================
    absolute 锚定到 .canvas 右上角，编辑模式与预览模式均可见 */

@@ -1,7 +1,7 @@
 {
   "name": "prismcode",
   "private": true,
-  "version": "3.1.0",
+  "version": "3.2.0",
   "license": "MIT",
   "type": "module",
   "scripts": {
@@ -16,6 +16,7 @@
     "test:completion": "node --experimental-strip-types scripts/completion-selfcheck.ts && node --experimental-strip-types scripts/completion-service-selfcheck.ts && node --experimental-strip-types scripts/type-service-selfcheck.ts",
     "test:language": "node --experimental-strip-types scripts/language-selfcheck.ts",
     "test:markdown-highlight": "node --experimental-strip-types scripts/markdown-highlight-selfcheck.ts",
+    "test:md-preview": "node --experimental-strip-types scripts/md-preview-selfcheck.ts",
     "test:editor-session": "node --experimental-strip-types scripts/editor-session-selfcheck.ts",
     "test:editor-interaction": "node --experimental-strip-types scripts/editor-interaction-selfcheck.ts",
     "test:jump-highlight": "node --experimental-strip-types scripts/jump-highlight-selfcheck.ts",

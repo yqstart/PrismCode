@@ -2,7 +2,16 @@
 
 本文件遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 风格，版本号遵循语义化版本。
 
-## [Unreleased]
+## [3.2.0] - 2026-09-15
+
+### 新增
+
+- Markdown 预览支持 ⌘/Ctrl+F 只读查找：浮层样式对齐编辑器查找面板（区分大小写 / 正则 / 全词，Enter / F3 / ⌘G 导航，Esc 关闭），命中 `mark` 高亮、当前命中居中滚动。
+
+### 修复
+
+- Markdown 预览切换闪屏：预览容器去 `key` 复用（切文件只换 `v-html`，不再触发画布离场 / 进场动画），切文件后回到顶部。
+- 关闭标签时标签栏闪动：离场标签脱离文档流后没有定位坐标，引擎按 flex 容器起点摆放，导致残影盖在第一个标签上淡出；现于离场前记录原位、离场时写回。
 
 ## [3.1.0] - 2026-09-14
 
@@ -181,6 +190,7 @@ Prism Code 1.0.0 是当前代码基线的首个可用大版本，定位为轻量
 - 文件访问、Git、搜索、SSH 和更新说明渲染均加入路径校验、错误处理、超时清理、敏感信息隔离和 Markdown 链接过滤。
 - 采用 MIT 许可证，纯开源免费；本版本坚持离线优先，不包含联网 AI 补全、AI 对话面板、AI Agent、MCP/Skills 生态或插件市场。
 
+[3.2.0]: https://github.com/yqstart/PrismCode/releases/tag/v3.2.0
 [3.1.0]: https://github.com/yqstart/PrismCode/releases/tag/v3.1.0
 [3.0.0]: https://github.com/yqstart/PrismCode/releases/tag/v3.0.0
 [2.2.1]: https://github.com/yqstart/PrismCode/releases/tag/v2.2.1
