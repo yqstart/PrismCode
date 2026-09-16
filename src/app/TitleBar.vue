@@ -79,16 +79,28 @@ onMounted(() => {
 
   void refreshFullscreen();
   // 启动瞬间调一次即可；后续由 Rust 端 install_traffic_light_hooks
-  // 监听 Resized/ThemeChanged/ScaleFactorChanged/Focused 事件统一重排。
-  // 不在前端做 80/300/900ms 延迟补排，避免与 hook 事件 setFrame 抢位置造成抖动。
+  // 监听 Resized/Moved/ThemeChanged/ScaleFactorChanged/Focused 事件统一重排。
+  // 不在前端做 80/300/900ms 延迟补排，避免与 AppKit 自身 layout 反复 setFrame
+  // 抢位置造成抖动。
   void syncTrafficLights();
 
   void (async () => {
     try {
       const { getCurrentWindow } = await import("@tauri-apps/api/window");
-      unlistenResize = await getCurrentWindow().onResized(() => {
-        void refreshFullscreen();
-        void syncTrafficLights();
+      const win = getCurrentWindow();
+      // Tauri 后端没有原生 Fullscreen 事件，前端监听进入/退出全屏做两件事：
+      // 1) 更新 isFullscreen（折叠按钮贴左）；
+      // 2) 退出全屏后补一次红绿灯重排——AppKit 进出全屏会重置标题栏布局，
+      //    而后端 apply_traffic_lights 在全屏期间主动跳过，需在退出后补排。
+      let wasFullscreen = isFullscreen.value;
+      unlistenResize = await win.onResized(() => {
+        void (async () => {
+          await refreshFullscreen();
+          // onResized 在全屏过渡中也会触发；退出全屏的最后一次重排
+          // 落在 isFullscreen 翻回 false 之后，补一次即可，平时后端已处理。
+          if (wasFullscreen && !isFullscreen.value) void syncTrafficLights();
+          wasFullscreen = isFullscreen.value;
+        })();
       });
     } catch {
       // 非桌面壳

@@ -167,17 +167,34 @@ pub fn apply_titlebar_background(
 
 /// 按 TITLEBAR_HEIGHT 重排红绿灯，使其与前端 TitleBar 折叠按钮垂直对齐。
 ///
-/// 关键：title_bar_container 必须同时设置 size.height 和 origin.y——
-/// - size.height: 拉高容器到 38pt（默认可能是 28pt，AppKit standard 标题栏高度）
+/// 关键：title_bar_container（NSTitlebarContainerView）必须同时设置
+/// size.height 和 origin.y——
+/// - size.height: 拉高容器到 38pt（默认是 32pt，AppKit 标准值；旧注释写的
+///   28pt 是过时数据）
 /// - origin.y: 把容器底边对齐窗口顶（容器底 y = window.height，容器顶 y = window.height - 38）
 /// 之后再用 setFrameOrigin 摆按钮，按钮 origin_y 用**相对容器底**算：
 /// `origin_y = (TITLEBAR_HEIGHT - button_h) / 2`。
+/// 注意坐标系：按钮是 NSTitlebarView（parent1）的子视图，origin_y 相对的是
+/// parent1 的左下角；本函数同时把 NSTitlebarView 高度拉到 38pt，
+/// 所以相对 parent1 底算出的 12pt 同样居中（按钮中心距顶 19pt）。
+/// 实测层级：按钮（_NSThemeCloseWidget）→ NSTitlebarView → NSTitlebarContainerView → NSThemeFrame。
 ///
 /// ⚠️ 绝不能配置 tauri.conf.json / WebviewWindow 的 `trafficLightPosition`：
 /// tao 0.35 的 `view.rs draw_rect` 每次窗口重绘都会调 `inset_traffic_lights`，
 /// 把容器高度重置为 `button_h + traffic_light_inset.y`（≈24pt）并重设容器 origin，
 /// 本函数设的按钮 origin_y=12 在 24pt 容器下变成中心距顶 6pt → 红绿灯贴顶被裁。
 /// 删除该配置后 tao 不再插手，位置完全由本函数（setup 一次 + 窗口事件钩子）接管。
+/// （历史注：这里原本写 tao 每次重绘都会重置——已证伪。tao 仅在配置了
+/// trafficLightPosition 时才在 drawRect 里调用 inset_traffic_lights；
+/// 未配置时 drawRect 是空操作，罪魁祸首是 AppKit 自身，见下。）
+///
+/// AppKit 重置布局的触发点（macOS 26 + Xcode 26 实测）：
+/// - 窗口 resize / 移动到另一块屏（ScaleFactorChanged）：NSThemeFrame layout
+///   把 container 高度压回 32pt、按钮 origin 打回 (x, 9)。此时按钮中心距顶
+///   = 38 - (9+7) = 22pt，比居中的 19pt 低 3pt——视觉上灯整体偏下，
+///   与折叠按钮错位约 3pt。
+/// - 进出原生全屏：AppKit 接管按钮布局（container 被挪到屏外），本函数全程跳过。
+/// - 单纯失焦/获焦、最小化/还原、拖动窗口：不重置，可放心监听 Focused 做兜底。
 ///
 /// 全屏时跳过，避免与系统全屏过渡动画抢布局。
 #[cfg(target_os = "macos")]
@@ -218,19 +235,38 @@ pub fn apply_traffic_lights(window: &WebviewWindow) -> Result<(), String> {
     // 容器底 = 窗口顶（y = window.frame.height），容器顶 = window.height - 38。
     // 这一步必须做——少 setFrame 只 setFrameSize 的话，origin.y 没对齐，
     // 后面按钮 origin_y 相对容器底算出来的位置是错的（按钮会消失或偏到窗口外）。
-    let title_bar_container = unsafe {
+    // 层级实测（macOS 26）：按钮.superview() = NSTitlebarView（parent1），
+    // parent1.superview() = NSTitlebarContainerView（parent2）。
+    // 按钮 origin 相对的是 parent1 的左下角，不是 parent2 的——
+    // 所以两个层级都要拉高到 38pt（AppKit 默认都是 32pt），
+    // 按钮 origin_y = (38 - button_h) / 2 = 12 相对 parent1 底，
+    // 按钮中心距窗口顶 = 38 - (12+7) = 19pt，正好与前端 38px 标题栏居中对齐。
+    let title_bar_view = unsafe {
         close
             .superview()
-            .and_then(|v| v.superview())
+            .ok_or_else(|| "无标题栏视图".to_string())?
+    };
+    let title_bar_container = unsafe {
+        title_bar_view
+            .superview()
             .ok_or_else(|| "无标题栏容器".to_string())?
     };
-    let mut title_bar_rect = NSView::frame(&*title_bar_container);
-    title_bar_rect.size.height = TITLEBAR_HEIGHT;
-    title_bar_rect.origin.y = ns_window.frame().size.height - TITLEBAR_HEIGHT;
-    title_bar_container.setFrame(title_bar_rect);
+    let win_h = ns_window.frame().size.height;
+    let mut container_rect = NSView::frame(&*title_bar_container);
+    container_rect.size.height = TITLEBAR_HEIGHT;
+    container_rect.origin.y = win_h - TITLEBAR_HEIGHT;
+    title_bar_container.setFrame(container_rect);
+    // NSTitlebarView 与 container 等高（默认 32pt 也要拉到 38pt），
+    // 按钮 origin 相对它算，基准才与 container 一致。
+    let mut title_view_rect = NSView::frame(&*title_bar_view);
+    title_view_rect.size.height = TITLEBAR_HEIGHT;
+    title_view_rect.origin.x = 0.0;
+    title_view_rect.origin.y = 0.0;
+    title_bar_view.setFrame(title_view_rect);
 
-    // 按钮居中：origin_y 相对 title_bar_container 底部（y=window.height）算。
-    // 按钮中心 = (TITLEBAR_HEIGHT/2) above container.bottom；
+    // 按钮居中：origin_y 相对 NSTitlebarView（parent1）底部算。
+    // 按钮中心距窗口顶 = TITLEBAR_HEIGHT - (origin_y + button_h / 2) = 19pt，
+    // 与前端 38px 标题栏的折叠按钮（align-items:center → 中线 19px）对齐。
     // origin_y = (TITLEBAR_HEIGHT - button_h) / 2。
     let close_rect = NSView::frame(&*close);
     let button_h = if close_rect.size.height > 0.0 {
@@ -263,22 +299,46 @@ pub fn install_traffic_light_hooks(window: &WebviewWindow) {
 
     // 立即调一次：button_h 已兜底 14 逻辑点，setup 阶段能拿到按钮 frame → 摆到正确位置
     let _ = apply_traffic_lights(window);
-    // 后续仅在 Resized/ThemeChanged/ScaleFactorChanged 等真实布局事件触发时重排。
-    // 不监听 Focused：失焦窗口点击红绿灯时，聚焦事件与鼠标事件相邻，
-    // 此时 setFrame 会抢在鼠标处理期间重排按钮，导致首次点击失效。
-    // —— 不再用 80/250/700/1600ms 延迟补排，避免与 Wry 持续 inset_traffic_lights 反复 setFrame 导致视觉抖动
+    // 后续仅在 Resized/Moved/ThemeChanged/ScaleFactorChanged/Focused 等真实布局
+    // 事件触发时重排：
+    // - Resized：窗口尺寸变化必重置 container（实测）→ 立刻重排。
+    // - Moved：跨屏拖动会换 backingScaleFactor，但 ScaleFactorChanged 只在 DPI
+    //   真变时才发；同 DPI 跨屏也可能重置主题帧。Moved 高频但本函数开销小
+    //   （几次 setFrame），直接重排即可。
+    // - Focused(true)：原生全屏进出 / 系统重置布局后没有 Resized 事件，
+    //   获焦是最后的兜底机会。点击守卫保证键鼠按下期间不重排——失焦窗口点
+    //   红绿灯时聚焦与鼠标事件相邻，此时 setFrame 会抢在鼠标处理期间挪走按钮、
+    //   导致首次点击失效（旧注释的历史教训），所以聚焦重排前先查鼠标状态。
+    // —— 不用 80/250/700/1600ms 延迟补排，避免与 AppKit 持续 layout 反复
+    // setFrame 导致视觉抖动。
 
     let win = window.clone();
     window.on_window_event(move |event| {
-        if !matches!(
-            event,
+        match event {
             WindowEvent::Resized(_)
-                | WindowEvent::ThemeChanged(_)
-                | WindowEvent::ScaleFactorChanged { .. }
-        ) {
-            return;
+            | WindowEvent::Moved(_)
+            | WindowEvent::ThemeChanged(_)
+            | WindowEvent::ScaleFactorChanged { .. } => {
+                let _ = apply_traffic_lights(&win);
+            }
+            WindowEvent::Focused(true) => {
+                if mouse_button_pressed() {
+                    // 用户正按着键鼠（大概率是点红绿灯），跳过这次，等下次事件
+                    return;
+                }
+                let _ = apply_traffic_lights(&win);
+            }
+            _ => {}
         }
-
-        let _ = apply_traffic_lights(&win);
     });
+}
+
+/// 当前是否有鼠标按键处于按下状态（左/右/中任一）。
+/// 用于 Focused(true) 兜底重排前的点击守卫：失焦窗口点红绿灯时，
+/// AppKit 会先发聚焦事件再派发鼠标点击；若在两次事件之间 setFrame 挪走按钮，
+/// 本次点击会落空（表现为“第一次点只聚焦不关窗”）。有键按下时跳过重排。
+#[cfg(target_os = "macos")]
+fn mouse_button_pressed() -> bool {
+    use objc2_app_kit::NSEvent;
+    NSEvent::pressedMouseButtons() != 0
 }
