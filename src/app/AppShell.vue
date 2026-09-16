@@ -23,9 +23,14 @@ import UpdateNotesDialog from "@/shared/UpdateNotesDialog.vue";
 import PushDialog from "@/features/git/PushDialog.vue";
 import UpdateProjectDialog from "@/features/git/UpdateProjectDialog.vue";
 import InteractiveRebaseDialog from "@/features/git/InteractiveRebaseDialog.vue";
-import { basename, dirname, isPathUnder } from "@/shared/fs";
-import { dispatchDockMenuEvent, type DockMenuEvent } from "@/shared/dockMenu";
+import { basename, isPathUnder } from "@/shared/fs";
 import type { ExternalOpenRequest, ExternalOpenTarget } from "@/shared/externalOpen";
+import { dispatchDockMenuEvent, type DockMenuEvent } from "@/shared/dockMenu";
+import {
+  parentDirectory,
+  planExternalOpen,
+  takeBootFiles,
+} from "@/shared/externalOpenRoute";
 import { setupAutoSave } from "@/features/editor/autoSave";
 import { checkForAppUpdate } from "@/shared/appUpdate";
 import { isMacOS } from "@/shared/platform";
@@ -316,41 +321,10 @@ function onAppWillExit() {
   persistWindowState();
 }
 
-function parentDirectory(path: string): string {
-  const parent = dirname(path);
-  // shared dirname 保留了根目录文件的原样路径；外部打开时需要真正的 `/`。
-  if (parent === path && path.startsWith("/")) return "/";
-  return parent;
-}
-
-function validExternalTarget(target: ExternalOpenTarget): boolean {
-  return Boolean(
-    target &&
-      typeof target.path === "string" &&
-      target.path.trim() &&
-      typeof target.isDir === "boolean",
-  );
-}
-
-async function openExternalTargets(targets: ExternalOpenTarget[]) {
+function openExternalFiles(targets: ExternalOpenTarget[]) {
   for (const target of targets) {
-    if (!validExternalTarget(target)) continue;
-    const path = target.path.trim();
+    const path = target.path;
     try {
-      if (target.isDir) {
-        await workspace.openFolder(path);
-        continue;
-      }
-
-      // 文件必须属于当前工作区才能通过现有受限 FS IPC 打开；外部文件先
-      // 以其父目录建立工作区，再复用普通编辑器打开/定位链路。
-      if (!workspace.rootPath || !isPathUnder(workspace.rootPath, path)) {
-        const opened = await workspace.openFolder(parentDirectory(path), {
-          quiet: true,
-        });
-        if (!opened) continue;
-      }
-
       const line =
         typeof target.line === "number" && Number.isFinite(target.line)
           ? Math.max(1, Math.floor(target.line))
@@ -359,11 +333,16 @@ async function openExternalTargets(targets: ExternalOpenTarget[]) {
         typeof target.column === "number" && Number.isFinite(target.column)
           ? Math.max(1, Math.floor(target.column))
           : 1;
-      if (line !== null) {
-        await editor.openFileAt(path, line, column);
-      } else {
-        await editor.openFile(path);
-      }
+      const openPromise =
+        line !== null
+          ? editor.openFileAt(path, line, column)
+          : editor.openFile(path);
+      void openPromise.catch((error: unknown) => {
+        workspace.showNotice(
+          error instanceof Error ? error.message : String(error),
+          3200,
+        );
+      });
     } catch (error) {
       workspace.showNotice(
         error instanceof Error ? error.message : String(error),
@@ -371,6 +350,58 @@ async function openExternalTargets(targets: ExternalOpenTarget[]) {
       );
     }
   }
+}
+
+async function openExternalTargets(targets: ExternalOpenTarget[]) {
+  const plan = planExternalOpen(targets, workspace.rootPath);
+
+  // 目录：与当前工作区相同时忽略（之前会整窗切换过去，属于打扰）；
+  // 新目录逐个开新窗口，不占用当前窗口。
+  for (const dir of plan.newWindowDirs) {
+    try {
+      await openFolderInNewWindow(dir.path);
+    } catch (error) {
+      workspace.showNotice(
+        error instanceof Error ? error.message : String(error),
+        3200,
+      );
+    }
+  }
+
+  // 工作区外文件：按父目录分组，每组新开一个窗口并透传文件列表。
+  for (const group of plan.newWindowGroups) {
+    try {
+      await openFolderInNewWindow(group.folder, {
+        bootFiles: group.targets,
+      });
+    } catch (error) {
+      workspace.showNotice(
+        error instanceof Error ? error.message : String(error),
+        3200,
+      );
+    }
+  }
+
+  // 本窗口只处理三类：启动目录、当前工作区内文件、无工作区时的首个文件组。
+  for (const dir of plan.inCurrentDirs) {
+    try {
+      await workspace.openFolder(dir.path);
+    } catch (error) {
+      workspace.showNotice(
+        error instanceof Error ? error.message : String(error),
+        3200,
+      );
+    }
+  }
+  if (!plan.inCurrentFiles.length) return;
+  if (!workspace.rootPath || !isPathUnder(workspace.rootPath, plan.inCurrentFiles[0]!.path)) {
+    const opened = await workspace.openFolder(
+      parentDirectory(plan.inCurrentFiles[0]!.path),
+      { quiet: true },
+    );
+    if (!opened) return;
+  }
+  openExternalFiles(plan.inCurrentFiles);
 }
 
 function queueExternalOpenRequest(request: ExternalOpenRequest) {
@@ -413,6 +444,11 @@ async function restoreApplicationWindows(bootFolder: string | null) {
     if (!opened && !isPrimaryWindow) {
       removeWindowSession(windowSessionId);
     }
+    // 外部打开落到新窗口时，随窗口透传待开文件；新窗口打开目录成功后再
+    // 打开文件，行列定位复用普通编辑器链路。目录打开失败也要取走透传，
+    // 避免残留文件下次误打开。
+    const bootFiles = isPrimaryWindow ? [] : takeBootFiles(windowSessionId);
+    if (opened && bootFiles.length) openExternalFiles(bootFiles);
   } else if (isPrimaryWindow) {
     const mainWindow = savedWindows.find((item) => item.id === "main");
     let opened = false;

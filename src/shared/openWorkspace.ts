@@ -1,5 +1,7 @@
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { basename } from "@/shared/fs";
+import type { ExternalOpenTarget } from "@/shared/externalOpen";
+import { removeBootFiles, saveBootFiles } from "@/shared/externalOpenRoute";
 import {
   createWindowSessionId,
   removeWindowSession,
@@ -35,7 +37,7 @@ export function readBootFolder(): string | null {
 /** 在新窗口中打开指定文件夹；restoreId 用于重启后复用原窗口身份。 */
 export async function openFolderInNewWindow(
   folder: string,
-  options?: { windowId?: string },
+  options?: { windowId?: string; bootFiles?: readonly ExternalOpenTarget[] },
 ): Promise<void> {
   const windowId = options?.windowId ?? createWindowSessionId();
   const label = windowLabel(windowId);
@@ -45,6 +47,7 @@ export async function openFolderInNewWindow(
   // 先注册再创建，确保极短的启动/退出窗口内也不会丢失这条记录；创建失败
   // 时回滚，避免下次启动反复尝试不存在的动态窗口。
   saveWindowSession(folder, windowId);
+  if (options?.bootFiles?.length) saveBootFiles(windowId, options.bootFiles);
   const webview = new WebviewWindow(label, {
     title: `Prism Code — ${basename(folder)}`,
     url,
@@ -62,6 +65,7 @@ export async function openFolderInNewWindow(
     void webview.once("tauri://created", () => resolve());
     void webview.once("tauri://error", (event) => {
       removeWindowSession(windowId);
+      removeBootFiles(windowId);
       reject(new Error(String(event.payload ?? "创建新窗口失败")));
     });
   });
