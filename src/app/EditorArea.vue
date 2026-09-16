@@ -48,7 +48,6 @@ const settings = useSettingsStore();
 const { tabs, activePath, activeTab, blameVisible, findRequest } = storeToRefs(editor);
 const { rootPath } = storeToRefs(workspace);
 const { snapshot: gitSnapshot } = storeToRefs(git);
-const { isFocused: sessionsFocused } = storeToRefs(sessions);
 const {
   open: sshOpen,
   mounted: sshMounted,
@@ -102,12 +101,20 @@ const showImagePreview = computed(
     (isRaster.value || (isSvg.value && svgPreview.value)),
 );
 
+/** 当前活动 md 是否因渲染失败而强制回退到编辑态 */
+const mdRenderFailed = computed(
+  () =>
+    isMarkdown.value &&
+    Boolean(activeTab.value) &&
+    mdRenderFailedPath.value === activeTab.value?.path,
+);
+
 const showTextEditor = computed(
   () =>
     showFileEditor.value &&
     Boolean(activeTab.value) &&
     !isRaster.value &&
-    !(isMarkdown.value && markdownPreview.value) &&
+    !(isMarkdown.value && markdownPreview.value && !mdRenderFailed.value) &&
     !(isSvg.value && svgPreview.value),
 );
 
@@ -147,8 +154,19 @@ const previewHtml = computed(() => {
   ) {
     return "";
   }
-  return renderMarkdown(activeTab.value.content);
+  try {
+    return renderMarkdown(activeTab.value.content);
+  } catch (error) {
+    // 渲染失败（畸形 md 触发解析器异常）：记失败路径，mdRenderFailed 分支
+    // 会把该文件展示为编辑态而非空白/旧内容。try/catch 放在 computed 内：
+    // computed 抛错会连带污染依赖它的 previewHtml watcher，错误必须在此消化。
+    mdRenderFailedPath.value = activeTab.value.path;
+    console.warn("[md-preview] 渲染失败，已回退到编辑态", error);
+    return "";
+  }
 });
+/** 最近一次渲染失败的文件路径：命中时该 md 强制走编辑态（而非空白/旧内容） */
+const mdRenderFailedPath = ref<string | null>(null);
 /** MD 预览容器（滚动）与渲染根：容器复用去 key，切文件只换 v-html（无闪屏） */
 const mdPreviewRef = ref<HTMLElement | null>(null);
 const mdContentRef = ref<HTMLElement | null>(null);
@@ -170,7 +188,8 @@ const mdFindVisible = computed(
     mdFindOpen.value &&
     showFileEditor.value &&
     isMarkdown.value &&
-    markdownPreview.value,
+    markdownPreview.value &&
+    !mdRenderFailed.value,
 );
 
 const mdFindCountText = computed(() => {
@@ -264,7 +283,7 @@ function stepMdFind(delta: 1 | -1): void {
 }
 
 function openMdFind(): void {
-  if (!isMarkdown.value || !markdownPreview.value) return;
+  if (!isMarkdown.value || !markdownPreview.value || mdRenderFailed.value) return;
   mdFindOpen.value = true;
   nextTick(() => {
     // 有旧查询直接沿用并定位首处（对齐 CM 面板 mount 行为），无查询只聚焦
@@ -331,6 +350,7 @@ watch(findRequest, (req) => {
   if (
     !isMarkdown.value ||
     !markdownPreview.value ||
+    mdRenderFailed.value ||
     !showFileEditor.value ||
     sshFocused.value ||
     compareFocused.value ||
@@ -384,6 +404,9 @@ function fileTabTitle(path: string): string {
 watch(
   () => activeTab.value?.path,
   (next) => {
+    // 渲染失败标记只对当时失败的路径有效：切走即清，避免污染其它文件；
+    // 切回同一失败文件时 previewHtml 会重算，仍失败则重新标记。
+    if (mdRenderFailedPath.value !== next) mdRenderFailedPath.value = null;
     // Markdown：从 store 读上次选择（按路径持久化），无记录默认 preview
     markdownPreviewMode.value = editor.getMdMode(next ?? "");
     // SVG：保持旧行为（每次切文件重置为预览）
@@ -497,32 +520,55 @@ function onTabsWheel(event: WheelEvent) {
  * 标签离场定位：`.tab-leave-active` 需要 `position: absolute` 才能让相邻标签
  * 立即补位（配合 `.tab-move` 补间）。但绝对定位元素在 flex 容器里没有 inset
  * 时，静止位置按容器起点算——被关闭的标签会飞到标签条最左端、盖在第一个标签
- * 上淡出（表现为「第一个标签闪一下」）。所以离场前记下原位，离场时写回。
+ * 上淡出。所以离场前记下原位，离场时写回。
+ *
+ * 跳动根因（macOS overlay scrollbars）：横向滚动条是覆盖层、不占布局高度，
+ * `.tabs-scroll` 的 overflow-y: hidden + scrollbar-width: none 会让容器
+ * scrollWidth/scrollLeft 出现亚像素取整抖动。用 offsetLeft 快照再回填
+ * style.left 时，小宽度标签（图标+短文件名）会取到取整前的值，回填后产生
+ * 1px 级整体偏移，视觉上就是关闭时标签条「跳动一下」。改用
+ * getBoundingClientRect 快照（与 FLIP 补间同一坐标系）+ 离场期间锁定元素
+ * 自身宽度 + 离场取消时清掉 FLIP 残留的 transform，关闭即稳。
  */
-const leavingTabOrigin = new WeakMap<HTMLElement, { left: number; top: number }>();
+const leavingTabGeom = new WeakMap<HTMLElement, { left: number; top: number; width: number }>();
 
 function onTabBeforeLeave(el: Element) {
   const node = el as HTMLElement;
-  // 此刻元素仍在文档流中，offsetLeft/offsetTop 就是它在标签条内的真实位置
-  leavingTabOrigin.set(node, { left: node.offsetLeft, top: node.offsetTop });
+  // 此刻元素仍在文档流中，rect 就是它在视口坐标系下的真实位置；
+  // 转成相对 offsetParent（.tabs-scroll，position: relative）的坐标，
+  // 与 FLIP 补间的 getPosition 快照同源，避免 offsetLeft 取整抖动。
+  const parent = node.offsetParent as HTMLElement | null;
+  const rect = node.getBoundingClientRect();
+  const parentRect = parent?.getBoundingClientRect();
+  leavingTabGeom.set(node, {
+    left: parentRect ? rect.left - parentRect.left : node.offsetLeft,
+    top: parentRect ? rect.top - parentRect.top : node.offsetTop,
+    width: rect.width,
+  });
 }
 
 function onTabLeave(el: Element) {
   const node = el as HTMLElement;
-  const origin = leavingTabOrigin.get(node);
-  leavingTabOrigin.delete(node);
+  const origin = leavingTabGeom.get(node);
+  leavingTabGeom.delete(node);
   if (!origin) return;
   node.style.left = `${origin.left}px`;
   node.style.top = `${origin.top}px`;
+  // 锁定自身宽度：flex 容器里绝对定位元素的宽度按内容重算（图标/关闭按钮
+  // 的显隐会让它变窄），宽窄变化会带动相邻标签的 FLIP 目标抖动。
+  node.style.width = `${origin.width}px`;
 }
 
 /** 离场被打断（同一路径在动画结束前被重新打开）时元素会被复用，
- *  `.tab` 自身是 relative，残留的 left/top 会把标签挤偏，必须清掉。 */
+ *  `.tab` 自身是 relative，残留的 left/top/width 会把标签挤偏，必须清掉；
+ *  同时清掉 FLIP 补间可能残留的行内 transform，否则复用的标签会偏位。 */
 function onTabLeaveCancelled(el: Element) {
   const node = el as HTMLElement;
-  leavingTabOrigin.delete(node);
+  leavingTabGeom.delete(node);
   node.style.left = "";
   node.style.top = "";
+  node.style.width = "";
+  node.style.transform = "";
 }
 
 const editorCtx = ref<{ x: number; y: number; absPath: string } | null>(null);
@@ -909,8 +955,11 @@ onBeforeUnmount(() => {
             :content="activeTab.content"
             @contextmenu="onEditorContextMenu"
           />
+          <!-- 预览分支必须与 showTextEditor 的 md 条件互补：渲染失败回退编辑态
+               时 showTextEditor 为 true 走上面分支；此处只在「预览成功」时挂载，
+               否则失败文件会同时命中两分支、旧预览 DOM 残留（上次文件的内容）。 -->
           <div
-            v-else-if="markdownPreview && isMarkdown"
+            v-else-if="markdownPreview && isMarkdown && !mdRenderFailed"
             ref="mdPreviewRef"
             class="md-preview"
             @contextmenu="onEditorContextMenu"
@@ -919,7 +968,7 @@ onBeforeUnmount(() => {
           </div>
         </template>
         <div
-          v-else-if="!sessionsFocused && !sshFocused && !compareFocused && !gitLogFocused && !activeTab"
+          v-else-if="!sshFocused && !compareFocused && !gitLogFocused && !activeTab"
           key="welcome"
           class="welcome"
         >
@@ -1270,8 +1319,11 @@ onBeforeUnmount(() => {
 }
 .tab-leave-active {
   animation: prism-tab-out 160ms var(--ease-out);
-  /* 脱流以便相邻标签立即补位；left/top 由 onTabLeave 写回原位（见脚本注释） */
+  /* 脱流以便相邻标签立即补位；left/top/width 由 onTabLeave 写回原位（见脚本注释） */
   position: absolute;
+  /* 定宽 + 隐藏溢出：防止脱流后按内容重算宽度、挤动相邻标签的 FLIP 目标 */
+  overflow: hidden;
+  pointer-events: none;
 }
 @keyframes prism-tab-in {
   from {

@@ -33,10 +33,15 @@ marked.use({
       return escapeHtml(text);
     },
     // 安全防线 ②：过滤 javascript:/data: 等危险协议链接，防点击执行脚本
-    link({ href, title, text }) {
-      // text 为原始未转义文本，必须经 parseInline 解析（其中 raw HTML 会走
-      // 上面的 html renderer 被转义，粗体/斜体等正常渲染）
-      const content = marked.parseInline(text);
+    link({ href, title, tokens }) {
+      // 直接渲染已切分的子 token，不回炉重走 inline 词法器。
+      // 旧实现用 marked.parseInline(text) 解析「链接文本原文」，未闭合输入
+      // （如 `[a](http://x` / 裸 URL / autolink / email）会触发
+      // tokenizer ↔ link-renderer 互递归，导致 Maximum call stack 溢出，
+      // 预览 computed 抛错整区白屏（或残留上次文件的旧 DOM）。
+      // 子 token 中的 raw HTML 仍走上面的 html renderer 被转义，
+      // 粗体/斜体/行内 code 正常渲染，安全防线不变。
+      const content = this.parser.parseInline(tokens ?? []);
       if (isUnsafeProtocol(href)) {
         return `<span title="${escapeAttr(title ?? "")}">${content}</span>`;
       }
@@ -108,6 +113,8 @@ function safeFromCodePoint(code: number): string {
 /**
  * 同步解析 markdown 文本为 HTML 字符串。
  * 与 marked.parse({ async: false }) 等价，封装后调用方不直接 import marked。
+ * marked 对畸形输入可能抛错（如历史版本的栈溢出）；调用方 previewHtml
+ * computed 内兜底，抛错时展示源码编辑态而非白屏/旧内容。
  */
 export function renderMarkdown(source: string): string {
   return marked.parse(source, { async: false }) as string;

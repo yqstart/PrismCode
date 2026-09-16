@@ -1,6 +1,7 @@
 // ==================== MD 预览查找自测 ====================
 // 覆盖 previewFind 纯函数（大小写/正则/全词/非法正则/空查询/零宽/上限）
-// 与 EditorArea 接线（去 key 防闪屏、回顶、⌘F 路由、mark 包裹）。
+// 与 EditorArea 接线（去 key 防闪屏、回顶、⌘F 路由、mark 包裹）
+// 与 preview.ts link 渲染器（tokens 直渲防栈溢出）与渲染失败回退编辑态。
 
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -9,6 +10,7 @@ import {
   buildPreviewFindRegExp,
   findPreviewMatches,
 } from "../src/features/editor/markdown/previewFind.ts";
+import { renderMarkdown } from "../src/features/editor/markdown/preview.ts";
 
 const OPTS = { caseSensitive: false, regexp: false, wholeWord: false };
 
@@ -59,5 +61,42 @@ assert.match(area, /mdFindVisible/);
 assert.match(area, /\.canvas > :not\(\.md-mode-toggle\):not\(\.md-find-panel\)/);
 // 浮层隐藏恢复（SSH/GitLog 切回）时 DOM 重建，需重打高亮
 assert.match(area, /watch\(mdFindVisible/);
+
+// link 渲染器必须用 tokens 直渲（this.parser.parseInline(tokens)），
+// 禁止回炉重走 inline 词法器（marked.parseInline(text)）：
+// 未闭合输入（[a](http://x / 裸 URL / autolink / email）会触发
+// tokenizer ↔ renderer 互递归栈溢出，预览 computed 抛错整区白屏。
+const preview = await readFile(
+  resolve(root, "src/features/editor/markdown/preview.ts"),
+  "utf8",
+);
+assert.doesNotMatch(preview, /const content = marked\.parseInline\(/);
+assert.match(preview, /this\.parser\.parseInline\(tokens/);
+// 渲染失败回退编辑态：computed 内消化异常并记失败路径，模板分支互补
+assert.match(area, /mdRenderFailed/);
+assert.match(area, /!mdRenderFailed/);
+// 曾栈溢出的输入全部可渲染（回归核心：裸 URL / autolink / email / 未闭合链接）
+assert.doesNotThrow(() => renderMarkdown("[abc](http://x"));
+assert.doesNotThrow(() => renderMarkdown("裸URL http://example.com 测试"));
+assert.doesNotThrow(() => renderMarkdown("<http://example.com>"));
+assert.doesNotThrow(() => renderMarkdown("email test@example.com"));
+assert.doesNotThrow(() => renderMarkdown("# 标题\n\n[坏](http://x\n\n正文"));
+// 安全防线不退化：危险协议仍降级 span，xss 载荷仍转义
+assert.match(renderMarkdown("[a](javascript:alert(1))"), /<span/);
+assert.doesNotMatch(renderMarkdown("[a](javascript:alert(1))"), /<a\s+href/);
+// raw HTML 文本经转义后无可执行标签（尖括号已转义，仅文本形态残留属性名）
+assert.doesNotMatch(
+  renderMarkdown("[<img src=x onerror=alert(1)>](https://x)"),
+  /<img|<script/i,
+);
+// 正常链接仍可用：target=_blank + noopener
+assert.match(
+  renderMarkdown("[x](https://example.com)"),
+  /<a href="https:\/\/example\.com"[^>]*target="_blank"/,
+);
+assert.match(
+  renderMarkdown("[*em* **b**](https://x)"),
+  /<em>em<\/em> <strong>b<\/strong>/,
+);
 
 console.log("MD 预览查找自测通过");
