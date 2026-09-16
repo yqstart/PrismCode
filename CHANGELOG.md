@@ -2,6 +2,19 @@
 
 本文件遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 风格，版本号遵循语义化版本。
 
+## [3.3.0] - 2026-09-16
+
+### 新增
+
+- 外部打开按工作区归属分流：已在当前窗口工作区内的文件留在本窗口打开；工作区外的文件按父目录分组、每组自动新开一个窗口展示（文件与行列定位随窗口透传）；目录同理，与当前工作区相同时忽略，不同则新开窗口；无工作区时首个文件组留给当前窗口，其余开新窗口。
+
+### 修复
+
+- macOS 标题栏红绿灯在窗口 resize、跨屏移动、进出原生全屏后与前端折叠按钮错位（整体偏低约 3pt）：`NSTitlebarView` 与标题栏容器两层高度一并对齐到 38pt，重排改由 `Resized` / `Moved` / `ThemeChanged` / `ScaleFactorChanged` / `Focused` 事件统一驱动，并在键鼠按下期间跳过重排，避免抢走失焦窗口对红绿灯的首次点击。
+- Markdown 预览遇到未闭合链接 / 裸 URL / 邮箱自动链接时整区空白或残留上次文件内容：`link` 渲染器改用已切分 token 直渲（不再回炉重走 inline 词法器，避免 tokenizer 与渲染器互递归栈溢出）；渲染仍抛错时该文件自动回退到编辑态。
+- 关闭标签时标签栏跳动：离场快照改用 `getBoundingClientRect`（与 FLIP 补间同坐标系，避免 `offsetLeft` 取整抖动），离场期间锁定自身宽度，离场取消时清掉残留位移。
+- 未打开任何标签且终端面板展开时编辑区空白：欢迎页（打开文件夹 / 打开终端）不再被终端焦点抑制（本地终端改为底部面板后遗留的 canvas 级判据），终端面板展开 / 收起均常驻显示。
+
 ## [3.2.0] - 2026-09-15
 
 ### 新增
@@ -190,6 +203,7 @@ Prism Code 1.0.0 是当前代码基线的首个可用大版本，定位为轻量
 - 文件访问、Git、搜索、SSH 和更新说明渲染均加入路径校验、错误处理、超时清理、敏感信息隔离和 Markdown 链接过滤。
 - 采用 MIT 许可证，纯开源免费；本版本坚持离线优先，不包含联网 AI 补全、AI 对话面板、AI Agent、MCP/Skills 生态或插件市场。
 
+[3.3.0]: https://github.com/yqstart/PrismCode/releases/tag/v3.3.0
 [3.2.0]: https://github.com/yqstart/PrismCode/releases/tag/v3.2.0
 [3.1.0]: https://github.com/yqstart/PrismCode/releases/tag/v3.1.0
 [3.0.0]: https://github.com/yqstart/PrismCode/releases/tag/v3.0.0
