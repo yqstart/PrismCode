@@ -1,8 +1,8 @@
 import {
+  clearMainWindowRoot,
   getWindowSessionId,
-  loadWindowSessions,
-  removeWindowSession,
-  saveWindowSession,
+  loadMainWindowRoot,
+  saveMainWindowRoot,
 } from "../src/shared/windowSession.ts";
 import {
   loadEditorSession,
@@ -15,6 +15,7 @@ import {
 
 type Stored = Map<string, string>;
 const stored: Stored = new Map();
+const locationStub = { search: "?windowId=window-a" };
 (globalThis as typeof globalThis & {
   localStorage: Storage;
   window: { location: { search: string } };
@@ -30,10 +31,12 @@ const stored: Stored = new Map();
 } as Storage;
 (globalThis as typeof globalThis & {
   window: { location: { search: string } };
-}).window = { location: { search: "?windowId=window-a" } };
+}).window = { location: locationStub };
 
 let failed = 0;
+let total = 0;
 function assert(name: string, condition: boolean, detail?: unknown): void {
+  total += 1;
   if (condition) console.log(`  ✓ ${name}`);
   else {
     failed += 1;
@@ -41,18 +44,59 @@ function assert(name: string, condition: boolean, detail?: unknown): void {
   }
 }
 
+const windowSessionsKey = "prismcode.window-sessions.v1";
 const root = "/workspace/demo";
 const fileA = "/workspace/demo/src/a.ts";
 const fileB = "/workspace/demo/src/b.ts";
 
 assert("从 URL 读取稳定窗口 ID", getWindowSessionId() === "window-a");
-saveWindowSession(root, "window-a");
-saveWindowSession("/workspace/other", "window-b");
-assert("多个窗口记录并存", loadWindowSessions().length === 2, loadWindowSessions());
-removeWindowSession("window-b");
+
+saveMainWindowRoot(root);
 assert(
-  "关闭窗口后只移除对应窗口记录",
-  loadWindowSessions().length === 1 && loadWindowSessions()[0]?.id === "window-a",
+  "动态窗口不写主窗口锚点",
+  loadMainWindowRoot() === null,
+  loadMainWindowRoot(),
+);
+
+locationStub.search = "";
+saveMainWindowRoot(root);
+assert("主窗口工作区可读写", loadMainWindowRoot() === root, loadMainWindowRoot());
+saveMainWindowRoot("/workspace/other");
+assert(
+  "重新打开工作区会覆盖旧锚点",
+  loadMainWindowRoot() === "/workspace/other",
+  loadMainWindowRoot(),
+);
+
+stored.set(
+  windowSessionsKey,
+  JSON.stringify([
+    { id: "window-b", root: "/workspace/b", updatedAt: 1 },
+    { id: "main", root: "/workspace/legacy", updatedAt: 2 },
+  ]),
+);
+assert(
+  "兼容旧版多窗口索引，只取 main 记录",
+  loadMainWindowRoot() === "/workspace/legacy",
+  loadMainWindowRoot(),
+);
+saveMainWindowRoot(root);
+assert(
+  "写入后只保留主窗口一条记录",
+  (JSON.parse(stored.get(windowSessionsKey) ?? "[]") as unknown[]).length === 1,
+  stored.get(windowSessionsKey),
+);
+
+clearMainWindowRoot();
+assert("主窗口关闭后清除锚点", loadMainWindowRoot() === null);
+
+saveMainWindowRoot(root);
+locationStub.search = "?windowId=window-a";
+clearMainWindowRoot();
+assert(
+  "动态窗口关闭不清除主窗口锚点",
+  loadMainWindowRoot() === root,
+  loadMainWindowRoot(),
 );
 
 saveEditorSession(root, {
@@ -78,7 +122,7 @@ saveEditorSession(root, {
 assert(
   "同一工作区的编辑器会话按窗口隔离",
   loadEditorSession(root, "window-a")?.activePath === fileA &&
-    loadEditorSession(root, "window-b")?.activePath === fileB,
+  loadEditorSession(root, "window-b")?.activePath === fileB,
 );
 
 saveTerminalSession(
@@ -107,11 +151,11 @@ saveTerminalSession(
 assert(
   "终端标签和展开状态按窗口隔离",
   loadTerminalSession(root, "window-a")?.localTerminals.length === 1 &&
-    loadTerminalSession(root, "window-a")?.open === true &&
-    loadTerminalSession(root, "window-b")?.localTerminals.length === 2 &&
-    loadTerminalSession(root, "window-b")?.activeLocalId === "local-2" &&
-    loadTerminalSession(root, "window-b")?.dormant === true,
+  loadTerminalSession(root, "window-a")?.open === true &&
+  loadTerminalSession(root, "window-b")?.localTerminals.length === 2 &&
+  loadTerminalSession(root, "window-b")?.activeLocalId === "local-2" &&
+  loadTerminalSession(root, "window-b")?.dormant === true,
 );
 
-console.log(`\n通过 ${5 - failed}，失败 ${failed}`);
+console.log(`\n通过 ${total - failed}，失败 ${failed}`);
 if (failed > 0) process.exit(1);

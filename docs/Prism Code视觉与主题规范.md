@@ -292,7 +292,7 @@ Midnight / Cyberpunk 各自维护完整 `HighlightStyle`（矢车菊蓝 / 霓虹
 |---|---|---|
 | `--transition-fast` | `140ms` | hover / 轻反馈（按钮、tab、文字色） |
 | `--transition-medium` | `200ms` | 弹层 / popover / tooltip |
-| `--transition-slow` | `280ms` | 画布切换 / welcome |
+| `--transition-slow` | `280ms` | 缓速档：大区块过渡（画布主区已改为整块替换，当前无使用点） |
 | `--ease-out` | `cubic-bezier(0.16, 1, 0.3, 1)` | 全局缓动 |
 
 ### 8.2 全局关键帧
@@ -303,7 +303,6 @@ Midnight / Cyberpunk 各自维护完整 `HighlightStyle`（矢车菊蓝 / 霓虹
 | `prism-dialog-in` | dialog 弹入 | `translateY(6px) scale(0.98) → 1` |
 | `prism-tab-in` | tab 入场 | `translateY(2px) + opacity` |
 | `prism-toast-in` | toast 入场 | `translateY(8px) scale(0.98) → 1` |
-| `prism-canvas-in` | 画布主区切换 | `translateY(2px) + opacity` |
 | `prism-tooltip-in` | CM6 tooltip / completion / signature enter | `translateY(3px) scale(0.98) → 1` |
 | `prism-popover-in` | context menu / dropdown / project menu | `scale(0.96) + opacity → 1` |
 | `prism-status-pulse` | 状态点脉动 | `opacity 1 ↔ 0.55` |
@@ -315,7 +314,7 @@ Midnight / Cyberpunk 各自维护完整 `HighlightStyle`（矢车菊蓝 / 霓虹
 | 区域 | 动效策略 |
 |---|---|
 | 文件 tab | TransitionGroup + `prism-tab-in` + active `::after` 缩放 |
-| 画布主区（CM/ImagePreview/md-preview/welcome） | `<Transition name="canvas" mode="out-in">` |
+| 画布主区（CM/ImagePreview/md-preview/welcome） | 整块直接替换，不做过渡（交叉淡化会让离场视图透过入场视图显形） |
 | CodeMirror 弹层 | enter-only（CM6 原生无 leave 钩子） |
 | find panel / ctx menu / dropdown | `prism-popover-in` + leave 淡出 |
 | ActivityBar / StatusBar 状态点 | `prism-status-pulse` |

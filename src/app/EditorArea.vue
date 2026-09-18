@@ -933,58 +933,56 @@ onBeforeUnmount(() => {
       </TransitionGroup>
 
       <!--
-        画布切换：默认同时过渡 + 绝对定位叠放（enter 在上层、leave 在下层）。
-        不用 out-in：其 afterLeave 依赖 nextFrame（双 rAF）内注册的动画结束
-        监听，WKWebView 长时间空闲/被遮挡后 rAF 可能被丢弃，旧视图会永久
-        卡在 leave、新分支永不挂载（表现为编辑区黑屏/空白，必须重启）。
-        同时模式下即使动画完全未播放，新内容也已挂载且位于上层可见。
-        :duration 兜底「动画事件丢失」场景（清理残留过渡类）。
+        画布主视图（文件编辑区 / 图片 / MD 预览 / 欢迎页）直接整块替换，不做过渡。
+        这些视图都铺满画布，且彼此背景互相透明，只要「新旧共存 + 淡入淡出」，
+        离场视图就会透过入场视图显形（打开 / 关闭文件时上一屏内容闪一下）；
+        改为淡出到背景同样会看到半空一屏。同类型文件间切换本就直接换文档
+        （无过渡），侧边栏面板切换也是直接换面板，这里保持一致。
+        入场视图自带不透明底色（.welcome / .md-preview），所以 SSH / GitLog /
+        Compare 这些 canvas-fade 视图淡出时不会透过它们显形。
       -->
-      <Transition name="canvas" :duration="{ enter: 320, leave: 220 }">
-        <template v-if="showFileEditor && activeTab">
-          <ImagePreview
-            v-if="showImagePreview"
-            :key="`image-${activeTab.path}`"
-            :path="activeTab.path"
-            :content="isSvg ? activeTab.content : undefined"
-            :cache-key="activeTab.previewNonce"
-          />
-          <CodeMirrorEditor
-            v-else-if="showTextEditor"
-            :path="activeTab.path"
-            :content="activeTab.content"
-            @contextmenu="onEditorContextMenu"
-          />
-          <!-- 预览分支必须与 showTextEditor 的 md 条件互补：渲染失败回退编辑态
-               时 showTextEditor 为 true 走上面分支；此处只在「预览成功」时挂载，
-               否则失败文件会同时命中两分支、旧预览 DOM 残留（上次文件的内容）。 -->
-          <div
-            v-else-if="markdownPreview && isMarkdown && !mdRenderFailed"
-            ref="mdPreviewRef"
-            class="md-preview"
-            @contextmenu="onEditorContextMenu"
-          >
-            <div ref="mdContentRef" class="md-preview-content" v-html="previewHtml" />
-          </div>
-        </template>
+      <template v-if="showFileEditor && activeTab">
+        <ImagePreview
+          v-if="showImagePreview"
+          :key="`image-${activeTab.path}`"
+          :path="activeTab.path"
+          :content="isSvg ? activeTab.content : undefined"
+          :cache-key="activeTab.previewNonce"
+        />
+        <CodeMirrorEditor
+          v-else-if="showTextEditor"
+          :path="activeTab.path"
+          :content="activeTab.content"
+          @contextmenu="onEditorContextMenu"
+        />
+        <!-- 预览分支必须与 showTextEditor 的 md 条件互补：渲染失败回退编辑态
+             时 showTextEditor 为 true 走上面分支；此处只在「预览成功」时挂载，
+             否则失败文件会同时命中两分支、旧预览 DOM 残留（上次文件的内容）。 -->
         <div
-          v-else-if="!sshFocused && !compareFocused && !gitLogFocused && !activeTab"
-          key="welcome"
-          class="welcome"
+          v-else-if="markdownPreview && isMarkdown && !mdRenderFailed"
+          ref="mdPreviewRef"
+          class="md-preview"
+          @contextmenu="onEditorContextMenu"
         >
-          <h1>{{ t("app.name") }}</h1>
-          <p>{{ t("app.tagline") }}</p>
-          <div class="actions">
-            <button type="button" class="cta" @click="workspace.openFolder()">
-              {{ t("editor.openFolder") }}
-            </button>
-            <button type="button" class="ghost" @click="sessions.openSessions(workspace.rootPath)">
-              {{ t("editor.openTerminal") }}
-            </button>
-            <p class="hint">{{ welcomeShortcutHint }}</p>
-          </div>
+          <div ref="mdContentRef" class="md-preview-content" v-html="previewHtml" />
         </div>
-      </Transition>
+      </template>
+      <div
+        v-else-if="!sshFocused && !compareFocused && !gitLogFocused && !activeTab"
+        class="welcome"
+      >
+        <h1>{{ t("app.name") }}</h1>
+        <p>{{ t("app.tagline") }}</p>
+        <div class="actions">
+          <button type="button" class="cta" @click="workspace.openFolder()">
+            {{ t("editor.openFolder") }}
+          </button>
+          <button type="button" class="ghost" @click="sessions.openSessions(workspace.rootPath)">
+            {{ t("editor.openTerminal") }}
+          </button>
+          <p class="hint">{{ welcomeShortcutHint }}</p>
+        </div>
+      </div>
       <!-- MD 预览内查找：只读浮层（无替换行），⌘F 经 findRequest 路由打开 -->
       <div
         v-if="mdFindVisible"
@@ -1454,8 +1452,9 @@ onBeforeUnmount(() => {
 }
 
 /* 画布全部直接子视图（SSH/GitLog/Compare/编辑器/welcome）统一绝对定位叠放：
-   同时过渡模式下新旧分支共存，靠 z-index 分层（enter 在上）。
-   旧视图即使动画卡住留在 DOM，也被上层新视图盖住，不影响显示与操作。
+   SSH/GitLog/Compare 用 v-show 保活，canvas-fade 淡出期间与主视图共存；
+   主视图之间不做过渡，同一时刻只有一个（新的直接替换旧的）。
+   层级按 DOM 顺序决定，主视图排在最后即压在最上层（且自带不透明底色）。
    .md-mode-toggle / .md-find-panel 是浮层，自带 absolute 定位，不进全屏叠放。 */
 .canvas > :not(.md-mode-toggle):not(.md-find-panel) {
   position: absolute;
@@ -1496,43 +1495,8 @@ onBeforeUnmount(() => {
   height: 100%;
 }
 
-/* canvas：互斥视图（CM/Image/md/welcome）交叉淡化 + 轻微上移。
-   用 animation 而非 transition（理由同 canvas-fade）：动画事件/rAF 丢失时
-   元素回到自身样式（opacity 1）保持可见，杜绝「标签已打开但编辑区黑屏」。
-   同时模式下 enter 元素压在上层（z 2），leave 元素在下层（z 1）。 */
-.canvas-enter-active {
-  animation: prism-canvas-in var(--transition-slow) var(--ease-out);
-  z-index: 2;
-}
-.canvas-leave-active {
-  animation: prism-canvas-out var(--transition-fast) var(--ease-out);
-  z-index: 1;
-  /* 离场视图不接收交互：动画卡住残留时也不能挡住新视图 */
-  pointer-events: none;
-}
-@keyframes prism-canvas-in {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-@keyframes prism-canvas-out {
-  from {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  to {
-    opacity: 0;
-    transform: translateY(-2px);
-  }
-}
-
 /* ctx：tab-ctx / editor-ctx 右键菜单 popover。
-   同 canvas：用 animation，动画事件丢失时菜单仍可见可点（transparent 也不挡点击）。 */
+   同 canvas-fade：用 animation，动画事件丢失时菜单仍可见可点（transparent 也不挡点击）。 */
 .ctx-enter-active {
   animation: prism-ctx-in var(--transition-medium) var(--ease-out);
 }
@@ -1586,6 +1550,10 @@ onBeforeUnmount(() => {
   position: relative;
   height: 100%;
   overflow: auto;
+  /* 铺满画布的主视图必须自带不透明底色（与 .editor-area 的 --bg-editor 一致，
+     肉眼无差别）：否则 SSH / GitLog / Compare 等 canvas-fade 视图在它下面淡出时
+     会从预览区透出来 */
+  background: var(--bg-editor);
   color: var(--text-primary);
   font-family: var(--font-ui);
   font-size: var(--font-size-md);   /* 13px，紧凑 */
@@ -1902,6 +1870,8 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   gap: 8px;
+  /* 同 .md-preview：铺满画布的主视图自带不透明底色，避免下层视图透出来 */
+  background: var(--bg-editor);
   color: var(--text-secondary);
 }
 

@@ -301,18 +301,6 @@ textarea::placeholder {
   }
 }
 
-/* 画布主区切换：用于 EditorArea 画布 + welcome（mode="out-in"） */
-@keyframes prism-canvas-in {
-  from {
-    opacity: 0;
-    transform: translateY(2px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 /* CodeMirror 弹层（completions / hover / signature）——CM6 不提供 leave 钩子，仅 enter */
 @keyframes prism-tooltip-in {
   from {

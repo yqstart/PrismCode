@@ -2,12 +2,7 @@ import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { basename } from "@/shared/fs";
 import type { ExternalOpenTarget } from "@/shared/externalOpen";
 import { removeBootFiles, saveBootFiles } from "@/shared/externalOpenRoute";
-import {
-  createWindowSessionId,
-  removeWindowSession,
-  saveWindowSession,
-  windowLabel,
-} from "@/shared/windowSession";
+import { createWindowSessionId } from "@/shared/windowSession";
 
 export interface BootWindowState {
   folder: string | null;
@@ -29,26 +24,19 @@ export function readBootState(): BootWindowState {
   }
 }
 
-/** 从启动 URL 读取新窗口要打开的文件夹（兼容旧调用方）。 */
-export function readBootFolder(): string | null {
-  return readBootState().folder;
-}
-
-/** 在新窗口中打开指定文件夹；restoreId 用于重启后复用原窗口身份。 */
+/** 在新窗口中打开指定文件夹。 */
 export async function openFolderInNewWindow(
   folder: string,
-  options?: { windowId?: string; bootFiles?: readonly ExternalOpenTarget[] },
+  options?: { bootFiles?: readonly ExternalOpenTarget[] },
 ): Promise<void> {
-  const windowId = options?.windowId ?? createWindowSessionId();
-  const label = windowLabel(windowId);
+  const windowId = createWindowSessionId();
   const url =
     `index.html?folder=${encodeURIComponent(folder)}` +
     `&windowId=${encodeURIComponent(windowId)}`;
-  // 先注册再创建，确保极短的启动/退出窗口内也不会丢失这条记录；创建失败
-  // 时回滚，避免下次启动反复尝试不存在的动态窗口。
-  saveWindowSession(folder, windowId);
+  // 待开文件跟随窗口 ID 写入 localStorage：新窗口启动时一次性取走，
+  // 避免 URL 编码长路径；写入失败只影响文件定位，不阻断窗口创建。
   if (options?.bootFiles?.length) saveBootFiles(windowId, options.bootFiles);
-  const webview = new WebviewWindow(label, {
+  const webview = new WebviewWindow(`proj-${windowId}`, {
     title: `Prism Code — ${basename(folder)}`,
     url,
     width: 1280,
@@ -64,7 +52,6 @@ export async function openFolderInNewWindow(
   await new Promise<void>((resolve, reject) => {
     void webview.once("tauri://created", () => resolve());
     void webview.once("tauri://error", (event) => {
-      removeWindowSession(windowId);
       removeBootFiles(windowId);
       reject(new Error(String(event.payload ?? "创建新窗口失败")));
     });

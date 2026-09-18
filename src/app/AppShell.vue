@@ -39,10 +39,10 @@ import {
   readBootState,
 } from "@/shared/openWorkspace";
 import {
+  clearMainWindowRoot,
   getWindowSessionId,
   isMainWindowSession,
-  loadWindowSessions,
-  removeWindowSession,
+  loadMainWindowRoot,
 } from "@/shared/windowSession";
 import { useEditorStore } from "@/stores/editor";
 import { useGitStore } from "@/stores/git";
@@ -301,7 +301,7 @@ function onWindowFocus() {
   void workspace.refreshFromDisk([], { quiet: true });
 }
 
-/** 关闭/退出前同步该窗口当前工作区的文件和终端快照。窗口索引在打开工作区时已写入。 */
+/** 关闭/退出前同步该窗口当前工作区的文件和终端快照；主窗口工作区锚点在打开工作区时已写入。 */
 function persistWindowState() {
   const root = workspace.rootPath;
   settings.persistNow();
@@ -311,8 +311,8 @@ function persistWindowState() {
 
 function onBeforeUnload() {
   persistWindowState();
-  // 关闭单个窗口时移除索引；应用整体退出由 app://will-exit 标记后保留。
-  if (!appQuitting) removeWindowSession(windowSessionId);
+  // 主窗口正常关闭时清除工作区锚点；应用整体退出由 app://will-exit 标记后保留。
+  if (!appQuitting) clearMainWindowRoot();
 }
 
 /** 主进程发出应用退出通知后，各 WebView 先保存，再按原生流程退出。 */
@@ -437,39 +437,25 @@ function openRecentProjectInNewWindow(path: string) {
 }
 
 async function restoreApplicationWindows(bootFolder: string | null) {
-  const savedWindows = isPrimaryWindow ? loadWindowSessions() : [];
-
-  if (bootFolder) {
+  // 动态窗口（「在新窗口打开」）只恢复 URL 指定的工作区。
+  if (!isPrimaryWindow) {
+    if (!bootFolder) return;
     const opened = await workspace.openFolder(bootFolder, { quiet: true });
-    if (!opened && !isPrimaryWindow) {
-      removeWindowSession(windowSessionId);
-    }
     // 外部打开落到新窗口时，随窗口透传待开文件；新窗口打开目录成功后再
     // 打开文件，行列定位复用普通编辑器链路。目录打开失败也要取走透传，
     // 避免残留文件下次误打开。
-    const bootFiles = isPrimaryWindow ? [] : takeBootFiles(windowSessionId);
+    const bootFiles = takeBootFiles(windowSessionId);
     if (opened && bootFiles.length) openExternalFiles(bootFiles);
-  } else if (isPrimaryWindow) {
-    const mainWindow = savedWindows.find((item) => item.id === "main");
-    let opened = false;
-    if (mainWindow?.root) {
-      opened = await workspace.openFolder(mainWindow.root, { quiet: true });
-    }
-    if (!opened) {
-      await workspace.restoreLastFolder();
-    }
+    return;
   }
 
-  // 只有主窗口负责按索引重建其它动态窗口；动态窗口自身只恢复自己的工作区。
-  if (!isPrimaryWindow) return;
-  for (const saved of savedWindows) {
-    if (saved.id === "main" || !saved.root) continue;
-    try {
-      await openFolderInNewWindow(saved.root, { windowId: saved.id });
-    } catch {
-      removeWindowSession(saved.id);
-    }
+  // 主窗口只恢复自己的工作区；应用重启不再重建退出时的多窗口布局。
+  const lastRoot = loadMainWindowRoot();
+  if (lastRoot) {
+    const opened = await workspace.openFolder(lastRoot, { quiet: true });
+    if (opened) return;
   }
+  await workspace.restoreLastFolder();
 }
 
 onMounted(async () => {
@@ -479,8 +465,8 @@ onMounted(async () => {
   teardownAutoSave = setupAutoSave({
     beforeClose: () => {
       persistWindowState();
-      // 正常关闭单个窗口时不应在下次启动重新打开；应用整体退出则保留。
-      if (!appQuitting) removeWindowSession(windowSessionId);
+      // 主窗口正常关闭时不应在下次启动自动打开工作区；应用整体退出则保留。
+      if (!appQuitting) clearMainWindowRoot();
     },
   });
   // macOS：启动后立即把主窗口拉前（解决自动更新后需手动点 dock 才能前置的问题）。

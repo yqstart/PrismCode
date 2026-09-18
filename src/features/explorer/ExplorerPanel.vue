@@ -83,6 +83,8 @@ const menu = ref<{
 } | null>(null);
 const menuRef = ref<HTMLElement | null>(null);
 const treeBodyRef = ref<HTMLElement | null>(null);
+/** 面板根元素：判定文本选区是否落在树外（见 hasSelectionOutsidePanel） */
+const panelRef = ref<HTMLElement | null>(null);
 const projectMenuOpen = ref(false);
 /** Teleport 到 body 后的浮层位置（由 toggleProjectMenu 在 button 真实坐标计算） */
 const projectMenuPos = ref<{ top: number; left: number } | null>(null);
@@ -866,6 +868,22 @@ function isExplorerTarget(target: EventTarget | null): boolean {
   return target === document.body || Boolean(target.closest(".panel"));
 }
 
+/**
+ * 是否存在落在资源树面板之外的「选中文本」。
+ *
+ * MD 预览 / Diff / Git Log 这些只读区域支持选中复制，但它们不可聚焦：选中后
+ * activeElement 落在 body，isExplorerTarget 会把它判成「焦点在树内」，⌘C/⌘X
+ * 于是被抢去复制文件——弹「已复制」，系统剪贴板里却什么都没有。只要用户手上
+ * 有树外选区，复制/剪切就必须交回原生处理。
+ * 折叠选区不算（刚点过预览、只留光标时仍按树内处理，⌘C 继续复制文件）。
+ */
+function hasSelectionOutsidePanel(): boolean {
+  const selection = window.getSelection();
+  const panel = panelRef.value;
+  if (!panel || !selection || selection.isCollapsed) return false;
+  return Boolean(selection.anchorNode) && !panel.contains(selection.anchorNode);
+}
+
 async function deleteSelectedPaths(
   paths: readonly string[] = selectedPaths.value,
 ) {
@@ -923,25 +941,26 @@ function copyOrCutSelected(mode: "copy" | "cut") {
 
 function onExplorerKeydown(event: KeyboardEvent) {
   const mod = event.metaKey || event.ctrlKey;
+  const key = event.key.toLowerCase();
+  const isCopyOrCut = key === "c" || key === "x";
   // 资源树复制/剪切/粘贴：⌘/Ctrl+C/X/V。文本输入区与弹层内不拦截，
   // 让原生编辑行为优先；只有 activePanel 为 explorer 且焦点在树内才接管。
+  // 树外有选中文本（MD 预览 / Diff / Git Log 等）时 ⌘C/⌘X 同样不拦截。
   if (
     mod &&
     !event.altKey &&
     !event.shiftKey &&
-    (event.key.toLowerCase() === "c" ||
-      event.key.toLowerCase() === "x" ||
-      event.key.toLowerCase() === "v") &&
+    (isCopyOrCut || key === "v") &&
     settings.layout.activePanel === "explorer" &&
     isExplorerTarget(event.target) &&
-    !isTextEditingTarget(event.target)
+    !isTextEditingTarget(event.target) &&
+    !(isCopyOrCut && hasSelectionOutsidePanel())
   ) {
     if (event.defaultPrevented || !rootPath.value) return;
     event.preventDefault();
     event.stopPropagation();
     closeMenu();
-    const key = event.key.toLowerCase();
-    if (key === "c" || key === "x") {
+    if (isCopyOrCut) {
       if (!selectedPath.value) return;
       copyOrCutSelected(key === "c" ? "copy" : "cut");
       return;
@@ -975,7 +994,7 @@ defineExpose({ locateActiveFile });
 </script>
 
 <template>
-  <div class="panel" @click="closeMenu">
+  <div ref="panelRef" class="panel" @click="closeMenu">
     <header class="header">
       <div class="title-wrap">
         <button

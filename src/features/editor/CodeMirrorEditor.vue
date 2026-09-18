@@ -299,20 +299,6 @@ async function formatSelection(current: EditorView): Promise<void> {
 
 /** 构建编辑器扩展集（按当前 props.path / 设置；标签切换时按需重建） */
 function buildExtensions(): Extension[] {
-  // WebKit 26（macOS 26 的 WKWebView）回归缺陷：编辑器失焦后单击聚焦时，
-  // 浏览器会在「点击点」与「旧光标位置」之间自动生成一段原生选区并被同步回
-  // CM 状态（CM 上游 issue #1626；其 workaround 仅对 UA 含 Version/26 的
-  // Safari 生效，Tauri WKWebView 的 UA 不匹配，内建修复不生效）。搜索/查找
-  // 面板让编辑器失焦后单击回归编辑时最易触发，表现为「单击移动光标却莫名
-  // 选中一段代码」。
-  // 兜底：仅当单击发生在编辑器「未聚焦 → 本击聚焦」时，若点击结束后 CM 仍
-  // 持有单一非空选区，折叠到点击落点（与 CM 自身单击置光标结果一致）。
-  // 编辑器已聚焦时的单击/双击/拖选/组合键完全不干预，不产生误伤。
-  let refocusClick: { x: number; y: number } | null = null;
-  // 鼠标交互序号：任何新的鼠标按下都会使此前排队的折叠回调作废
-  // （双击第二击可能在首击 click 排队的折叠执行前完成选词，不得被折叠）。
-  let clickSeq = 0;
-
   return [
     highlightSpecialChars(),
     history(),
@@ -334,60 +320,16 @@ function buildExtensions(): Extension[] {
     // ⌘/Ctrl + 滚轮调字号（VS Code 行为）；只拦截带修饰键的滚轮，其他滚轮照旧滚动。
     EditorView.domEventHandlers({
       wheel: (event) => wheelFontSize(event),
-      // 记录「从失焦到聚焦」的普通单击（mousedown 与 mouseup 间无位移、非双击）。
-      mousedown(event) {
-        clickSeq += 1; // 新交互开始，作废此前排队的折叠回调
-        refocusClick = null;
-        if (event.button !== 0 || event.detail !== 1) return false;
-        if (event.shiftKey || event.metaKey || event.ctrlKey || event.altKey) return false;
-        // mousedown 派发时浏览器尚未执行默认聚焦，activeElement 仍是旧焦点：
-        // 不等于编辑器内容区即「从失焦状态单击」，正是 WebKit 26 自动选区
-        // 残留的触发源；已聚焦状态的单击/双击/拖选一律不干预。
-        const focusedInEditor =
-          document.activeElement instanceof HTMLElement &&
-          document.activeElement.closest(".cm-content") !== null;
-        if (focusedInEditor) return false;
-        refocusClick = {
-          x: event.clientX,
-          y: event.clientY,
-        };
-        return false;
-      },
-      mouseup(event) {
-        if (refocusClick && (event.button !== 0 || event.detail !== 1)) {
-          refocusClick = null;
-        }
-        return false;
-      },
-      click(event, view) {
-        const target = refocusClick;
-        refocusClick = null;
-        if (!target || event.button !== 0 || event.detail !== 1) return false;
-        if (event.shiftKey || event.metaKey || event.ctrlKey || event.altKey) return false;
-        // 位移超过阈值视为拖选（从失焦状态按下即拖），不可折叠。
-        // 阈值与 CM 自身 MouseSelection 的单击/拖动死区（dist < 10）对齐。
-        if (Math.hypot(event.clientX - target.x, event.clientY - target.y) > 10) return false;
-        const { x, y } = event;
-        const seq = clickSeq;
-        // 折叠延迟一帧：WebKit 的自动选区可能由聚焦引发的 selectionchange
-        // 在 click 之后才同步进 CM 状态，此时折叠才兜得住。
-        setTimeout(() => {
-          // 期间又发生了新的鼠标按下（双击第二击 / 再次单击）：不再兜底，
-          // 避免把双击选出的词或新落点误折叠。
-          if (seq !== clickSeq) return;
-          if (!view.hasFocus) return;
-          const selection = view.state.selection;
-          // 单一范围且非空：正常失焦→单击聚焦后 CM 应只留下空光标；残留的
-          // 非空范围即 WebKit 自动选区，折叠到点击落点。
-          if (selection.ranges.length !== 1 || selection.main.empty) return;
-          const pos = view.posAtCoords({ x, y });
-          if (pos == null) return;
-          view.dispatch({
-            selection: { anchor: pos },
-            scrollIntoView: false,
-            userEvent: "select.pointer",
-          });
-        }, 0);
+      mousedown(event, view) {
+        if (event.button !== 0 || view.hasFocus) return false;
+        if (!(event.target instanceof Node) || !view.contentDOM.contains(event.target)) return false;
+        // WKWebView 的 UA 不含 Version/26，无法命中 CM 的 Safari 26
+        // preventScroll 兼容分支。先同步聚焦并恢复视口，再让 CM 根据原始
+        // 点击坐标处理单击、双击和拖选，避免聚焦滚动把起止点映射到不同区域。
+        const { scrollTop, scrollLeft } = view.scrollDOM;
+        view.focus();
+        view.scrollDOM.scrollTop = scrollTop;
+        view.scrollDOM.scrollLeft = scrollLeft;
         return false;
       },
     }),

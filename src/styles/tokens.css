@@ -47,7 +47,7 @@
      现代紧凑：140/200/280ms 三档；统一用 --ease-out。
      fast   = hover/feedback（按钮、tab、文字色）
      medium = 弹层/弹窗（dialog、tooltip、popover）
-     slow   = 画布切换（文件切换、welcome） */
+     slow   = 缓速档（大区块过渡；画布主区已改为整块直接替换，当前无使用点） */
   --transition-fast: 120ms;
   --transition-medium: 180ms;
   --transition-slow: 260ms;
