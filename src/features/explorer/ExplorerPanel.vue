@@ -13,6 +13,7 @@ import {
   ChevronsDownUp,
   Crosshair,
   FilePlus,
+  FileText,
   FolderOpen,
   FolderPlus,
   FolderInput,
@@ -60,6 +61,7 @@ const settings = useSettingsStore();
 const {
   rootPath,
   rootName,
+  lightMode,
   selectedPath,
   selectedPaths,
   flatTree,
@@ -1096,9 +1098,14 @@ defineExpose({ locateActiveFile });
     <div ref="treeBodyRef" class="body">
       <template v-if="!rootPath">
         <div class="empty">
-          <FolderOpen :size="28" :stroke-width="1.5" class="icon" />
-          <p class="name">{{ rootName }}</p>
-          <p class="hint">{{ t("explorer.emptyHint") }}</p>
+          <FileText v-if="lightMode" :size="28" :stroke-width="1.5" class="icon" />
+          <FolderOpen v-else :size="28" :stroke-width="1.5" class="icon" />
+          <p class="name">
+            {{ lightMode ? t("explorer.lightTitle") : rootName }}
+          </p>
+          <p class="hint">
+            {{ lightMode ? t("explorer.lightHint") : t("explorer.emptyHint") }}
+          </p>
           <button class="cta" type="button" @click="onOpen">
             {{ t("explorer.openFolder") }}
           </button>

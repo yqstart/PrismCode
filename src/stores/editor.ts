@@ -20,6 +20,7 @@ import {
   prioritizeActiveTab,
 } from "@/features/editor/sessionRestore";
 import { formatDocumentContent } from "@/features/editor/formatting";
+import { fileScopeRoot } from "@/shared/fileScope";
 import {
   recordNavigation,
   takeNavigationBack,
@@ -114,6 +115,14 @@ export const useEditorStore = defineStore("editor", () => {
 
   function isLiveTab(tab: EditorTab, path: string): boolean {
     return tabs.value.some((item) => item === tab && item.path === path);
+  }
+
+  /**
+   * 该文件的读写作用域根：项目窗口为工作区根，light 模式为文件所在目录
+   * （见 shared/fileScope）。所有文件 IPC 都以它作为 root 参数。
+   */
+  function scopeFor(path: string): string | null {
+    return fileScopeRoot(useWorkspaceStore().rootPath, path);
   }
 
   // dirty 集合缓存：只在集合内容真正变化时替换 Set 引用。dirty 由 setContent
@@ -425,8 +434,9 @@ export const useEditorStore = defineStore("editor", () => {
 
   async function openFile(path: string) {
     const workspace = useWorkspaceStore();
-    if (!workspace.rootPath) return;
-    const root = workspace.rootPath;
+    // 项目窗口用工作区根；light 模式（无工作区）用文件所在目录。
+    const scope = scopeFor(path);
+    if (!scope) return;
     const generation = workspaceGeneration;
     useSessionsStore().blurSessions();
     useCompareStore().blurCompare();
@@ -453,9 +463,9 @@ export const useEditorStore = defineStore("editor", () => {
       const beforeActive = activePath.value;
       const content = isRasterImagePath(path)
         ? ""
-        : await readTextFile(root, path);
-      // 读取期间已切换工作区：旧文件标签不得落入新工作区
-      if (workspace.rootPath !== root || generation !== workspaceGeneration) return;
+        : await readTextFile(scope, path);
+      // 读取期间已切换工作区/作用域：旧文件标签不得落入新工作区
+      if (scopeFor(path) !== scope || generation !== workspaceGeneration) return;
       // 并发打开同一文件的场景（双击、快速打开连续回车等）：两个请求都
       // 通过了上面的 existing 检查，后完成的请求会在此发现重复标签。
       // 此时绝不能再 push，否则同一 path 出现两个标签，:key 冲突导致
@@ -488,7 +498,7 @@ export const useEditorStore = defineStore("editor", () => {
         workspace.revealPath(path);
       }
     } catch (error) {
-      if (workspace.rootPath !== root || generation !== workspaceGeneration) return;
+      if (scopeFor(path) !== scope || generation !== workspaceGeneration) return;
       workspace.showNotice(
         error instanceof Error ? error.message : String(error),
         3200,
@@ -502,9 +512,8 @@ export const useEditorStore = defineStore("editor", () => {
     column: number,
     options?: { recordHistory?: boolean },
   ) {
-    const workspace = useWorkspaceStore();
-    const root = workspace.rootPath;
-    if (!root) return;
+    const scope = scopeFor(path);
+    if (!scope) return;
     const generation = workspaceGeneration;
     const current = activeTab.value;
     if (current && options?.recordHistory !== false) {
@@ -515,7 +524,7 @@ export const useEditorStore = defineStore("editor", () => {
       });
     }
     await openFile(path);
-    if (workspace.rootPath !== root || generation !== workspaceGeneration) return;
+    if (scopeFor(path) !== scope || generation !== workspaceGeneration) return;
     if (!tabs.value.some((tab) => tab.path === path)) return;
     requestOpenAt(path, line, column);
   }
@@ -545,20 +554,21 @@ export const useEditorStore = defineStore("editor", () => {
 
   /** 外部磁盘变更：干净标签自动重载；脏标签询问是否覆盖 */
   async function syncExternalChanges(changedPaths: string[]) {
+    if (!changedPaths.length) return;
     const workspace = useWorkspaceStore();
-    if (!workspace.rootPath || !changedPaths.length) return;
-    const root = workspace.rootPath;
     const generation = workspaceGeneration;
-    const isCurrent = () =>
-      workspace.rootPath === root && generation === workspaceGeneration;
 
     for (const path of changedPaths) {
-      if (!isCurrent()) return;
+      // 每个标签按自己的作用域校验：项目窗口为工作区，light 模式为文件目录。
+      const scope = scopeFor(path);
+      if (!scope) continue;
+      const isCurrent = () =>
+        scopeFor(path) === scope && generation === workspaceGeneration;
       const tab = tabs.value.find((t) => t.path === path);
       if (!tab) continue;
 
       try {
-        const exists = await pathExists(root, path);
+        const exists = await pathExists(scope, path);
         if (!isCurrent()) return;
         if (!exists) {
           if (tab.content === tab.original) {
@@ -583,7 +593,7 @@ export const useEditorStore = defineStore("editor", () => {
           continue;
         }
 
-        const disk = await readTextFile(root, path);
+        const disk = await readTextFile(scope, path);
         if (!isCurrent() || !isLiveTab(tab, path)) return;
         if (disk === tab.content) {
           if (tab.original !== disk || tab.dirty) {
@@ -756,11 +766,6 @@ export const useEditorStore = defineStore("editor", () => {
   async function formatDocument(path?: string, options?: { quiet?: boolean }) {
     const workspace = useWorkspaceStore();
     const settings = useSettingsStore();
-    if (!workspace.rootPath) return;
-    const root = workspace.rootPath;
-    const generation = workspaceGeneration;
-    const isCurrent = () =>
-      workspace.rootPath === root && generation === workspaceGeneration;
     if (!settings.editor.prettierEnabled) {
       if (!options?.quiet) workspace.showNotice("请先在设置中启用代码格式化");
       return;
@@ -771,6 +776,11 @@ export const useEditorStore = defineStore("editor", () => {
       return;
     }
     if (isRasterImagePath(targetPath)) return;
+    const scope = scopeFor(targetPath);
+    if (!scope) return;
+    const generation = workspaceGeneration;
+    const isCurrent = () =>
+      scopeFor(targetPath) === scope && generation === workspaceGeneration;
 
     let tab = tabs.value.find((t) => t.path === targetPath) ?? null;
     if (!tab) {
@@ -784,7 +794,7 @@ export const useEditorStore = defineStore("editor", () => {
     const contentAtStart = tab.content;
     try {
       const formatted = await formatDocumentContent(
-        root,
+        scope,
         tabPath,
         contentAtStart,
       );
@@ -829,16 +839,17 @@ export const useEditorStore = defineStore("editor", () => {
     if (options?.auto && autoSaveBlockedPaths.has(tab.path)) return;
     const tabPath = tab.path;
 
-    if (!workspace.rootPath) {
+    // light 模式（无工作区）也允许保存：作用域取文件所在目录。
+    const scope = scopeFor(tabPath);
+    if (!scope) {
       if (!options?.quiet) {
         workspace.showNotice("当前无活动文件可保存");
       }
       return;
     }
-    const root = workspace.rootPath;
     const generation = workspaceGeneration;
     const isCurrent = () =>
-      workspace.rootPath === root && generation === workspaceGeneration;
+      scopeFor(tabPath) === scope && generation === workspaceGeneration;
 
     // 保存时格式化：先格式化再写盘（失败静默，保留原内容继续保存）
     const settings = useSettingsStore();
@@ -851,7 +862,7 @@ export const useEditorStore = defineStore("editor", () => {
     if (!tab.dirty) return;
     try {
       workspace.markSelfWrite(tabPath);
-      await writeTextFile(root, tabPath, content);
+      await writeTextFile(scope, tabPath, content);
       if (!isCurrent() || !isLiveTab(tab, tabPath)) return;
       // 写盘期间的新输入属于下一次保存，不能被本次快照错误标记为已保存。
       if (tab.content !== content) return;
@@ -877,11 +888,7 @@ export const useEditorStore = defineStore("editor", () => {
   async function saveAll(options?: { quiet?: boolean; auto?: boolean }) {
     const workspace = useWorkspaceStore();
     const git = useGitStore();
-    const root = workspace.rootPath;
-    if (!root) return;
     const generation = workspaceGeneration;
-    const isCurrent = () =>
-      workspace.rootPath === root && generation === workspaceGeneration;
     const dirty = tabs.value.filter(
       (t) =>
         !isRasterImagePath(t.path) &&
@@ -893,8 +900,12 @@ export const useEditorStore = defineStore("editor", () => {
       let saved = 0;
       const settings = useSettingsStore();
       for (const tab of dirty) {
-        if (!isCurrent()) return;
         const tabPath = tab.path;
+        // 每个标签各取自己的作用域：项目窗口为工作区，light 模式为文件目录。
+        const scope = scopeFor(tabPath);
+        if (!scope) continue;
+        const isCurrent = () =>
+          scopeFor(tabPath) === scope && generation === workspaceGeneration;
         if (!isLiveTab(tab, tabPath)) continue;
         // 保存时格式化：先格式化再写盘（失败静默，保留原内容继续保存）
         if (settings.editor.formatOnSave) {
@@ -903,7 +914,7 @@ export const useEditorStore = defineStore("editor", () => {
         if (!isCurrent() || !isLiveTab(tab, tabPath)) return;
         const content = tab.content;
         workspace.markSelfWrite(tabPath);
-        await writeTextFile(root, tabPath, content);
+        await writeTextFile(scope, tabPath, content);
         if (!isCurrent() || !isLiveTab(tab, tabPath)) return;
         // 写盘期间的新输入仍保持 dirty，避免把未落盘内容误报为已保存。
         if (tab.content !== content) continue;
@@ -918,9 +929,10 @@ export const useEditorStore = defineStore("editor", () => {
           saved === 1 ? `已保存 ${dirty[0].name}` : `已保存 ${saved} 个文件`,
         );
       }
-      if (isCurrent()) void git.scheduleRefresh();
+      // light 模式没有 Git 仓库，git store 内部会按无工作区直接返回。
+      if (generation === workspaceGeneration) void git.scheduleRefresh();
     } catch (error) {
-      if (!isCurrent()) return;
+      if (generation !== workspaceGeneration) return;
       if (!options?.quiet) {
         workspace.showNotice(
           error instanceof Error ? error.message : String(error),

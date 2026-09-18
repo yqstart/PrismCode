@@ -19,6 +19,7 @@ import {
 } from "@codemirror/state";
 import { ensureTypeScriptProgram, tsService } from "@/features/editor/typeService";
 import { createVueScriptContext, isInVueScript } from "@/features/editor/vueScript";
+import { fileScopeRoot } from "@/shared/fileScope";
 import {
   lineHasOpenParen,
   type TsSignatureHelp,
@@ -127,8 +128,8 @@ function createSignaturePlugin(filePath: string): Extension {
         const serviceFile = virtual?.fileName ?? filePath;
         const serviceText = virtual?.text ?? source;
         const { useWorkspaceStore } = await import("@/stores/workspace");
-        const root = useWorkspaceStore().rootPath;
-        if (!root || !(await ensureTypeScriptProgram(root, serviceFile, serviceText))) return;
+        const scope = fileScopeRoot(useWorkspaceStore().rootPath, serviceFile);
+        if (!scope || !(await ensureTypeScriptProgram(scope, serviceFile, serviceText))) return;
         const help = tsService.signatureHelpAt(serviceFile, head);
         if (help) {
           view.dispatch({

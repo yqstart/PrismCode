@@ -1,6 +1,7 @@
 import { hoverTooltip, type Tooltip } from "@codemirror/view";
 import { ensureTypeScriptProgram, tsService } from "@/features/editor/typeService";
 import { createVueScriptContext, isInVueScript } from "@/features/editor/vueScript";
+import { fileScopeRoot } from "@/shared/fileScope";
 
 function renderQuickInfo(display: string, documentation: string): HTMLDivElement {
   const dom = document.createElement("div");
@@ -32,8 +33,8 @@ export function createTypeScriptHoverExtension(filePath: string) {
     const serviceText = virtual?.text ?? source;
     try {
       const { useWorkspaceStore } = await import("@/stores/workspace");
-      const root = useWorkspaceStore().rootPath;
-      if (!root || !(await ensureTypeScriptProgram(root, serviceFile, serviceText))) return null;
+      const scope = fileScopeRoot(useWorkspaceStore().rootPath, serviceFile);
+      if (!scope || !(await ensureTypeScriptProgram(scope, serviceFile, serviceText))) return null;
       const info = tsService.quickInfoAt(serviceFile, pos);
       if (!info) return null;
       const tooltip: Tooltip = {

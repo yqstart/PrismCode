@@ -6,6 +6,7 @@ import {
   saveBootFiles,
   takeBootFiles,
 } from "../src/shared/externalOpenRoute.ts";
+import { fileScopeRoot } from "../src/shared/fileScope.ts";
 import type { ExternalOpenTarget } from "../src/shared/externalOpen.ts";
 
 function file(path: string, line?: number): ExternalOpenTarget {
@@ -30,7 +31,7 @@ const stored: Stored = new Map();
   },
 } as Storage;
 
-// 已在工作区的文件留在本窗口，工作区外的文件按父目录分组开新窗口。
+// 已在工作区的文件留在本窗口；工作区外文件走 light 窗口，不按父目录建项目窗口。
 {
   const plan = planExternalOpen(
     [file("/work/demo/src/a.ts"), file("/tmp/other/b.ts"), file("/tmp/other/c.ts:9")],
@@ -40,10 +41,8 @@ const stored: Stored = new Map();
     plan.inCurrentFiles.map((item) => item.path),
     ["/work/demo/src/a.ts"],
   );
-  assert.equal(plan.newWindowGroups.length, 1);
-  assert.equal(plan.newWindowGroups[0]?.folder, "/tmp/other");
   assert.deepEqual(
-    (plan.newWindowGroups[0]?.targets ?? []).map((item) => item.path),
+    plan.lightFiles.map((item) => item.path),
     ["/tmp/other/b.ts", "/tmp/other/c.ts:9"],
   );
 }
@@ -69,9 +68,11 @@ const stored: Stored = new Map();
     plan.inCurrentFiles.map((item) => item.path),
     ["/work/demo/a.ts", "/work/demo/b.ts"],
   );
+  assert.deepEqual(plan.lightFiles, []);
 }
 
-// 无工作区时首个文件组留给本窗口，其余分组新开；多目录首个留本窗口。
+// 无工作区（欢迎页 / light 窗口）：文件就地打开，不再为其新开项目窗口；
+// 目录在有文件时全部新开，只有目录时首个留给本窗口。
 {
   const plan = planExternalOpen(
     [file("/a/x.ts"), file("/b/y.ts"), dir("/c"), dir("/d")],
@@ -79,10 +80,9 @@ const stored: Stored = new Map();
   );
   assert.deepEqual(
     plan.inCurrentFiles.map((item) => item.path),
-    ["/a/x.ts"],
+    ["/a/x.ts", "/b/y.ts"],
   );
-  assert.equal(plan.newWindowGroups.length, 1);
-  assert.equal(plan.newWindowGroups[0]?.folder, "/b");
+  assert.deepEqual(plan.lightFiles, []);
   assert.deepEqual(
     plan.inCurrentDirs.map((item) => item.path),
     [],
@@ -115,6 +115,17 @@ assert.equal(parentDirectory("/a.ts"), "/");
     plan.inCurrentFiles.map((item) => item.path),
     ["/work/demo/a.ts"],
   );
+}
+
+// 读写作用域：项目窗口用工作区根；light 模式用文件所在目录（后端要求目标在 root 内）。
+{
+  assert.equal(fileScopeRoot("/work/demo", "/work/demo/src/a.ts"), "/work/demo");
+  assert.equal(fileScopeRoot(null, "/Users/me/notes/todo.md"), "/Users/me/notes");
+  assert.equal(fileScopeRoot("  ", "/tmp/other/b.ts"), "/tmp/other");
+  assert.equal(fileScopeRoot(null, "/a.ts"), "/");
+  assert.equal(fileScopeRoot(null, "a.ts"), null);
+  assert.equal(fileScopeRoot(null, "   "), null);
+  assert.equal(fileScopeRoot(undefined, ""), null);
 }
 
 // 新窗口文件透传随窗口 ID 写入、一次性取走。

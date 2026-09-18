@@ -211,6 +211,8 @@ export const zhCN = {
     filterPlaceholder: "过滤文件…",
     empty: "请先打开工作区文件夹",
     emptyHint: "打开本地文件夹后展示项目树",
+    lightTitle: "单文件模式",
+    lightHint: "未打开文件夹，仅编辑独立文件；打开文件夹即可切换到项目模式",
     newFile: "新建文件",
     newFolder: "新建文件夹",
     rename: "重命名",

@@ -1,12 +1,13 @@
 /**
  * 外部打开路由（纯函数 + 本地透传，与 Tauri / 别名无关）。
  *
- * 主窗口收到 Rust 端 `app://open-external` 事件后，不再直接把外部文件塞进
+ * 主窗口收到 Rust 端 `app://open-external` 事件后，不再直接把外部路径塞进
  * 当前工作区，而是先用 `planExternalOpen` 按工作区归属分流：
  * - 已在当前工作区内的文件：留在本窗口打开定位；
- * - 工作区外的文件：按父目录分组，每组新开一个窗口展示；
+ * - 工作区外的文件：交给新窗口以 light 模式打开（单文件、无工作区，不把
+ *   文件所在目录当成项目）；
  * - 目录：与当前工作区相同则忽略，不同则新开窗口；
- * - 无工作区（欢迎页）时：首个文件组（或首个目录）留给本窗口，其余新开。
+ * - 无工作区（欢迎页 / light 窗口）时：文件就地打开，目录首个留给本窗口。
  *
  * 新窗口的文件透传走 localStorage（各窗口同源共享），随窗口创建写入、
  * 新窗口启动时一次性取走，避免 URL 编码长路径。
@@ -14,16 +15,15 @@
 
 import type { ExternalOpenTarget } from "./externalOpen.ts";
 
-export interface NewWindowFileGroup {
-  folder: string;
-  targets: ExternalOpenTarget[];
-}
-
 export interface ExternalOpenPlan {
-  inCurrentDirs: ExternalOpenTarget[];
+  /** 当前窗口直接打开的文件（工作区内文件；无工作区时为独立文件） */
   inCurrentFiles: ExternalOpenTarget[];
+  /** 当前窗口作为项目打开的目录（无工作区时的首个目录） */
+  inCurrentDirs: ExternalOpenTarget[];
+  /** 新窗口打开的目录 */
   newWindowDirs: ExternalOpenTarget[];
-  newWindowGroups: NewWindowFileGroup[];
+  /** 新窗口以 light 模式打开的独立文件（不设置工作区） */
+  lightFiles: ExternalOpenTarget[];
 }
 
 const BOOT_FILES_PREFIX = "prismcode.window-boot-files.v1:";
@@ -87,17 +87,10 @@ export function planExternalOpen(
   const files = cleaned.filter((target) => !target.isDir);
 
   const plan: ExternalOpenPlan = {
-    inCurrentDirs: [],
     inCurrentFiles: [],
+    inCurrentDirs: [],
     newWindowDirs: [],
-    newWindowGroups: [],
-  };
-  const groups = new Map<string, ExternalOpenTarget[]>();
-  const pushToGroup = (file: ExternalOpenTarget) => {
-    const folder = parentDirectory(file.path);
-    const list = groups.get(folder);
-    if (list) list.push(file);
-    else groups.set(folder, [file]);
+    lightFiles: [],
   };
 
   const root = currentRoot?.trim() ? currentRoot.trim() : null;
@@ -108,29 +101,24 @@ export function planExternalOpen(
       plan.newWindowDirs.push(dir);
     }
     for (const file of files) {
+      // 工作区外文件按「单文件 light 窗口」打开，不把其父目录变成新项目。
       if (isPathUnderRoot(root, file.path)) plan.inCurrentFiles.push(file);
-      else pushToGroup(file);
+      else plan.lightFiles.push(file);
     }
-  } else if (files.length) {
-    // 无工作区时首个父目录组留给本窗口，避免一次多文件打开炸出 N 个窗口。
-    const stayParent = parentDirectory(files[0]!.path);
-    for (const file of files) {
-      if (isSameFolder(parentDirectory(file.path), stayParent)) {
-        plan.inCurrentFiles.push(file);
-      } else {
-        pushToGroup(file);
-      }
-    }
+    return plan;
+  }
+
+  // 无工作区（欢迎页 / light 窗口）：窗口本就与项目无关，文件就地打开即可，
+  // 不新开窗口；目录只在没有文件时才占用本窗口，其余新开。
+  if (files.length) {
+    plan.inCurrentFiles.push(...files);
     plan.newWindowDirs.push(...dirs);
-  } else if (dirs.length) {
+    return plan;
+  }
+  if (dirs.length) {
     plan.inCurrentDirs.push(dirs[0]!);
     plan.newWindowDirs.push(...dirs.slice(1));
   }
-
-  plan.newWindowGroups = [...groups.entries()].map(([folder, groupTargets]) => ({
-    folder,
-    targets: groupTargets,
-  }));
   return plan;
 }
 

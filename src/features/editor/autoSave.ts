@@ -9,8 +9,11 @@ import { useSessionsStore } from "@/stores/sessions";
  * - 兜底：窗口隐藏 / 关闭前强制落盘（避免延迟未触发就崩溃丢改）
  */
 export interface AutoSaveOptions {
-  /** 关闭窗口前保存窗口级编辑器/终端快照。 */
-  beforeClose?: () => void | Promise<void>;
+  /**
+   * 关闭窗口前保存窗口级编辑器/终端快照。
+   * 返回 `false` 表示取消本次关闭（如 light 模式还有未保存的独立文件）。
+   */
+  beforeClose?: () => boolean | void | Promise<boolean | void>;
 }
 
 export function setupAutoSave(options: AutoSaveOptions = {}): () => void {
@@ -106,7 +109,9 @@ export function setupAutoSave(options: AutoSaveOptions = {}): () => void {
 
   async function finishWindowClose(win: { destroy: () => Promise<void> }) {
     try {
-      await options.beforeClose?.();
+      // beforeClose 返回 false 表示用户取消了关闭：窗口保持原样，
+      // 监听器仍在（allowNativeClose 未置位），下一次关闭请求照常进入。
+      if ((await options.beforeClose?.()) === false) return;
     } catch {
       // 状态快照失败也不能跳过终端清理或阻止窗口关闭。
     }

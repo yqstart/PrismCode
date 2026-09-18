@@ -124,6 +124,11 @@ export const useWorkspaceStore = defineStore("workspace", () => {
  /** 刷新进行中又收到变更：结束后补刷一轮（防丢 watch 事件，git store 同款） */
  let refreshAgain = false;
  const watchActive = ref(false);
+ /**
+  * light 模式：窗口没有工作区，只承载外部打开的独立文件（项目无关）。
+  * 打开文件夹成功后自动退出该模式。
+  */
+ const lightMode = ref(false);
 
  let noticeSeq = 0;
  const noticeTimers = new Map<number, number>();
@@ -469,6 +474,15 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   }
  }
 
+ /**
+  * 进入 light 模式：窗口不再关联任何工作区，只承载外部打开的独立文件
+  * （「用 Prism Code 打开文件」不再把文件所在目录当成项目）。
+  * 打开文件夹（openFolder）会退出该模式。
+  */
+ function enterLightMode() {
+  lightMode.value = true;
+ }
+
  async function openFolder(
   path?: string | null,
   options?: OpenFolderOptions,
@@ -488,9 +502,11 @@ export const useWorkspaceStore = defineStore("workspace", () => {
    if (!isLatestRequest()) return false;
 
    const previousRoot = rootPath.value;
-   const isWorkspaceSwitch = Boolean(
-    previousRoot && previousRoot !== selected,
-   );
+   // light 模式（无工作区但有独立文件标签）打开文件夹等同于切换项目：
+   // 那些标签不在新工作区内，必须确认并清空，否则后续读写会被后端拒绝。
+   const isWorkspaceSwitch =
+    Boolean(previousRoot && previousRoot !== selected) ||
+    (!previousRoot && useEditorStore().tabs.length > 0);
    // 首次打开工作区也要恢复该窗口在此工作区的终端快照；同一工作区
    // 重新选择时则保留当前编辑器和终端，不做销毁重建。
    const shouldResetWorkspaceSessions = previousRoot !== selected;
@@ -556,6 +572,8 @@ export const useWorkspaceStore = defineStore("workspace", () => {
    workspaceEpoch += 1;
    rootPath.value = selected;
    rootName.value = basename(selected);
+   // 打开文件夹即离开 light 模式：本窗口重新绑定项目
+   lightMode.value = false;
    childrenMap.value = { [selected]: entries };
    expanded.value = new Set([selected]);
    setSelection([selected]);
@@ -1242,15 +1260,16 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   }
  }
 
- /** 同步窗口原生标题（`Prism Code — 项目名`，与 openFolderInNewWindow 格式一致）。
+ /** 同步窗口原生标题（`Prism Code — 项目名 / 文件名`，与 openWorkspace 新窗口一致）。
   *  Overlay 标题栏隐藏 native title，但系统层仍读取：Mission Control / ⌘Tab /
   *  窗口菜单 / 系统 Tab 合并浮层。不更新则多窗口时名称恒为默认 "Prism Code"。 */
- async function syncWindowTitle(root: string) {
-  const state = { root, at: new Date().toISOString() };
+ async function syncWindowTitle(target?: string | null) {
+  const state = { root: target ?? "", at: new Date().toISOString() };
   try {
    const { getCurrentWindow } = await import("@tauri-apps/api/window");
    const prefix = import.meta.env.DEV ? "Prism Code Dev" : "Prism Code";
-   await getCurrentWindow().setTitle(`${prefix} — ${basename(root)}`);
+   const trimmed = target?.trim();
+   await getCurrentWindow().setTitle(trimmed ? `${prefix} — ${basename(trimmed)}` : prefix);
    Object.assign(state, { ok: true });
   } catch (e) {
    Object.assign(state, { ok: false, error: String(e) });
@@ -1263,6 +1282,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
 
  // 窗口原生标题随 rootPath 同步：任何设置 rootPath 的路径（启动恢复 / 手动打开 /
  // 新窗口 boot / Dock 菜单）都触发，比在 openFolder 内 fire-and-forget 更可靠。
+ // light 模式（无工作区）由 AppShell 按活动文件调用同一函数。
  watchState(rootPath, (root) => {
   if (root) void syncWindowTitle(root);
  });
@@ -1270,6 +1290,8 @@ export const useWorkspaceStore = defineStore("workspace", () => {
  return {
   rootPath,
   rootName,
+  lightMode,
+  enterLightMode,
   toasts,
   filter,
   selectedPath,
@@ -1317,5 +1339,6 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   removeRecentFolder,
   clearRecentFolders,
   syncDockMenu,
+  syncWindowTitle,
  };
 });

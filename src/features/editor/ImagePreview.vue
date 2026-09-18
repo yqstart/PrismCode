@@ -9,6 +9,7 @@ import {
   svgDataUrl,
 } from "@/shared/media";
 import { useWorkspaceStore } from "@/stores/workspace";
+import { fileScopeRoot } from "@/shared/fileScope";
 import { useI18n } from "@/i18n";
 
 const props = defineProps<{
@@ -91,10 +92,11 @@ async function reload() {
       return;
     }
 
-    if (!rootPath.value) {
+    const scope = fileScopeRoot(rootPath.value, props.path);
+    if (!scope) {
       throw new Error(t("editor.image.noWorkspace"));
     }
-    const url = await rasterDataUrl(rootPath.value, props.path);
+    const url = await rasterDataUrl(scope, props.path);
     if (seq !== loadSeq) return;
     src.value = url;
   } catch (error) {

@@ -4,6 +4,7 @@ import { GitBranch } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
 import BranchesPopup from "@/features/git/BranchesPopup.vue";
 import { THEME_LABELS, THEME_ORDER } from "@/features/editor/theme";
+import { basename } from "@/shared/fs";
 import type { ThemeId } from "@/shared/types";
 import { useEditorStore } from "@/stores/editor";
 import { useGitStore } from "@/stores/git";
@@ -40,6 +41,16 @@ const syncLabel = computed(() => {
   return parts.join(" ");
 });
 const themeLabel = computed(() => THEME_LABELS[theme.value]);
+
+/** 状态栏左端名称：项目名；light 模式（无工作区）显示当前独立文件名 */
+const workspaceLabel = computed(() =>
+  workspace.rootPath
+    ? workspace.rootName
+    : (editor.activePath ? basename(editor.activePath) : workspace.rootName),
+);
+const workspaceLabelTitle = computed(
+  () => workspace.rootPath ?? editor.activePath ?? workspace.rootName,
+);
 
 const themeOptions = computed(() =>
   THEME_ORDER.map((id) => ({ id, label: THEME_LABELS[id] })),
@@ -85,8 +96,8 @@ onBeforeUnmount(() => {
 <template>
   <footer class="status-bar">
     <div class="left">
-      <span class="root-name" :title="workspace.rootName">{{
-        workspace.rootName
+      <span class="root-name" :title="workspaceLabelTitle">{{
+        workspaceLabel
       }}</span>
       <div v-if="branch" class="branch-switch" @click.stop>
         <button

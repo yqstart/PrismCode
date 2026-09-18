@@ -3,9 +3,13 @@ use tauri::{
     AppHandle, Emitter, Manager, RunEvent, Runtime, State,
 };
 use std::{
+    collections::HashMap,
     ffi::OsString,
     path::PathBuf,
-    sync::atomic::{AtomicBool, Ordering},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Mutex,
+    },
 };
 
 pub mod commands;
@@ -16,6 +20,28 @@ pub mod user_data;
 #[derive(Default)]
 struct AppLifecycleState {
     quitting: AtomicBool,
+    /// 前端已处理完 light 模式未保存文件（落盘或用户确认放弃），允许退出。
+    exit_confirmed: AtomicBool,
+    /// 各窗口上报的「存在未保存的独立文件（light 模式）」标记，key 为窗口 label。
+    /// 窗口销毁时清除，避免已关闭窗口的陈旧标记把退出流程卡住。
+    light_unsaved: Mutex<HashMap<String, bool>>,
+}
+
+impl AppLifecycleState {
+    fn has_unsaved_light(&self) -> bool {
+        self.light_unsaved
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .values()
+            .any(|dirty| *dirty)
+    }
+
+    fn clear_window(&self, label: &str) {
+        self.light_unsaved
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .remove(label);
+    }
 }
 
 struct NativeMenuLabels {
@@ -181,6 +207,32 @@ fn is_app_quitting(state: State<'_, AppLifecycleState>) -> bool {
     state.quitting.load(Ordering::SeqCst)
 }
 
+/// light 模式（无工作区）窗口上报是否存在未保存的独立文件。
+/// 应用整体退出前会据此先让前端落盘或向用户确认，避免静默丢改。
+#[tauri::command]
+fn set_light_unsaved(
+    window: tauri::WebviewWindow,
+    state: State<'_, AppLifecycleState>,
+    dirty: bool,
+) {
+    let mut map = state
+        .light_unsaved
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    if dirty {
+        map.insert(window.label().to_string(), true);
+    } else {
+        map.remove(window.label());
+    }
+}
+
+/// 前端处理完未保存的独立文件后调用：放行应用退出。
+#[tauri::command]
+fn confirm_app_exit(app: AppHandle, state: State<'_, AppLifecycleState>) {
+    state.exit_confirmed.store(true, Ordering::SeqCst);
+    app.exit(0);
+}
+
 /// Tauri command：前端 invoke 时重建 Dock 菜单。
 /// 实际逻辑在 `commands/dock_menu::rebuild_dock_menu`（macOS only；
 /// 非 macOS 是 no-op）。catch_unwind 防 NSMenu/NSMenuItem 调用链上的 objc
@@ -339,6 +391,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             set_app_menu_locale,
             is_app_quitting,
+            set_light_unsaved,
+            confirm_app_exit,
             set_dock_menu,
             external_open::take_pending_external_opens,
             commands::fs::list_dir,
@@ -450,11 +504,25 @@ pub fn run() {
             // 让所有 WebView 在应用整体退出前先保存各自的窗口、编辑器和终端
             // 快照；单独关闭某个窗口不会收到这条应用级通知，因此仍会被移出
             // 前端窗口索引。
-            if matches!(event, RunEvent::ExitRequested { .. }) {
-                app.state::<AppLifecycleState>()
-                    .quitting
-                    .store(true, Ordering::SeqCst);
+            if let RunEvent::ExitRequested { api, .. } = &event {
+                let state = app.state::<AppLifecycleState>();
+                state.quitting.store(true, Ordering::SeqCst);
+                // light 模式没有按工作区持久化的会话快照：还有未保存的独立
+                // 文件时先拦住退出，等前端落盘或用户确认后再走 confirm_app_exit。
+                if state.has_unsaved_light() && !state.exit_confirmed.load(Ordering::SeqCst) {
+                    api.prevent_exit();
+                }
                 let _ = app.emit("app://will-exit", ());
+            }
+
+            // 窗口销毁后清掉它的未保存标记：否则已关闭窗口会把后续退出卡住。
+            if let RunEvent::WindowEvent {
+                label,
+                event: tauri::WindowEvent::Destroyed,
+                ..
+            } = &event
+            {
+                app.state::<AppLifecycleState>().clear_window(label);
             }
         });
 }

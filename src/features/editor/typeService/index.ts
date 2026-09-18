@@ -3,6 +3,7 @@
 // 加载完成前补全源返回 null → 分派链降级轻量语义层。
 
 import { TsLanguageService, type FileContentSource, type TsModule } from "./tsService";
+import { fileScopeRoot } from "@/shared/fileScope";
 
 let tsPromise: Promise<TsModule> | null = null;
 
@@ -26,14 +27,14 @@ export async function openedContent(path: string): Promise<string | undefined> {
   }
 }
 
-/** 磁盘读取（workspace root + readTextFile） */
+/** 磁盘读取（读写作用域根 + readTextFile；light 模式取文件所在目录） */
 export async function readDiskContent(path: string): Promise<string | null> {
   try {
     const { useWorkspaceStore } = await import("@/stores/workspace");
-    const root = useWorkspaceStore().rootPath;
-    if (!root) return null;
+    const scope = fileScopeRoot(useWorkspaceStore().rootPath, path);
+    if (!scope) return null;
     const { readTextFile } = await import("@/shared/fs");
-    return await readTextFile(root, path);
+    return await readTextFile(scope, path);
   } catch {
     return null;
   }

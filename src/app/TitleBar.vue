@@ -4,6 +4,8 @@ import { PanelLeft, PanelLeftClose, Copy, Check } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
 import UpdateBadge from "@/app/UpdateBadge.vue";
 import { formatShortcut, isMacOS } from "@/shared/platform";
+import { basename } from "@/shared/fs";
+import { useEditorStore } from "@/stores/editor";
 import { useSettingsStore } from "@/stores/settings";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { useI18n } from "@/i18n";
@@ -11,6 +13,7 @@ import { useI18n } from "@/i18n";
 const { t } = useI18n();
 const settings = useSettingsStore();
 const workspace = useWorkspaceStore();
+const editor = useEditorStore();
 const { layout } = storeToRefs(settings);
 const { rootPath } = storeToRefs(workspace);
 
@@ -45,22 +48,31 @@ async function refreshFullscreen() {
   }
 }
 
-/** 全局项目标题：项目名（粗体 ≤24 字符自动截断）+ 完整路径（淡灰，ellipsis） */
+/** 全局项目标题：项目名（粗体 ≤24 字符自动截断）+ 完整路径（淡灰，ellipsis）。
+ *  light 模式（无工作区）显示当前独立文件名与所在目录，不再是「未打开文件夹」。 */
 const MAX_NAME = 24;
+const clampName = (name: string) =>
+  name.length > MAX_NAME ? `${name.slice(0, MAX_NAME - 1)}…` : name;
 const projectTitle = computed(() => {
-  if (!rootPath.value) return t("title.noFolder");
+  if (!rootPath.value) {
+    const path = editor.activePath;
+    return path ? clampName(basename(path)) : t("title.noFolder");
+  }
   const name = rootPath.value.split("/").filter(Boolean).pop() ?? t("title.noFolder");
-  return name.length > MAX_NAME ? `${name.slice(0, MAX_NAME - 1)}…` : name;
+  return clampName(name);
 });
-const projectPath = computed(() => rootPath.value ?? "");
+/** 标题栏可复制/展示的完整路径：工作区根；light 模式为当前文件路径 */
+const titlePath = computed(
+  () => rootPath.value ?? editor.activePath ?? "",
+);
 
 /** 点击标题复制完整路径到剪贴板（带视觉反馈） */
 const copied = ref(false);
 let copiedTimer: number | null = null;
 async function copyProjectPath() {
-  if (!rootPath.value) return;
+  if (!titlePath.value) return;
   try {
-    await navigator.clipboard.writeText(rootPath.value);
+    await navigator.clipboard.writeText(titlePath.value);
     copied.value = true;
     if (copiedTimer != null) window.clearTimeout(copiedTimer);
     copiedTimer = window.setTimeout(() => {
@@ -149,22 +161,23 @@ onUnmounted(() => {
       />
     </button>
     <div class="drag-fill" data-tauri-drag-region />
-    <!-- 全局项目标题：项目名（粗）+ 路径（淡灰），点击复制完整路径 -->
+    <!-- 全局项目标题：项目名（粗）+ 路径（淡灰），点击复制完整路径；
+         light 模式显示当前独立文件名与路径 -->
     <button
       type="button"
       class="project-title"
-      :disabled="!rootPath"
-      :title="rootPath ? t('title.copyPath') : ''"
-      :aria-label="projectPath"
+      :disabled="!titlePath"
+      :title="titlePath ? t('title.copyPath') : ''"
+      :aria-label="titlePath"
       data-tauri-drag-region="false"
       @click="copyProjectPath"
     >
       <span class="project-name" data-tauri-drag-region>{{ projectTitle }}</span>
-      <span v-if="rootPath" class="project-sep" data-tauri-drag-region>·</span>
-      <span v-if="rootPath" class="project-path" data-tauri-drag-region>{{ projectPath }}</span>
+      <span v-if="titlePath" class="project-sep" data-tauri-drag-region>·</span>
+      <span v-if="titlePath" class="project-path" data-tauri-drag-region>{{ titlePath }}</span>
       <Transition name="copied" mode="out-in">
         <Check v-if="copied" :size="12" class="copy-check" />
-        <Copy v-else-if="rootPath" :size="12" class="copy-icon" />
+        <Copy v-else-if="titlePath" :size="12" class="copy-icon" />
       </Transition>
     </button>
     <div class="drag-fill" data-tauri-drag-region />

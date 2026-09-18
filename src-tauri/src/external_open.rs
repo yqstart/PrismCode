@@ -26,6 +26,13 @@ pub struct ExternalOpenTarget {
 impl ExternalOpenTarget {
     pub fn from_path(path: PathBuf, line: Option<u32>, column: Option<u32>) -> Self {
         let is_dir = path.is_dir();
+        // Launch Services 的目录 URL 带结尾分隔符（`file:///tmp/proj/`）：不去掉的话
+        // 它会一路成为工作区根，窗口标题 / 状态栏只能显示整条路径（basename 为空）。
+        let path = if is_dir {
+            trim_trailing_separator(path)
+        } else {
+            path
+        };
         Self {
             path: path.to_string_lossy().into_owned(),
             line,
@@ -33,6 +40,16 @@ impl ExternalOpenTarget {
             is_dir,
         }
     }
+}
+
+/// 去掉目录路径结尾的分隔符；根目录（`/`）与 Windows 盘符（`C:\`）保持原样。
+fn trim_trailing_separator(path: PathBuf) -> PathBuf {
+    let text = path.to_string_lossy();
+    let trimmed = text.trim_end_matches(['/', '\\']);
+    if trimmed.is_empty() || trimmed.ends_with(':') {
+        return path;
+    }
+    PathBuf::from(trimmed)
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -148,23 +165,51 @@ pub fn targets_from_urls(urls: Vec<Url>) -> Vec<ExternalOpenTarget> {
         .collect()
 }
 
-#[cfg(all(test, target_os = "macos"))]
+#[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn converts_file_urls_to_local_targets() {
-        let url = Url::parse("file:///tmp/Prism%20Code.ts").expect("文件 URL 应有效");
-        let targets = targets_from_urls(vec![url]);
-        assert_eq!(targets.len(), 1);
-        assert_eq!(targets[0].path, "/tmp/Prism Code.ts");
-        assert!(!targets[0].is_dir);
-        assert_eq!(targets[0].line, None);
+    fn trims_trailing_separator_of_directories() {
+        let target = ExternalOpenTarget::from_path(PathBuf::from("/tmp/"), None, None);
+        assert!(target.is_dir);
+        assert_eq!(target.path, "/tmp");
     }
 
     #[test]
-    fn ignores_non_file_urls() {
-        let url = Url::parse("https://example.com/file.ts").expect("URL 应有效");
-        assert!(targets_from_urls(vec![url]).is_empty());
+    fn keeps_root_and_drive_paths_intact() {
+        assert_eq!(
+            PathBuf::from("/"),
+            trim_trailing_separator(PathBuf::from("/"))
+        );
+        assert_eq!(
+            PathBuf::from("C:\\"),
+            trim_trailing_separator(PathBuf::from("C:\\"))
+        );
+        assert_eq!(
+            PathBuf::from("/tmp/file.ts/"),
+            trim_trailing_separator(PathBuf::from("/tmp/file.ts/"))
+        );
+    }
+
+    #[cfg(target_os = "macos")]
+    mod macos_urls {
+        use super::*;
+
+        #[test]
+        fn converts_file_urls_to_local_targets() {
+            let url = Url::parse("file:///tmp/Prism%20Code.ts").expect("文件 URL 应有效");
+            let targets = targets_from_urls(vec![url]);
+            assert_eq!(targets.len(), 1);
+            assert_eq!(targets[0].path, "/tmp/Prism Code.ts");
+            assert!(!targets[0].is_dir);
+            assert_eq!(targets[0].line, None);
+        }
+
+        #[test]
+        fn ignores_non_file_urls() {
+            let url = Url::parse("https://example.com/file.ts").expect("URL 应有效");
+            assert!(targets_from_urls(vec![url]).is_empty());
+        }
     }
 }

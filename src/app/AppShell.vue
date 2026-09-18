@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { defineAsyncComponent, onMounted, onUnmounted } from "vue";
+import { defineAsyncComponent, onMounted, onUnmounted, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -27,7 +27,6 @@ import { basename, isPathUnder } from "@/shared/fs";
 import type { ExternalOpenRequest, ExternalOpenTarget } from "@/shared/externalOpen";
 import { dispatchDockMenuEvent, type DockMenuEvent } from "@/shared/dockMenu";
 import {
-  parentDirectory,
   planExternalOpen,
   takeBootFiles,
 } from "@/shared/externalOpenRoute";
@@ -36,6 +35,7 @@ import { checkForAppUpdate } from "@/shared/appUpdate";
 import { isMacOS } from "@/shared/platform";
 import {
   openFolderInNewWindow,
+  openLightInNewWindow,
   readBootState,
 } from "@/shared/openWorkspace";
 import {
@@ -77,6 +77,8 @@ let unlistenDockMenu: (() => void) | undefined;
 let unlistenAppExit: (() => void) | undefined;
 let unlistenExternalOpen: (() => void) | undefined;
 let teardownAutoSave: (() => void) | undefined;
+let stopLightTitleWatch: (() => void) | undefined;
+let stopLightUnsavedWatch: (() => void) | undefined;
 let appQuitting = false;
 let externalOpenAccepting = false;
 let externalOpenBacklog: ExternalOpenRequest[] = [];
@@ -297,16 +299,51 @@ function isEditableTarget(target: EventTarget | null): boolean {
 }
 
 function onWindowFocus() {
-  if (!workspace.rootPath) return;
-  void workspace.refreshFromDisk([], { quiet: true });
+  if (workspace.rootPath) {
+    void workspace.refreshFromDisk([], { quiet: true });
+    return;
+  }
+  // light 模式（无工作区）没有文件监听：回到窗口时同步一次打开标签的磁盘
+  // 内容，让其它编辑器 / 终端的改动也能被发现（脏标签按既有规则询问）。
+  if (editor.tabs.length) {
+    void editor.syncExternalChanges(editor.tabs.map((tab) => tab.path));
+  }
 }
 
-/** 关闭/退出前同步该窗口当前工作区的文件和终端快照；主窗口工作区锚点在打开工作区时已写入。 */
+/**
+ * 关闭/退出前同步该窗口当前工作区的文件和终端快照；主窗口工作区锚点在打开工作区时已写入。
+ */
 function persistWindowState() {
   const root = workspace.rootPath;
   settings.persistNow();
   editor.persistSession(root);
   sessions.persistSession(root);
+}
+
+/** light 模式未保存文件的提示文案（最多列 3 个文件名） */
+function lightDirtyLabel(): string {
+  const dirtyTabs = editor.tabs.filter((tab) => editor.dirtyPaths.has(tab.path));
+  const names = dirtyTabs
+    .slice(0, 3)
+    .map((tab) => tab.name)
+    .join("、");
+  return dirtyTabs.length > 3 ? `${names} 等 ${dirtyTabs.length} 个文件` : names;
+}
+
+/**
+ * light 模式（无工作区）没有按工作区持久化的会话快照可用，关闭窗口前必须让用户
+ * 确认未保存的独立文件；返回 false 表示取消本次关闭。
+ */
+function confirmDiscardLightTabs(): boolean {
+  if (workspace.rootPath || !editor.dirtyPaths.size) return true;
+  return window.confirm(
+    `${lightDirtyLabel()} 有未保存更改，关闭窗口将丢弃这些更改。继续？`,
+  );
+}
+
+/** 上报本窗口 light 模式未保存状态：Rust 在应用退出前据此拦住退出。 */
+function reportLightUnsaved(dirty: boolean) {
+  void invoke("set_light_unsaved", { dirty }).catch(() => undefined);
 }
 
 function onBeforeUnload() {
@@ -315,10 +352,34 @@ function onBeforeUnload() {
   if (!appQuitting) clearMainWindowRoot();
 }
 
-/** 主进程发出应用退出通知后，各 WebView 先保存，再按原生流程退出。 */
-function onAppWillExit() {
+/**
+ * 主进程发出应用退出通知后，各 WebView 先保存，再按原生流程退出。
+ * light 模式没有工作区会话快照：自动保存开启时先落盘再放行退出，关闭自动保存时
+ * 由用户确认（Rust 侧已 prevent_exit，取消即留在应用内）。
+ */
+async function onAppWillExit() {
   appQuitting = true;
   persistWindowState();
+  if (workspace.rootPath || !editor.dirtyPaths.size) return;
+  if (settings.settings.editor.autoSave) {
+    await editor.saveAll({ quiet: true, auto: true });
+    reportLightUnsaved(false);
+    void invoke("confirm_app_exit").catch(() => undefined);
+    return;
+  }
+  try {
+    const { getCurrentWindow } = await import("@tauri-apps/api/window");
+    await getCurrentWindow().setFocus();
+  } catch {
+    // 纯 Vite 预览时无 Tauri runtime
+  }
+  if (window.confirm(`${lightDirtyLabel()} 有未保存更改，退出将丢弃这些更改。继续？`)) {
+    reportLightUnsaved(false);
+    void invoke("confirm_app_exit").catch(() => undefined);
+  } else {
+    // 取消退出：复位退出标记，窗口保持可用，下次退出重新判定。
+    appQuitting = false;
+  }
 }
 
 function openExternalFiles(targets: ExternalOpenTarget[]) {
@@ -368,12 +429,11 @@ async function openExternalTargets(targets: ExternalOpenTarget[]) {
     }
   }
 
-  // 工作区外文件：按父目录分组，每组新开一个窗口并透传文件列表。
-  for (const group of plan.newWindowGroups) {
+  // 工作区外文件：新窗口以 light 模式打开（单个/多个文件，无工作区），
+  // 不再把文件所在目录当成项目整窗打开。
+  if (plan.lightFiles.length) {
     try {
-      await openFolderInNewWindow(group.folder, {
-        bootFiles: group.targets,
-      });
+      await openLightInNewWindow(plan.lightFiles);
     } catch (error) {
       workspace.showNotice(
         error instanceof Error ? error.message : String(error),
@@ -382,7 +442,7 @@ async function openExternalTargets(targets: ExternalOpenTarget[]) {
     }
   }
 
-  // 本窗口只处理三类：启动目录、当前工作区内文件、无工作区时的首个文件组。
+  // 本窗口只处理两类：启动目录、本窗口要打开的文件。
   for (const dir of plan.inCurrentDirs) {
     try {
       await workspace.openFolder(dir.path);
@@ -394,14 +454,33 @@ async function openExternalTargets(targets: ExternalOpenTarget[]) {
     }
   }
   if (!plan.inCurrentFiles.length) return;
-  if (!workspace.rootPath || !isPathUnder(workspace.rootPath, plan.inCurrentFiles[0]!.path)) {
-    const opened = await workspace.openFolder(
-      parentDirectory(plan.inCurrentFiles[0]!.path),
-      { quiet: true },
-    );
-    if (!opened) return;
+  // 无工作区（欢迎页 / light 窗口）时文件就地打开：窗口进入 light 模式，
+  // 与项目无关；工作区内的文件则继续叠加在本窗口。
+  const root = workspace.rootPath;
+  if (!root) {
+    workspace.enterLightMode();
+    openExternalFiles(plan.inCurrentFiles);
+    return;
   }
-  openExternalFiles(plan.inCurrentFiles);
+  // 分流后工作区已被切走（用户在排队期间打开了别的项目）：不在工作区内的
+  // 文件改走 light 窗口，避免触发「禁止访问工作区外的路径」。
+  const inRoot = plan.inCurrentFiles.filter((target) =>
+    isPathUnder(root, target.path),
+  );
+  const outside = plan.inCurrentFiles.filter(
+    (target) => !isPathUnder(root, target.path),
+  );
+  if (outside.length) {
+    try {
+      await openLightInNewWindow(outside);
+    } catch (error) {
+      workspace.showNotice(
+        error instanceof Error ? error.message : String(error),
+        3200,
+      );
+    }
+  }
+  openExternalFiles(inRoot);
 }
 
 function queueExternalOpenRequest(request: ExternalOpenRequest) {
@@ -437,14 +516,21 @@ function openRecentProjectInNewWindow(path: string) {
 }
 
 async function restoreApplicationWindows(bootFolder: string | null) {
-  // 动态窗口（「在新窗口打开」）只恢复 URL 指定的工作区。
+  // 动态窗口：URL 带 folder 时恢复成项目窗口，否则是 light 窗口
+  // （用 Prism Code 打开文件创建，只展示随窗口透传的独立文件）。
   if (!isPrimaryWindow) {
-    if (!bootFolder) return;
+    const bootFiles = takeBootFiles(windowSessionId);
+    if (!bootFolder) {
+      if (bootFiles.length) {
+        workspace.enterLightMode();
+        openExternalFiles(bootFiles);
+      }
+      return;
+    }
     const opened = await workspace.openFolder(bootFolder, { quiet: true });
     // 外部打开落到新窗口时，随窗口透传待开文件；新窗口打开目录成功后再
     // 打开文件，行列定位复用普通编辑器链路。目录打开失败也要取走透传，
     // 避免残留文件下次误打开。
-    const bootFiles = takeBootFiles(windowSessionId);
     if (opened && bootFiles.length) openExternalFiles(bootFiles);
     return;
   }
@@ -464,9 +550,12 @@ onMounted(async () => {
   window.addEventListener("beforeunload", onBeforeUnload);
   teardownAutoSave = setupAutoSave({
     beforeClose: () => {
+      if (!confirmDiscardLightTabs()) return false;
       persistWindowState();
+      reportLightUnsaved(false);
       // 主窗口正常关闭时不应在下次启动自动打开工作区；应用整体退出则保留。
       if (!appQuitting) clearMainWindowRoot();
+      return true;
     },
   });
   // macOS：启动后立即把主窗口拉前（解决自动更新后需手动点 dock 才能前置的问题）。
@@ -515,6 +604,24 @@ onMounted(async () => {
     }
   }
 
+  // light 窗口（无工作区）的原生标题跟随活动文件；项目窗口的标题由
+  // workspace store 内的 rootPath watcher 负责。
+  stopLightTitleWatch = watch(
+    () => [workspace.rootPath, editor.activePath] as const,
+    ([root, file]) => {
+      if (!root) void workspace.syncWindowTitle(file);
+    },
+    { immediate: true },
+  );
+
+  // light 模式未保存状态上报 Rust：应用退出前由本窗口先落盘或请用户确认，
+  // 避免「关闭窗口会提示、⌘Q 却静默丢改」的不一致。
+  stopLightUnsavedWatch = watch(
+    () => !workspace.rootPath && editor.dirtyPaths.size > 0,
+    (dirty) => reportLightUnsaved(dirty),
+    { immediate: true },
+  );
+
   await setupExternalOpenBridge();
   const { folder: bootFolder } = readBootState();
   await restoreApplicationWindows(bootFolder);
@@ -545,6 +652,8 @@ onUnmounted(() => {
   window.removeEventListener("beforeunload", onBeforeUnload);
   editor.persistSession();
   teardownAutoSave?.();
+  stopLightTitleWatch?.();
+  stopLightUnsavedWatch?.();
   workspace.stopWatch();
   unlistenMenu?.();
   unlistenDockMenu?.();

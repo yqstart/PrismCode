@@ -212,6 +212,9 @@ export const enUS = {
     filterPlaceholder: "Filter files…",
     empty: "Open a workspace folder first",
     emptyHint: "Open a local folder to show the project tree",
+    lightTitle: "Single-file mode",
+    lightHint:
+      "No folder open — editing standalone files; open a folder to switch to project mode",
     newFile: "New File",
     newFolder: "New Folder",
     rename: "Rename",

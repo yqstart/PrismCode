@@ -5,6 +5,7 @@
 import type { Completion, CompletionContext, CompletionSource } from "@codemirror/autocomplete";
 import { ensureTypeScriptProgram, tsService } from "./index";
 import { buildAutoImportApply, type TsCompletionEntry } from "./tsService";
+import { fileScopeRoot } from "@/shared/fileScope";
 
 /** ts.CompletionEntry.kind（TS 字符串枚举）→ CM6 type */
 export function tsKindToCmType(kind: string): Completion["type"] {
@@ -54,8 +55,9 @@ export function createTsCompletionSource(
     // 准备当前文件与 import 闭包；未就绪/加载失败时回退轻量语义补全。
     try {
       const { useWorkspaceStore } = await import("@/stores/workspace");
-      const root = useWorkspaceStore().rootPath;
-      if (!root || !(await ensureTypeScriptProgram(root, serviceFilePath, serviceText))) return null;
+      // light 模式（未打开工作区）同样启用类型服务：作用域取文件所在目录
+      const scope = fileScopeRoot(useWorkspaceStore().rootPath, serviceFilePath);
+      if (!scope || !(await ensureTypeScriptProgram(scope, serviceFilePath, serviceText))) return null;
     } catch {
       return null;
     }
