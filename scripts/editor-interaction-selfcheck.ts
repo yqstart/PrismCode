@@ -52,7 +52,7 @@ try {
       document.querySelector<HTMLButtonElement>("#outside")!.focus();
       view.scrollDOM.scrollTop = 1600;
       const dom = view.contentDOM;
-      dom.focus = function (options: FocusOptions) {
+      dom.focus = function(options: FocusOptions) {
         HTMLElement.prototype.focus.call(this, options);
         // 模拟 Safari 26 / WKWebView 聚焦时滚回旧光标的回归。
         if (broken) view.scrollDOM.scrollTop = 0;
@@ -121,6 +121,50 @@ try {
   assert.match((await state()).text, /^\w+$/, "失焦后双击仍应选中单词");
   assert.equal((await state()).top, word.top, "双击聚焦也应保留视口");
 
+  // 手势中途的视口/布局变化（window focus 触发的 requestMeasure 滚动锚定、
+  // 切标签后的滚动恢复）会把同屏坐标解析到别的文档位置：CodeMirror 的
+  // basicMouseSelection 随即把「按下点范围」与「当前点范围」取并集，双击选词
+  // 变成选中跨行一段，WebKit 还要为这个超大选区做 reveal 滚动。视口保护必须
+  // 让这一变化既不改变选区、也不挪动视口。
+  const chaos = await prepare(true);
+  await page.evaluate(
+    ({ x, y }) => {
+      const view = window.checkView;
+      let presses = 0;
+      const arm = () => {
+        presses += 1;
+        if (presses !== 2) return;
+        window.removeEventListener("mousedown", arm, true);
+        // 第二次按下之后、抬起之前：先改视口，再补一次真实鼠标级别的 1px 抖动
+        setTimeout(() => {
+          view.scrollDOM.scrollTop += 120;
+          // 等布局反映新的滚动偏移后再抖动，模拟异步调整真正落到界面上的时刻
+          setTimeout(() => {
+            document.dispatchEvent(
+              new MouseEvent("mousemove", {
+                bubbles: true,
+                buttons: 1,
+                clientX: x,
+                clientY: y + 1,
+              }),
+            );
+          }, 20);
+        }, 0);
+      };
+      window.addEventListener("mousedown", arm, true);
+    },
+    { x: chaos.x, y: chaos.y },
+  );
+  await page.mouse.click(chaos.x, chaos.y, { count: 2, delay: 60 });
+  await delay(80);
+  const chaosState = await state();
+  assert.match(
+    chaosState.text,
+    /^\w+$/,
+    "手势中途的视口变化不应把双击放大成跨段选区",
+  );
+  assert.equal(chaosState.top, chaos.top, "手势中途的视口变化不应挪动视口");
+
   const line = await prepare(true);
   await page.mouse.click(line.x, line.y, { count: 3 });
   assert.match(
@@ -154,7 +198,7 @@ try {
   assert.equal((await state()).top, multi.top, "多光标聚焦不应跳转视口");
 
   console.log(
-    "编辑器交互自测通过：聚焦防跳动、连续单击、双击选词、三击选行、拖选、Shift 扩选、多光标",
+    "编辑器交互自测通过：聚焦防跳动、连续单击、双击选词、手势中途视口变化、三击选行、拖选、Shift 扩选、多光标",
   );
 } finally {
   await browser?.close();

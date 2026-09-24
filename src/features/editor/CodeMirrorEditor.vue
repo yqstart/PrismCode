@@ -90,6 +90,90 @@ const JUMP_HIGHLIGHT_DURATION = 1800;
  */
 let measureTimer: ReturnType<typeof setTimeout> | null = null;
 
+// ==================== 指针手势期间的视口保护 ====================
+// CodeMirror 的 basicMouseSelection 在「按下点解析出的范围」与「当前点解析出的
+// 范围」不同源时会取并集（start.pos != cur.pos → union）。因此只要手势途中
+// 视口或布局发生变化，同一个屏幕坐标就会解析到别的文档位置：双击选词会被
+// 放大成跨行一整段，WebKit 还会为这个超大原生选区做一次 reveal 滚动，用户
+// 看到的就是「双击选中一段代码并跳动」（2026-09 WKWebView 真机复现：第二次
+// mousedown 之后滚动 120px + 1px 抖动，选区从 "gamma" 变成
+// "gamma\nline85 alpha beta gamma\n"）。
+// 视口变化的来源是应用自身的异步动作：window focus / ResizeObserver 触发的
+// requestMeasure 会按新行高做滚动锚定，切标签后的滚动恢复也排在 rAF 里。这些
+// 都不能插进用户按下的手指与屏幕之间——按下后钉住滚动位置，手势期间的重新
+// 测量与滚动恢复推迟到手势结束；指针移动超过点击容差（判定为拖选）或滚轮
+// 出现时立即交还滚动控制权，保证 CM 的拖选自动滚动不受影响。
+const CLICK_MOVE_TOLERANCE = 8;
+let pressX = 0;
+let pressY = 0;
+let pinnedScrollTop = 0;
+let pinnedScrollLeft = 0;
+let viewportPinned = false;
+let pendingMeasureAfterGesture = false;
+let pendingScrollRestore: (() => void) | null = null;
+
+function onPinnedScroll(): void {
+  if (!viewportPinned || !view) return;
+  // 写回是幂等的：值相等时不写，避免与 scroll 事件互相触发
+  if (view.scrollDOM.scrollTop !== pinnedScrollTop) {
+    view.scrollDOM.scrollTop = pinnedScrollTop;
+  }
+  if (view.scrollDOM.scrollLeft !== pinnedScrollLeft) {
+    view.scrollDOM.scrollLeft = pinnedScrollLeft;
+  }
+}
+
+function releaseViewportPin(): void {
+  if (!viewportPinned) return;
+  viewportPinned = false;
+  view?.scrollDOM.removeEventListener("scroll", onPinnedScroll);
+}
+
+/** 手势结束：先恢复视口，再交还滚动控制权并补做被推迟的维护动作 */
+function endPointerGesture(): void {
+  // CM 的 MouseSelection.up「点击落在选区内的单击」会在此刻才结算选区，
+  // 先恢复按下时的滚动位置，保证它读到的仍是按下时的坐标映射。
+  onPinnedScroll();
+  releaseViewportPin();
+  const restore = pendingScrollRestore;
+  pendingScrollRestore = null;
+  restore?.();
+  if (pendingMeasureAfterGesture) {
+    pendingMeasureAfterGesture = false;
+    scheduleEditorMeasure();
+  }
+}
+
+function onGestureMouseDown(event: MouseEvent): void {
+  if (event.button !== 0 || !view) return;
+  // 只保护正文区的按下：滚动条、gutter 的拖动是明确的滚动/菜单意图
+  if (!(event.target instanceof Node) || !view.contentDOM.contains(event.target)) return;
+  pressX = event.clientX;
+  pressY = event.clientY;
+  pinnedScrollTop = view.scrollDOM.scrollTop;
+  pinnedScrollLeft = view.scrollDOM.scrollLeft;
+  viewportPinned = true;
+  view.scrollDOM.addEventListener("scroll", onPinnedScroll);
+}
+
+function onGestureMouseMove(event: MouseEvent): void {
+  if (!viewportPinned) return;
+  if (event.buttons === 0) {
+    // 抬起事件可能落在窗口外，用按键位兜底结束手势
+    endPointerGesture();
+    return;
+  }
+  // CM 的 MouseSelection.move 挂在 document 冒泡阶段，本监听在 window 捕获阶段，
+  // 必然先执行：先把视口拉回按下时的位置，再让 CM 解析落点。
+  onPinnedScroll();
+  if (
+    Math.abs(event.clientX - pressX) > CLICK_MOVE_TOLERANCE ||
+    Math.abs(event.clientY - pressY) > CLICK_MOVE_TOLERANCE
+  ) {
+    releaseViewportPin();
+  }
+}
+
 function scheduleEditorMeasure(): void {
   if (!view || measureRaf !== null || measureTimer !== null) return;
   const run = () => {
@@ -98,6 +182,12 @@ function scheduleEditorMeasure(): void {
     if (measureTimer !== null) clearTimeout(measureTimer);
     measureTimer = null;
     if (!view || !host.value?.isConnected) return;
+    // 手势进行中不测量：requestMeasure 会按新行高做滚动锚定，
+    // 一旦落在 mousedown 与 mouseup 之间就会造出跨区域选区（见上文）。
+    if (viewportPinned) {
+      pendingMeasureAfterGesture = true;
+      return;
+    }
     view.requestMeasure();
   };
   measureRaf = requestAnimationFrame(run);
@@ -455,9 +545,15 @@ function switchDocument(path: string, content: string): void {
   if (cached && cached.state.doc.toString() === content) {
     view.setState(cached.state);
     const scrollTop = cached.scrollTop;
-    requestAnimationFrame(() => {
+    const restoreScroll = () => {
       if (view) view.scrollDOM.scrollTop = scrollTop;
-    });
+    };
+    if (viewportPinned) {
+      // 手势进行中：交给 endPointerGesture 补做，不在按下与抬起之间挪视口
+      pendingScrollRestore = restoreScroll;
+    } else {
+      requestAnimationFrame(restoreScroll);
+    }
   } else {
     // 3. 未命中 / 内容被外部修改：按当前内容重建状态（历史从空开始）
     stateCache.delete(path);
@@ -516,11 +612,25 @@ onMounted(() => {
   void git.scheduleRefresh();
   window.addEventListener("focus", handleWindowRestore);
   document.addEventListener("visibilitychange", handleWindowRestore);
+  // 手势视口保护：捕获阶段监听，保证在 CodeMirror 自己的处理之前拿到按下点
+  window.addEventListener("mousedown", onGestureMouseDown, true);
+  window.addEventListener("mousemove", onGestureMouseMove, true);
+  window.addEventListener("mouseup", endPointerGesture, true);
+  window.addEventListener("wheel", releaseViewportPin, true);
+  window.addEventListener("blur", endPointerGesture);
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener("focus", handleWindowRestore);
   document.removeEventListener("visibilitychange", handleWindowRestore);
+  window.removeEventListener("mousedown", onGestureMouseDown, true);
+  window.removeEventListener("mousemove", onGestureMouseMove, true);
+  window.removeEventListener("mouseup", endPointerGesture, true);
+  window.removeEventListener("wheel", releaseViewportPin, true);
+  window.removeEventListener("blur", endPointerGesture);
+  releaseViewportPin();
+  pendingMeasureAfterGesture = false;
+  pendingScrollRestore = null;
   resizeObserver?.disconnect();
   resizeObserver = null;
   if (measureRaf !== null) {
