@@ -478,6 +478,7 @@ pub fn run() {
             commands::ssh::ssh_secret_set,
             commands::ssh::ssh_secret_remove,
             commands::tooling::format_with_prettier,
+            commands::tooling::lint_with_eslint,
             commands::security_scoped::create_security_scoped_bookmarks,
             commands::security_scoped::resolve_security_scoped_bookmarks,
             commands::security_scoped::release_security_scoped_bookmarks,

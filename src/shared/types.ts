@@ -26,6 +26,12 @@ export function isUpdateImportsOnMove(
   return value === "always" || value === "prompt" || value === "never";
 }
 
+export type KeymapPreset = "webstorm" | "vscode";
+
+export function isKeymapPreset(value: unknown): value is KeymapPreset {
+  return value === "webstorm" || value === "vscode";
+}
+
 export interface EditorPreferences {
   /** 编辑器字体预设 ID；具体 CSS 字体栈由编辑器字体模块解析 */
   fontFamily: EditorFontId;
@@ -41,6 +47,18 @@ export interface EditorPreferences {
   prettierEnabled: boolean;
   /** 保存文件前自动格式化（需 prettierEnabled） */
   formatOnSave: boolean;
+  /** 粘性滚动：当前作用域表头固定在编辑区顶部 */
+  stickyScroll: boolean;
+  /** 小地图 */
+  minimap: boolean;
+  /** 相对行号（当前行显示绝对值） */
+  relativeLineNumbers: boolean;
+  /** 垂直标尺列（按字符宽度；空数组表示不显示） */
+  rulers: number[];
+  /** 编辑器键位预设：WebStorm 或 VS Code 默认键位 */
+  keymap: KeymapPreset;
+  /** 使用项目本地 ESLint 做实时诊断（需项目已安装 eslint） */
+  eslintEnabled: boolean;
   /** 移动文件/文件夹后如何更新相对 import 引用 */
   updateImportsOnMove: UpdateImportsOnMove;
 }
@@ -82,6 +100,12 @@ export const DEFAULT_SETTINGS: AppSettings = {
     autoSaveDelayMs: 1000,
     prettierEnabled: true,
     formatOnSave: false,
+    stickyScroll: true,
+    minimap: false,
+    relativeLineNumbers: false,
+    rulers: [100],
+    keymap: "webstorm",
+    eslintEnabled: false,
     updateImportsOnMove: "prompt",
   },
   layout: {

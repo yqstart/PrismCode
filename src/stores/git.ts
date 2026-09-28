@@ -74,6 +74,7 @@ const EMPTY: GitStatusSnapshot = {
   behind: 0,
   entries: [],
   conflictCount: 0,
+  mergeInProgress: false,
 };
 
 const EMPTY_REBASE: GitRebaseStatus = {
@@ -725,6 +726,15 @@ export const useGitStore = defineStore("git", () => {
         const raw = error instanceof Error ? error.message : String(error);
         const parsed = parseGitAuthError(raw);
         if (!parsed) {
+          // 远端有新提交导致 push 被拒：引导先更新项目再推送（WebStorm 同款流程）
+          if (kind === "push" && isPushRejected(raw)) {
+            workspace.showNotice(t("git.pushRejected"), 5600);
+            // 当前调用栈结束后 remoteInFlight 才会复位，延后一拍再进更新流程
+            setTimeout(() => {
+              void updateProject();
+            }, 0);
+            return;
+          }
           workspace.showNotice(raw, 4800);
           return;
         }
@@ -769,6 +779,17 @@ export const useGitStore = defineStore("git", () => {
         };
       }
     }
+  }
+
+  /** push 被拒（远端领先）：git 各版本的措辞不同，按关键字判定 */
+  function isPushRejected(raw: string): boolean {
+    const text = raw.toLowerCase();
+    return (
+      text.includes("non-fast-forward") ||
+      text.includes("fetch first") ||
+      text.includes("failed to push some refs") ||
+      text.includes("[rejected]")
+    );
   }
 
   function parseGitAuthError(raw: string): { url: string; detail: string } | null {

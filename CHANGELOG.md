@@ -2,6 +2,27 @@
 
 本文件遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 风格，版本号遵循语义化版本。
 
+## [4.0.0] - 2026-09-28
+
+### 变更
+
+- **编辑器内核从 CodeMirror 6 迁移到 Monaco Editor（VSCode 同源）**。TS/JS 语言服务改为 Monaco 的 TypeScript worker：编译器与标准库内嵌、在 Worker 线程运行、不联网，主线程不再加载 TypeScript 编译器（原先约 4.6MB 的同步 chunk 消失）。跨文件跳转、重命名、查找引用、诊断改由 worker 承担。
+- 新增**编辑器键位预设**：设置 → 编辑器 → 键位预设可在 **WebStorm** 与 **VS Code** 两套默认键位间切换（默认 WebStorm）。两套预设覆盖跳转声明/查看引用/重命名/快速修复/问题导航/行操作/多光标/折叠等高频命令，冲突的内置键位会随预设自动让位。
+- 编辑器视觉能力补齐：粘性滚动（默认开）、缩进参考线与括号配对参考线、括号对着色、垂直标尺（默认 100 列）、相对行号（默认关）、小地图（默认关），均在设置中可调。
+- 语言能力：HTML/CSS/SCSS/Less 补全与悬浮提示（vscode-html/css-languageservice，VSCode 同源）、Emmet 缩写展开、Vue SFC 三态高亮、Vue `<script setup>` 顶层绑定在 template 表达式内补全、`.vue` script 段的 TypeScript 诊断与补全（等长虚拟文件映射）、JSON 语法诊断、`.env` 重复键诊断、项目本地 Prettier 格式化、用户代码片段补全。
+- 冲突解决：冲突文件内直接给每块冲突提供「采用当前更改 / 采用传入更改 / 保留两者」操作，无需打开对比视图。
+- 推送被拒（远端有新提交）时提示改用「更新项目」，并直接进入更新流程。
+- 新增 `lint_with_eslint` 后端命令与编辑器集成：开启后对 JS/TS/Vue 文件做实时 ESLint 校验并显示在编辑器中（项目未安装 ESLint 时自动停用）。
+
+### 修复
+
+- 项目 Prettier 配置探测失败（读取异常、权限不足、目录不可读）不再连带内置格式化引擎一起失败，改为退回全默认配置继续格式化。
+- `.vue` 的等长虚拟 TS 文件不再把换行也填成空格：此前虚拟文件与原文件行结构错位，诊断行列会落到错误的行上。
+
+### 移除
+
+- 移除 CodeMirror 6 相关依赖（@codemirror/*、@lezer/*、codemirror）与自研主线程类型服务链路。
+
 ## [3.4.0] - 2026-09-24
 
 ### 新增
@@ -221,6 +242,7 @@ Prism Code 1.0.0 是当前代码基线的首个可用大版本，定位为轻量
 - 文件访问、Git、搜索、SSH 和更新说明渲染均加入路径校验、错误处理、超时清理、敏感信息隔离和 Markdown 链接过滤。
 - 采用 MIT 许可证，纯开源免费；本版本坚持离线优先，不包含联网 AI 补全、AI 对话面板、AI Agent、MCP/Skills 生态或插件市场。
 
+[4.0.0]: https://github.com/yqstart/PrismCode/releases/tag/v4.0.0
 [3.4.0]: https://github.com/yqstart/PrismCode/releases/tag/v3.4.0
 [3.3.0]: https://github.com/yqstart/PrismCode/releases/tag/v3.3.0
 [3.2.0]: https://github.com/yqstart/PrismCode/releases/tag/v3.2.0

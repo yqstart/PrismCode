@@ -9,6 +9,7 @@ import {
   type ThemeId,
   isUpdateImportsOnMove,
   isEditorFontId,
+  isKeymapPreset,
 } from "@/shared/types";
 
 const STORAGE_KEY = "prismcode.settings.v1";
@@ -119,11 +120,18 @@ function loadSettings(): AppSettings {
       ...(parsed.editor ?? {}),
     } as Partial<EditorPreferences> & {
       aiCompletion?: unknown;
+      /** 更早的版本把 minimap 存成 { enabled } 对象 */
       minimap?: unknown;
     };
     delete editorOverrides.aiCompletion;
-    // Minimap 已移除，清理旧版本持久化设置，避免无效字段继续写回磁盘。
-    delete editorOverrides.minimap;
+    // minimap 曾是对象形态的遗留字段，统一收敛成布尔开关
+    if (
+      editorOverrides.minimap !== undefined &&
+      typeof editorOverrides.minimap !== "boolean"
+    ) {
+      const legacy = editorOverrides.minimap as { enabled?: unknown } | null;
+      editorOverrides.minimap = legacy?.enabled === true;
+    }
     const rawEditorFontFamily = parsed.editor?.fontFamily;
     const rawUpdateImportsOnMove = parsed.editor?.updateImportsOnMove;
 
@@ -145,6 +153,9 @@ function loadSettings(): AppSettings {
         updateImportsOnMove: isUpdateImportsOnMove(rawUpdateImportsOnMove)
           ? rawUpdateImportsOnMove
           : DEFAULT_SETTINGS.editor.updateImportsOnMove,
+        keymap: isKeymapPreset(editorOverrides.keymap)
+          ? editorOverrides.keymap
+          : DEFAULT_SETTINGS.editor.keymap,
       },
       layout,
       autoCheckUpdates:

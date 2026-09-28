@@ -2,7 +2,7 @@
 import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { Columns2, Eye, FileCode, GitCommitHorizontal, PenLine, Pin, Server, X } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
-import CodeMirrorEditor from "@/features/editor/CodeMirrorEditor.vue";
+import MonacoEditor from "@/features/editor/MonacoEditor.vue";
 import ImagePreview from "@/features/editor/ImagePreview.vue";
 import { renderMarkdown } from "@/features/editor/markdown/preview";
 import { buildPreviewFindRegExp } from "@/features/editor/markdown/previewFind";
@@ -949,7 +949,7 @@ onBeforeUnmount(() => {
           :content="isSvg ? activeTab.content : undefined"
           :cache-key="activeTab.previewNonce"
         />
-        <CodeMirrorEditor
+        <MonacoEditor
           v-else-if="showTextEditor"
           :path="activeTab.path"
           :content="activeTab.content"
@@ -1811,7 +1811,7 @@ onBeforeUnmount(() => {
   font-size: 11px;
   font-weight: 600;
 }
-/* 命中：弱高亮；当前命中：强高亮 + 描边（对齐 .cm-searchMatch(-selected)） */
+/* 命中：弱高亮；当前命中：强高亮 + 描边（与编辑器内查找命中视觉一致） */
 .md-preview-content :deep(mark.md-find-match) {
   background: color-mix(in srgb, var(--accent) 22%, transparent);
   color: inherit;

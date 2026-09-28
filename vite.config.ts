@@ -60,14 +60,16 @@ export default defineConfig(async () => ({
         manualChunks(id) {
           const normalizedId = id.replace(/\\/g, "/");
           if (!normalizedId.includes("/node_modules/")) return undefined;
-          if (
-            normalizedId.includes("/node_modules/@codemirror/") ||
-            normalizedId.includes("/node_modules/@lezer/") ||
-            normalizedId.includes("/node_modules/style-mod/") ||
-            normalizedId.includes("/node_modules/crelt/") ||
-            normalizedId.includes("/node_modules/w3c-keyname/")
-          ) {
-            return "cm-vendor";
+          // Monaco 内核 / feature 注册 / 语言定义分块。
+          // languages/features（含 worker 源码）不设规则，交给 ?worker 各自打包。
+          if (normalizedId.includes("/node_modules/monaco-editor/esm/vs/editor/")) {
+            return "monaco-core";
+          }
+          if (normalizedId.includes("/node_modules/monaco-editor/esm/vs/features/")) {
+            return "monaco-features";
+          }
+          if (normalizedId.includes("/node_modules/monaco-editor/esm/vs/languages/definitions/")) {
+            return "monaco-langs";
           }
           if (
             normalizedId.includes("/node_modules/vue/") ||
@@ -82,16 +84,15 @@ export default defineConfig(async () => ({
           ) {
             return "xterm-vendor";
           }
-          // 必须按真实包目录匹配。Material Icon Theme 含 typescript.svg；
-          // 宽泛子串会把图标与 5MB 编译器合进同一块并反向拉入首屏。
-          if (normalizedId.includes("/node_modules/typescript/")) {
-            return "typescript-vendor";
-          }
           return undefined;
         },
       },
     },
-    chunkSizeWarningLimit: 1200,
+    // Monaco 内核单块
+    chunkSizeWarningLimit: 2500,
+  },
+  worker: {
+    format: "es",
   },
   clearScreen: false,
   server: {
@@ -100,10 +101,10 @@ export default defineConfig(async () => ({
     host: host || false,
     hmr: host
       ? {
-          protocol: "ws",
-          host,
-          port: 1421,
-        }
+        protocol: "ws",
+        host,
+        port: 1421,
+      }
       : undefined,
     watch: {
       ignored: ["**/src-tauri/**"],

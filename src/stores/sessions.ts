@@ -26,6 +26,8 @@ export interface LocalTerminalSession {
 export const useSessionsStore = defineStore("sessions", () => {
   /** 终端底部面板是否展开（对应 AppShell 中 TerminalPanel 的 v-show） */
   const open = ref(false);
+  /** 底部面板当前视图：终端 / 问题 */
+  const panelView = ref<"terminal" | "problems">("terminal");
   const focused = ref(false);
   /**
    * 快捷键收起后面板仍保活：视图保持挂载、PTY 不销毁，
@@ -141,6 +143,12 @@ export const useSessionsStore = defineStore("sessions", () => {
       cwd,
     });
     activeLocalId.value = id;
+  }
+
+  /** 打开底部面板并切到问题视图（状态栏与快捷键入口） */
+  function showProblems(cwd: string | null = null): void {
+    panelView.value = "problems";
+    openSessions(cwd);
   }
 
   function openSessions(cwd: string | null = null) {
@@ -369,6 +377,8 @@ export const useSessionsStore = defineStore("sessions", () => {
 
   return {
     open,
+    panelView,
+    showProblems,
     focused,
     dormant,
     mounted,

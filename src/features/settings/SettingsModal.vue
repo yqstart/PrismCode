@@ -3,8 +3,8 @@ import { computed, onMounted, ref } from "vue";
 import { Check, X } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
 import { EDITOR_FONT_OPTIONS } from "@/features/editor/fonts";
-import { EDITOR_SHORTCUTS } from "@/features/editor/keymap";
-import { THEME_LABELS } from "@/features/editor/theme";
+import { EDITOR_SHORTCUTS } from "@/features/editor/shortcuts";
+import { THEME_LABELS } from "@/shared/themes";
 import { checkForAppUpdate, getAppVersion } from "@/shared/appUpdate";
 import { PLAIN_INPUT_ATTRS } from "@/shared/plainInput";
 import { formatShortcut, isMacOS } from "@/shared/platform";
@@ -12,7 +12,7 @@ import { useSettingsStore } from "@/stores/settings";
 import { useUiStore } from "@/stores/ui";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { isEditorFontId } from "@/shared/types";
-import type { ThemeId, ThemeMeta } from "@/shared/types";
+import type { KeymapPreset, ThemeId, ThemeMeta } from "@/shared/types";
 import { useI18n } from "@/i18n";
 
 const { t } = useI18n();
@@ -89,6 +89,15 @@ const activeThemeLabel = computed(() => THEME_LABELS[theme.value]);
 const activeNavLabel = computed(
   () => navItems.value.find((n) => n.id === activeNav.value)?.label ?? "",
 );
+
+/** 标尺输入：逗号或空格分隔的列宽；非法项丢弃，去重并升序 */
+function parseRulers(input: string): number[] {
+  const values = input
+    .split(/[,\s]+/)
+    .map((item) => Number.parseInt(item, 10))
+    .filter((value) => Number.isFinite(value) && value > 0 && value <= 1000);
+  return [...new Set(values)].sort((a, b) => a - b);
+}
 
 function selectTheme(id: ThemeId) {
   settings.setTheme(id);
@@ -246,6 +255,72 @@ function onOverlayClick(event: MouseEvent) {
                     class="ui-select"
                     :value="editor.lineNumbers ? 'on' : 'off'"
                     @change="settings.patchEditor({ lineNumbers: ($event.target as HTMLSelectElement).value === 'on' })"
+                  >
+                    <option value="on">{{ t("common.on") }}</option>
+                    <option value="off">{{ t("common.off") }}</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span class="field-label">{{ t("settings.relativeLineNumbers") }}</span>
+                  <select
+                    class="ui-select"
+                    :value="editor.relativeLineNumbers ? 'on' : 'off'"
+                    @change="settings.patchEditor({ relativeLineNumbers: ($event.target as HTMLSelectElement).value === 'on' })"
+                  >
+                    <option value="on">{{ t("common.on") }}</option>
+                    <option value="off">{{ t("common.off") }}</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span class="field-label">{{ t("settings.stickyScroll") }}</span>
+                  <select
+                    class="ui-select"
+                    :value="editor.stickyScroll ? 'on' : 'off'"
+                    @change="settings.patchEditor({ stickyScroll: ($event.target as HTMLSelectElement).value === 'on' })"
+                  >
+                    <option value="on">{{ t("common.on") }}</option>
+                    <option value="off">{{ t("common.off") }}</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span class="field-label">{{ t("settings.minimap") }}</span>
+                  <select
+                    class="ui-select"
+                    :value="editor.minimap ? 'on' : 'off'"
+                    @change="settings.patchEditor({ minimap: ($event.target as HTMLSelectElement).value === 'on' })"
+                  >
+                    <option value="on">{{ t("common.on") }}</option>
+                    <option value="off">{{ t("common.off") }}</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span class="field-label">{{ t("settings.rulers") }}</span>
+                  <input
+                    class="ui-input"
+                    type="text"
+                    :value="editor.rulers.join(',')"
+                    :placeholder="t('settings.rulersHint')"
+                    @change="settings.patchEditor({ rulers: parseRulers(($event.target as HTMLInputElement).value) })"
+                  />
+                </label>
+                <label class="field">
+                  <span class="field-label">{{ t("settings.keymap") }}</span>
+                  <select
+                    class="ui-select"
+                    :value="editor.keymap"
+                    @change="settings.patchEditor({ keymap: ($event.target as HTMLSelectElement).value as KeymapPreset })"
+                  >
+                    <option value="webstorm">{{ t("settings.keymapWebStorm") }}</option>
+                    <option value="vscode">{{ t("settings.keymapVSCode") }}</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span class="field-label">{{ t("settings.eslintEnabled") }}</span>
+                  <select
+                    class="ui-select"
+                    :value="editor.eslintEnabled ? 'on' : 'off'"
+                    :title="t('settings.eslintHint')"
+                    @change="settings.patchEditor({ eslintEnabled: ($event.target as HTMLSelectElement).value === 'on' })"
                   >
                     <option value="on">{{ t("common.on") }}</option>
                     <option value="off">{{ t("common.off") }}</option>

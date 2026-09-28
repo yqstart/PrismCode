@@ -31,8 +31,23 @@ assert.doesNotMatch(
 const viteSource = source("vite.config.ts");
 assert.match(
   viteSource,
-  /\/node_modules\/typescript\//,
-  "TypeScript vendor 必须精确匹配真实包目录",
+  /\/node_modules\/monaco-editor\/esm\/vs\/editor\//,
+  "Monaco 内核必须按 editor 目录拆成 monaco-core",
+);
+assert.match(
+  viteSource,
+  /\/node_modules\/monaco-editor\/esm\/vs\/features\//,
+  "Monaco feature 必须按 features 目录拆成 monaco-features",
+);
+assert.match(
+  viteSource,
+  /\/node_modules\/monaco-editor\/esm\/vs\/languages\/definitions\//,
+  "Monaco 语言定义必须按 definitions 目录拆成 monaco-langs",
+);
+assert.doesNotMatch(
+  viteSource,
+  /monaco-editor\/esm\/vs\/languages\/features\//,
+  "languages/features（含 worker 源码）不得打进命名首屏 chunk",
 );
 assert.doesNotMatch(
   viteSource,
@@ -131,6 +146,11 @@ if (process.argv.includes("--bundle")) {
     preloads,
     /typescript-vendor/,
     "TypeScript 编译器不能被首屏 modulepreload",
+  );
+  assert.doesNotMatch(
+    preloads,
+    /worker/i,
+    "首屏 modulepreload 不含任何 worker chunk",
   );
   assert.doesNotMatch(
     preloads,

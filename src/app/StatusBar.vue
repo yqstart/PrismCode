@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { GitBranch } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
 import BranchesPopup from "@/features/git/BranchesPopup.vue";
-import { THEME_LABELS, THEME_ORDER } from "@/features/editor/theme";
+import { THEME_LABELS, THEME_ORDER } from "@/shared/themes";
 import { basename } from "@/shared/fs";
 import type { ThemeId } from "@/shared/types";
 import { useEditorStore } from "@/stores/editor";

@@ -27,8 +27,23 @@ function pickConfig(raw: unknown): BuiltinPrettierConfig | null {
   return out as BuiltinPrettierConfig;
 }
 
-/** 读取离当前文件最近的 JSON 形式 prettier 配置；无配置返回 null */
+/**
+ * 读取离当前文件最近的 JSON 形式 prettier 配置；无配置返回 null。
+ * 配置探测属于「锦上添花」，任何失败（IPC 异常、权限、目录不可读）
+ * 都退回全默认配置，不能阻断内置格式化。
+ */
 export async function loadProjectPrettierConfig(
+  root: string,
+  absPath: string,
+): Promise<BuiltinPrettierConfig | null> {
+  try {
+    return await searchProjectPrettierConfig(root, absPath);
+  } catch {
+    return null;
+  }
+}
+
+async function searchProjectPrettierConfig(
   root: string,
   absPath: string,
 ): Promise<BuiltinPrettierConfig | null> {

@@ -162,6 +162,15 @@ function onKeydown(event: KeyboardEvent) {
     toggleCommitPanel();
     return;
   }
+  // 问题面板：WebStorm ⌘6 / VS Code ⇧⌘M
+  if (
+    (mod && !event.shiftKey && !event.altKey && event.key === "6") ||
+    (mod && event.shiftKey && !event.altKey && event.key.toLowerCase() === "m")
+  ) {
+    event.preventDefault();
+    sessions.showProblems(workspace.rootPath);
+    return;
+  }
   if (mod && event.key === ",") {
     event.preventDefault();
     ui.toggleSettings();

@@ -1,3 +1,4 @@
+import "@/features/editor/monaco/setup";
 import { createApp } from "vue";
 import App from "./App.vue";
 import { pinia } from "@/stores/pinia";
@@ -150,13 +151,13 @@ if (import.meta.env.DEV) {
   );
 
   // ==================== ⌘/Ctrl+滚轮调字号自测 ====================
-  // dev 模式访问 http://localhost:1420/?wheel=1 时自动挂载真实 CodeMirrorEditor
+  // dev 模式访问 http://localhost:1420/?wheel=1 时自动挂载真实 MonacoEditor
   // 组件并派发真实 WheelEvent（带 metaKey），结果渲染到 #wheel-selftest-result，
-  // 供外部自动化直接读取文本验证「wheel → CM6 handler → patchEditor → 字号生效」链路。
+  // 供外部自动化直接读取文本验证「wheel → Monaco handler → patchEditor → 字号生效」链路。
   if (location.search.includes("wheel=1")) {
     (async () => {
       const { createApp } = await import("vue");
-      const { default: CodeMirrorEditor } = await import("@/features/editor/CodeMirrorEditor.vue");
+      const { default: MonacoEditor } = await import("@/features/editor/MonacoEditor.vue");
       const { useSettingsStore } = await import("@/stores/settings");
       const host = document.createElement("div");
       host.style.cssText =
@@ -172,18 +173,30 @@ if (import.meta.env.DEV) {
       };
       try {
         write("挂载组件中…");
-        const app = createApp(CodeMirrorEditor, {
+        const app = createApp(MonacoEditor, {
           path: "/tmp/selftest.ts",
           content: "const greeting = 'hi';\nconsole.log(greeting);\n",
         });
         app.mount(host);
         await new Promise((r) => setTimeout(r, 800));
-        const content = host.querySelector<HTMLElement>(".cm-content");
+        const content = host.querySelector<HTMLElement>(".monaco-editor");
         if (!content) {
-          write("失败：未找到 .cm-content（组件挂载失败）");
+          write("失败：未找到 .monaco-editor（组件挂载失败）");
           return;
         }
         const store = useSettingsStore();
+        const { monaco } = await import("@/features/editor/monaco/setup");
+        const probeDom = () => {
+          const el = host.querySelector<HTMLElement>(".monaco-editor");
+          const lines = host.querySelector<HTMLElement>(".view-lines");
+          const api = monaco.editor.getEditors()[0];
+          return {
+            inline: el?.style.fontSize || "-",
+            computed: el ? getComputedStyle(el).fontSize : "-",
+            lines: lines ? getComputedStyle(lines).fontSize : "-",
+            option: api ? String(api.getOption(monaco.editor.EditorOption.fontSize)) : "-",
+          };
+        };
         const before = store.editor.fontSize;
         // 下推一格（deltaY=+100，模拟鼠标一格）→ 期望调大
         content.dispatchEvent(
@@ -191,28 +204,34 @@ if (import.meta.env.DEV) {
         );
         await new Promise((r) => setTimeout(r, 120));
         const afterDown = store.editor.fontSize;
-        const domDown = getComputedStyle(content).fontSize;
+        const domDown = probeDom();
         // 上推一格（deltaY=-100）→ 期望调小
         content.dispatchEvent(
           new WheelEvent("wheel", { deltaY: -100, deltaX: 0, metaKey: true, bubbles: true, cancelable: true }),
         );
         await new Promise((r) => setTimeout(r, 120));
         const afterUp = store.editor.fontSize;
-        const domUp = getComputedStyle(content).fontSize;
+        const domUp = probeDom();
         // 无修饰键滚轮 → 不应调字号
         content.dispatchEvent(
           new WheelEvent("wheel", { deltaY: 100, deltaX: 0, metaKey: false, bubbles: true, cancelable: true }),
         );
         await new Promise((r) => setTimeout(r, 120));
         const afterPlain = store.editor.fontSize;
-        const domPlain = getComputedStyle(content).fontSize;
+        const domPlain = probeDom();
         const ok =
-          afterDown === before + 1 && afterUp === before && afterPlain === before && domDown !== domUp;
+          afterDown === before + 1 &&
+          afterUp === before &&
+          afterPlain === before &&
+          domDown.option === String(afterDown);
         write(
           [
             ok ? "✅ 通过" : "❌ 失败",
             `store: before=${before} afterDown=${afterDown}(期望 ${before + 1}) afterUp=${afterUp}(期望 ${before}) afterPlain=${afterPlain}(期望 ${before})`,
-            `DOM: 下推后=${domDown}(期望 ${afterDown}px) 上推后=${domUp}(期望 ${afterUp}px) 无修饰键=${domPlain}`,
+            `Option: 下推后=${domDown.option}(期望 ${afterDown}) 上推后=${domUp.option}(期望 ${afterUp}) 无修饰键=${domPlain.option}`,
+            `Inline: 下推后=${domDown.inline} 上推后=${domUp.inline}`,
+            `Computed: 下推后=${domDown.computed} 上推后=${domUp.computed}`,
+            `view-lines: 下推后=${domDown.lines} 上推后=${domUp.lines}`,
             "方向: 下推调大 / 上推调小 / 无修饰键不变",
           ].join("\n"),
         );
@@ -222,6 +241,9 @@ if (import.meta.env.DEV) {
     })();
   }
 }
+
+// 图标资源懒加载：首屏不解析 440KB 清单，空闲时预热
+void import("@/shared/fileIcons").then((mod) => mod.ensureIconAssets());
 
 const app = createApp(App);
 app.use(pinia);

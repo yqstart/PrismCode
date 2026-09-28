@@ -11,8 +11,6 @@
 // hover、定义/引用、语义诊断和跨文件符号重命名。
 
 import type ts from "typescript";
-import type { Completion } from "@codemirror/autocomplete";
-import type { EditorView } from "@codemirror/view";
 
 export type TsModule = typeof import("typescript");
 
@@ -32,46 +30,6 @@ export function autoImportInsertPos(docText: string): number {
   return importLine ? (importLine.index ?? 0) + importLine[0].length : 0;
 }
 
-/** 构造 apply：普通项插入文本；自动导入项插入符号 + 顶部 import 语句（纯函数） */
-export function buildAutoImportApply(
-  entry: { name: string; insertText?: string; sourceDisplay?: string },
-  docText: string,
-): Completion["apply"] {
-  const insertText = entry.insertText ?? entry.name;
-  if (!entry.sourceDisplay) return insertText;
-  if (isAlreadyImported(docText, entry.name)) return insertText;
-  const spec = entry.sourceDisplay;
-  return (view: EditorView, _completion, from, to) => {
-    const importPos = autoImportInsertPos(docText);
-    view.dispatch({
-      changes: [
-        { from, to, insert: insertText },
-        {
-          from: importPos,
-          to: importPos,
-          insert: `import { ${entry.name} } from '${spec}';\n`,
-        },
-      ],
-      userEvent: "input.complete",
-    });
-  };
-}
-
-/** 轻量预判：当前行内最近的 ( 未闭合（签名帮助触发预判；纯函数可直测） */
-export function lineHasOpenParen(beforeLine: string): boolean {
-  let depth = 0;
-  for (let i = beforeLine.length - 1; i >= 0; i -= 1) {
-    const ch = beforeLine[i];
-    if (ch === ")") depth += 1;
-    else if (ch === "(") {
-      if (depth === 0) return true;
-      depth -= 1;
-    }
-  }
-  return false;
-}
-
-/** 文件内容来源（浏览器：打开 tabs + 磁盘；node 直测：内存 map） */
 export interface FileContentSource {
   /** 已打开文件内容（undefined → 回退磁盘；可异步） */
   openedContent(path: string): Promise<string | undefined> | string | undefined;

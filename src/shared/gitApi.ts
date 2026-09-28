@@ -63,6 +63,8 @@ export interface GitStatusSnapshot {
   behind: number;
   entries: GitStatusEntry[];
   conflictCount: number;
+  /** 合并进行中（冲突解决后提交即完成合并） */
+  mergeInProgress?: boolean;
 }
 
 export interface GitBranchInfo {

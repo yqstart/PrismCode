@@ -7,15 +7,17 @@
 
 ## 前端依赖
 
-### CodeMirror 6（@codemirror/*、codemirror、@lezer/highlight）
-- 仓库：https://github.com/codemirror/dev
+### Monaco Editor（monaco-editor）
+- 仓库：https://github.com/microsoft/monaco-editor
 - 许可证：MIT
-- 版权：Marijn Haverbeke 及贡献者
+- 版权：Microsoft Corporation 及贡献者
+- 用途：编辑器内核、TypeScript/JavaScript 语言服务（内含 TypeScript 编译器与标准库，Apache-2.0）、差异对比视图
 
-### @codemirror/merge（冲突分栏 MergeView）
-- 仓库：https://github.com/codemirror/merge
-- 许可证：MIT
-- 用途：Git 冲突对比分栏（CompareView）
+### TypeScript（内嵌于 Monaco 的 TS worker）
+- 仓库：https://github.com/microsoft/TypeScript
+- 许可证：Apache-2.0
+- 版权：Microsoft Corporation
+- 用途：编辑器内 TypeScript 语言服务与诊断（随 monaco-editor 一并分发，不联网）
 
 ### Vue
 - 仓库：https://github.com/vuejs/core

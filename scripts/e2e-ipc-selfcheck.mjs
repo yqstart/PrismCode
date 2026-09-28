@@ -16,6 +16,7 @@
  */
 
 import puppeteer from "puppeteer";
+import { existsSync } from "fs";
 import { fileURLToPath } from "url";
 import path from "path";
 
@@ -137,9 +138,12 @@ const HTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
+// 优先用系统 Chrome：仓库内 puppeteer 未下载自带浏览器时仍可运行
+const systemChrome = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 const browser = await puppeteer.launch({
   headless: true,
   args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  ...(existsSync(systemChrome) ? { executablePath: systemChrome } : {}),
 });
 const page = await browser.newPage();
 await page.setContent(HTML);

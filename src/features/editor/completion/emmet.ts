@@ -1,11 +1,7 @@
 // ==================== Emmet 缩写展开（VS Code 同款） ====================
-// Tab 键展开：光标前匹配 Emmet 缩写 → emmet 库展开 → 按当前行缩进对齐插入。
-// emmet 纯 JS 库动态 import（拆独立 chunk），仅 html/vue 上下文启用。
-//
-// 触发链路（CodeMirrorEditor keymap）：ghost 接受（Prec.highest）→ completionKeymap
-// （popup 打开时选中项）→ 本扩展 → indentWithTab。无缩写时返回 false 让位缩进。
+// 只保留与内核无关的纯函数：缩写匹配、缩进对齐、语法判定。
+// 展开动作由 Monaco 的补全 provider 承担（monaco/emmetProvider.ts）。
 
-import type { EditorView } from "@codemirror/view";
 
 /** 取文件名（POSIX 语义，零依赖保持可直测） */
 function basename(path: string): string {
@@ -60,47 +56,4 @@ export function emmetSyntax(filePath: string, beforeCursor: string): "html" | "c
     if (styleOpen > styleClose) return "css";
   }
   return "html";
-}
-
-let emmetPromise: Promise<{ default: (abbr: string, config: object) => string }> | null = null;
-
-/**
- * Tab 展开：光标前是 Emmet 缩写则展开并插入。
- * 异步（emmet 库懒加载）；成功消费 Tab 返回 true，无缩写/展开失败返回 false。
- */
-export async function expandEmmetAt(view: EditorView, filePath: string): Promise<boolean> {
-  const { state } = view;
-  const head = state.selection.main.head;
-  const before = state.doc.sliceString(0, head);
-  const abbr = matchEmmetAbbreviation(before);
-  if (!abbr) return false;
-
-  let expand: (abbr: string, config: object) => string;
-  try {
-    emmetPromise ??= import("emmet");
-    const mod = await emmetPromise;
-    expand = mod.default;
-  } catch {
-    return false;
-  }
-
-  let out: string;
-  try {
-    out = expand(abbr, { syntax: emmetSyntax(filePath, before) });
-  } catch {
-    return false;
-  }
-  if (!out || out === abbr) return false;
-
-  const from = head - abbr.length;
-  const line = state.doc.lineAt(head);
-  const baseIndent = line.text.match(/^\s*/)?.[0] ?? "";
-  const insert = indentExpanded(out, baseIndent);
-
-  view.dispatch({
-    changes: { from, to: head, insert },
-    selection: { anchor: from + insert.length },
-    userEvent: "emmet.expand",
-  });
-  return true;
 }

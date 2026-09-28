@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { resolveMaterialIconUrl } from "@/shared/fileIcons";
+import { iconAssetsVersion, resolveMaterialIconUrl } from "@/shared/fileIcons";
 
 const props = withDefaults(
   defineProps<{
@@ -16,12 +16,14 @@ const props = withDefaults(
   },
 );
 
-const src = computed(() =>
-  resolveMaterialIconUrl(props.path, {
+const src = computed(() => {
+  // 图标资源是懒加载的：version 变化后重新解析
+  void iconAssetsVersion.value;
+  return resolveMaterialIconUrl(props.path, {
     isDir: props.isDir,
     expanded: props.expanded,
-  }),
-);
+  });
+});
 </script>
 
 <template>

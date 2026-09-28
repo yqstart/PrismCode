@@ -11,10 +11,10 @@
 |---|---|
 | 产品名 | Prism Code |
 | 定位 | 轻量级、快速、顺滑的跨平台桌面代码编辑器 |
-| 技术栈 | Tauri 2 + Vue 3 + TypeScript + Pinia + CodeMirror 6 |
+| 技术栈 | Tauri 2 + Vue 3 + TypeScript + Pinia + Monaco Editor |
 | 平台 | Windows / macOS / Linux |
 | 阶段 | **功能定版**：核心功能集已收敛，进入优化迭代期（性能 / 流畅度 / 交互体验） |
-| 明确不做 | AI/模型联网补全、AI 对话面板、AI Agent、MCP / Skills 生态、插件市场、Monaco 替换 CM6 |
+| 明确不做 | AI/模型联网补全、AI 对话面板、AI Agent、MCP / Skills 生态、插件市场、Volar/外部 tsserver 接管语言服务 |
 
 已落地能力：资源树、多标签编辑、全局搜索 / 替换、Git（Commit / Log / Branches / Rebase / 冲突）、本地终端、SSH 远程 Shell、四主题、中英文界面、本地语言智能、会话恢复、应用内更新。
 
@@ -39,7 +39,7 @@
 | 桌面壳 | **Tauri 2** | 体积小、内存低、启动快 |
 | 前端框架 | **Vue 3 + Composition API + TypeScript** | 组件化 + Vite 热更新 |
 | 构建 | **Vite 6** | 官方模板同源 |
-| 编辑器内核 | **CodeMirror 6** | 比 Monaco 更轻；扩展模型清晰 |
+| 编辑器内核 | **Monaco Editor 0.57**（VSCode 同源） | 语言服务 Worker 化、内置差异对比与查找、键位可对齐 WebStorm / VS Code；按需注册 feature 与语言定义控制体积 |
 | 布局 | **自研 Dock 布局**（AppShell 五区） | 对标 VSCode 左右分栏 / 折叠 / 拖拽 |
 | 状态管理 | **Pinia** | 12 个 store，见 §5.2 |
 | 文件系统 | `@tauri-apps/plugin-fs` + Rust `fs.rs` | 打开目录、读写、变更监听（watch） |
@@ -49,21 +49,29 @@
 | 搜索 | **Rust walkdir + ignore + 正则** | async + `spawn_blocking` + LRU 文件列表缓存 |
 | SSH | **Rust `ssh2`（libssh2，vendored）** | 主机列表、凭据、远程 Shell |
 | 终端 | **`@xterm/xterm` + `tauri-plugin-pty` 0.3.1（本地阻塞 IO 补丁）** | 本地 PTY；同步读写/等待/终止操作走 `spawn_blocking`，SSH 走 ssh2 原生通道 |
-| 主题 | **CSS 变量 + CodeMirror `EditorView.theme` / `HighlightStyle`** | 四套主题，编辑器同步 |
+| 主题 | **CSS 变量 + Monaco `defineTheme`** | 四套主题，编辑器颜色与语法 token 同步 |
 | 图标 | **Lucide**（控件）+ **Material Icon Theme**（文件图标） | 细线控件；文件类型对齐 VS Code |
 | 包管理 | pnpm | `pnpm-lock.yaml` 入库，CI `--frozen-lockfile` |
 
-### 3.2 为什么不用 Monaco
+### 3.2 编辑器内核：为什么选 Monaco
 
-| 维度 | CodeMirror 6 | Monaco |
+早期版本使用 CodeMirror 6，代价是编辑器能力与 VSCode/WebStorm 存在可见差距：没有内置差异对比、没有问题面板与快速修复基础设施、查找面板与多光标要自研，最重的是**类型服务跑在主线程**——约 4.6MB 的 TypeScript 编译器与内嵌标准库会进入前端同步依赖图。
+
+迁移到 Monaco 后：
+
+| 维度 | 迁移前（CodeMirror 6） | 迁移后（Monaco 0.57） |
 |---|---|---|
-| 包体积 / 内存 | 更小，贴合轻量目标 | 偏重，接近 VSCode 内核 |
-| 扩展方式 | 语言包 / 扩展组合灵活 | 能力全但定制成本高 |
-| 结论 | **定版内核** | 不在计划内 |
+| 编辑器内核产物 | `cm-vendor` 约 695KB | `monaco-core` 单块约 4MB（内核 + 内置 feature） |
+| 类型服务 | 主线程 TypeScript LanguageService（约 4.6MB 同步 chunk） | TypeScript worker（编译器与标准库内嵌、Worker 线程、懒加载、不联网） |
+| 跨文件智能 | 自研程序范围管理 | worker 原生支持跳转 / 重命名 / 引用 / 诊断 |
+| 内置能力 | 大部分需自研或引第三方包 | 查找替换、差异对比、折叠、多光标、快速修复、粘性滚动、小地图、语义高亮 |
+| 键位 | CM6 keymap | 内置 action + `addKeybindingRules`，可在 **WebStorm / VS Code** 两套预设间切换 |
+
+**回滚路径**：编辑器内核的对外契约集中在 `src/features/editor/MonacoEditor.vue`（props `path`/`content`、`defineExpose({ scrollTo })`、经 `stores/editor.ts` 读写内容与光标），语言能力集中在 `src/features/editor/monaco/*` provider。若需回退，替换该组件与 provider 目录即可，其余功能模块不受影响。
 
 ### 3.3 明确不做的自研
 
-- 不自研文本缓冲与渲染引擎（用 CM6）
+- 不自研文本缓冲与渲染引擎（用 Monaco）
 - 不自研 Git 协议栈（优先复用 `git2` / 系统 Git，按能力边界混合实现）
 
 ---
@@ -93,7 +101,7 @@
 
 | 进程 | 职责 |
 |---|---|
-| WebView（前端） | UI、编辑器实例、主题、CodeMirror 扩展、TypeScript/HTML/CSS 语言服务、交互状态 |
+| WebView（前端） | UI、编辑器实例、主题、Monaco feature/provider、交互状态；TS 编译与标准库在 Web Worker |
 | Rust 主进程 | 文件访问、Git、目录遍历、搜索、SSH Shell、窗口控制（macOS 红绿灯） |
 | 外部子进程 | PTY shell；按需启动的外部工具进程（如项目本地 Prettier） |
 
@@ -105,7 +113,7 @@ PrismCode/
 │   ├── app/                  # AppShell / TitleBar / ActivityBar / SideBar / EditorArea / StatusBar
 │   ├── features/
 │   │   ├── explorer/         # 资源树（pointer 拖拽移动）
-│   │   ├── editor/           # CM6 编辑器、查找替换、补全、诊断、导航、引用、重命名
+│   │   ├── editor/           # Monaco 编辑器与 provider、主题、装饰、格式化、会话恢复
 │   │   │   └── completion/   # 补全服务层：adapters（LSP→CM 转换）、html/css 语言服务封装、
 │   │   │                     # semanticScanner（JS/TS 轻量语义）、vueBindings（指令/绑定）、symbolFilter
 │   │   ├── search/           # QuickOpen（⌘P）/ FindInFiles（⌘⇧F）
@@ -172,8 +180,26 @@ PrismCode/
 ### 5.3 快捷键体系（三层）
 
 1. **原生菜单加速键**（`lib.rs`）：⌘O / ⌘S / ⌘P / ⌘⇧F / ⌥F1 / ⌘J / ⌘B / ⌘, / ⌘F + 系统编辑键
-2. **AppShell 窗口级 keydown**（`AppShell.vue`）：⌘K（Commit 面板）、⌘W（关标签）、⌘⌥→/←（切换标签）、⌘R（刷新资源树）、Esc（关浮层）
-3. **编辑器 keymap**（CM6，`features/editor/keymap.ts`）：应用命令以最高优先级注册，⌘Enter / F12 跳定义、⌘[ 返回（无目标时回退 CM 原生编辑命令）、Shift+F12 引用、F2 重命名、⌘F / ⌘⌥F / ⌘H 查找替换、⌥⇧F 全文格式化、⌘K ⌘F 选区格式化、F8 / Shift+F8 诊断导航；其后保留 CM 多光标、行操作、注释、折叠、查找选择与 Tab 补全/Emmet
+2. **AppShell 窗口级 keydown**（`AppShell.vue`）：⌘K（Commit 面板）、⌘W（关标签）、⌘R（刷新资源树）、Esc（关浮层）等跨视图命令
+3. **编辑器键位预设**（`features/editor/monaco/actions.ts`）：内置 action 经 `monaco.editor.addKeybindingRules` 按预设重绑，可在设置里切换 **WebStorm** 与 **VS Code** 两套默认键位；切换预设会撤销上一套规则并让出与之冲突的内置默认（如 WebStorm 下 ⌘D 复制行、⌥↑/⌥↓ 扩展/收缩选择）。自研命令（切换自动换行等）用 `editor.addAction` 注册。
+
+编辑器键位速查（默认 WebStorm 预设）：
+
+| 操作 | WebStorm | VS Code |
+|---|---|---|
+| 跳转声明 | ⌘B / F12 | F12 |
+| 类型声明 / 实现 | ⇧⌘B / ⌥⌘B | ⌘F12 |
+| 查找引用 | ⌥F7（文件内 ⌘F7） | ⇧⌥F12（文件内 ⇧F12） |
+| 重命名 | ⇧F6 | F2 |
+| 快速修复 | ⌥⏎ | ⌘. |
+| 快速文档 | F1 | — |
+| 问题导航 | F2 / ⇧F2 | F8 / ⇧F8 |
+| 复制行 / 删除行 | ⌘D / ⌘⌫ | ⇧⌥↓ / ⇧⌘K |
+| 移动行 | ⌥⇧↑ / ⌥⇧↓ | ⌥↑ / ⌥↓ |
+| 扩展 / 收缩选择 | ⌥↑ / ⌥↓ | ⌃⇧⌘→ / ⌃⇧⌘← |
+| 选择下一处 / 全部 | ⌃G / ⌘⌃G | ⌘D / ⇧⌘L |
+| 重排代码 | ⌥⌘L | ⇧⌥F |
+| 跳行 | ⌘L | ⌃G |
 
 完整清单见《使用说明》。
 
@@ -181,7 +207,7 @@ PrismCode/
 
 ## 6. 编辑器与语言能力
 
-### 6.1 语言覆盖（`features/editor/languages.ts`）
+### 6.1 语言覆盖（`features/editor/monaco/langSetup.ts`）
 
 - **P0**：JS/TS（ts/tsx/mjs/cjs…）、Vue SFC（template 内嵌 scss/sass/less）、JSON、Markdown
 - **P1**：HTML、CSS / SCSS / Sass / Less、YAML、XML / SVG、Env（自研 StreamLanguage 键值高亮）
@@ -190,10 +216,10 @@ PrismCode/
 
 | 能力 | 实现 |
 |---|---|
-| 高亮 / 折叠 | CM6 Language + `HighlightStyle`，随主题切换 |
+| 高亮 / 折叠 | Monaco 语言定义 / Monarch + `defineTheme` 语法规则，随主题切换 |
 | 查找替换 | `findPanel.ts`：⌘F 查找、⌘⌥F / ⌘H 替换、⌘G / F3 下一个 |
 | 补全 | `completions.ts` 分派链 + `completion/` 服务层：HTML/Vue template → `vscode-html-languageservice`；CSS/SCSS/Less → `vscode-css-languageservice`；JS/TS/JSX/TSX → 浏览器内嵌 TypeScript LanguageService（类型成员、自动导入、签名帮助）；Vue script → 等长虚拟 TS 文件，template → `<script setup>` 绑定注入；服务失败降级静态表；⌘Space 手动触发 |
-| 诊断 / hover | `diagnostics.ts` + `typeService/tsService.ts`：JS/TS/Vue script 语义诊断、JSON / Env 校验；TypeScript quick info 以 CodeMirror tooltip 展示 |
+| 诊断 / hover | TS worker 语义诊断（JS/TS/Vue script，经等长虚拟文件映射回 SFC）＋ `monaco/jsonEnvProvider.ts` 的 JSON 语法与 `.env` 重复键校验＋可选 `monaco/eslint.ts` 的项目 ESLint；hover 由 TS worker 与 HTML/CSS 语言服务提供 |
 | 格式化 | Prettier（`tooling.rs` 调 npx，`--stdin-filepath`） |
 | 跳转 | `navigation.ts`：自定义引用识别与键盘触发；JS/TS/Vue script 优先 TypeScript definition，Vue 模板组件按 import / `defineAsyncComponent` 解析，class 支持同文件与外置样式选择器；相对路径 + `@/` 别名 import、同文档符号、跨文件符号索引兜底；跳转落点由 `jumpHighlight.ts` 标记；⌘[ 返回 |
 | 重命名 / 引用 | F2 / Shift+F12：TypeScript 精确引用位置优先，Vue script 做 offset 映射；结果面板可点击定位，未打开文件也会写盘 |
@@ -220,7 +246,7 @@ PrismCode/
 | Git Log（编辑区标签） | `git_log` 从全部 refs 建立拓扑；前端 `gitGraph.ts` 计算多车道 SVG；支持全部/当前/多选分支、远程/标签/贮藏筛选、搜索、自动加载更多、HEAD/贮藏快捷定位、列显隐；提交详情含正文/父提交/变更状态，Cmd/Ctrl 双选比较、文件 Diff/当前版本/复制路径/代码评审；右键覆盖提交 Checkout / New Branch / Tag / Copy / Show Diff / HEAD 对比 / Cherry-pick / Revert / 交互式 Rebase / Reset，ref 覆盖 Checkout / Merge / Rebase / Compare / Rename / Delete / Push Tag，未提交行覆盖 Commit / Stash / Discard / Hard Reset |
 | Branches 弹层 | 本地 / 远程列表；Checkout、New Branch、Rename、Delete（含远程）、Merge into current、Rebase current onto、交互式 Rebase、Compare with current、Set upstream、Copy |
 | 交互式 Rebase | 提交列表 pick / reword / squash / fix / drop + 拖拽排序；冲突时 Commit 横幅 Continue / Skip / Abort |
-| 冲突分栏 | `CompareView.vue`（CM6 MergeView）：左右双栏可编辑，prev/next 冲突导航，填本地 / 远程 / Base，一键接受 ours/theirs，手动解决后保存 |
+| 冲突分栏 | `CompareView.vue`（Monaco `createDiffEditor`）：左右双栏可编辑、折叠未改动区、prev/next 冲突导航、填本地 / 远程 / Base、一键接受 ours/theirs；冲突文件在编辑区还有逐块「采用当前 / 传入 / 两者」操作（`monaco/conflictResolver.ts`） |
 | 认证 | HTTPS 弹窗登录 + 记住凭据（`~/.prismcode/git-credentials.json` + 尽力同步系统 git credential）；SSH 密钥优先 |
 | 状态同步 | 资源树 Git 状态色点；状态栏分支 + ↑↓ 同步标记 + 冲突数；编辑区有变更文件右键可 Diff / 回滚，回滚后编辑器内容同步重载 |
 
@@ -297,10 +323,10 @@ PrismCode/
 
 | 指标 | 目标 | 落地手段 |
 |---|---|---|
-| 启动时长 | ≤ 2s（常规机器冷启动到可交互） | Tauri、延迟加载 Git/搜索 |
+| 启动时长 | ≤ 2s（常规机器冷启动到可交互） | Tauri、延迟加载 Git/搜索；编辑器图标资源懒加载（首屏主 chunk 由约 1.98MB 降到约 0.67MB） |
 | 千级文件打开 | 无明显卡顿 | 资源树懒加载子目录、Rust 侧遍历、搜索 LRU 缓存 + async |
-| 内存 | 显著低于 VSCode | CM6、编辑器实例按需创建回收、终端/SSH 连接生命周期 |
-| 编辑时延 | 输入无感 | 诊断/搜索防抖、TypeScript 服务按需加载与增量编译 |
+| 内存 | 显著低于 VSCode | Monaco 内核 + worker 按需加载、编辑器实例与 model 按标签生命周期回收、终端/SSH 连接生命周期 |
+| 编辑时延 | 输入无感 | 诊断/搜索防抖、TypeScript 服务在 Worker 线程按需加载、装饰刷新与光标写回按帧合并；2MB/5MB 双阈值大文件降级（`monaco/largeFile.ts`） |
 | 跨平台 | Win / Mac / Linux | CI 4 平台构建矩阵（arm64 / x86_64 / Linux / Windows） |
 
 ---

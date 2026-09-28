@@ -47,6 +47,9 @@ const {
   rebaseStatus,
 } = storeToRefs(git);
 
+/** 合并进行中（MERGE_HEAD 存在）：解决冲突后提交即完成合并 */
+const mergeInProgress = computed(() => git.snapshot.mergeInProgress === true);
+
 const contextMenu = ref<{ x: number; y: number; path: string; staged: boolean } | null>(
   null,
 );
@@ -271,6 +274,15 @@ function onCommitKeydown(event: KeyboardEvent) {
             stashes.length > 9 ? "9+" : stashes.length
           }}</span>
         </button>
+      </div>
+
+      <div v-if="mergeInProgress" class="merge-banner">
+        <span class="merge-text">{{ t("git.mergeInProgress") }}</span>
+        <div class="merge-actions">
+          <button type="button" class="link danger" @click="git.mergeAbort()">
+            {{ t("git.mergeAbort") }}
+          </button>
+        </div>
       </div>
 
       <div v-if="rebaseStatus.inProgress" class="rebase-banner">

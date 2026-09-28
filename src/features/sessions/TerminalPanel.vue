@@ -1,9 +1,22 @@
 <script setup lang="ts">
-import { onBeforeUnmount, ref } from "vue";
+import { computed, onBeforeUnmount, ref } from "vue";
 import SessionsView from "@/features/sessions/SessionsView.vue";
+import ProblemsPanel from "@/features/problems/ProblemsPanel.vue";
 import { useSettingsStore } from "@/stores/settings";
+import { useSessionsStore } from "@/stores/sessions";
+import { useI18n } from "@/i18n";
 
 const settings = useSettingsStore();
+const { t } = useI18n();
+const sessions = useSessionsStore();
+
+/** 底部面板级视图：终端 / 问题（终端用 v-show 保活 PTY） */
+const panelView = computed({
+  get: () => sessions.panelView,
+  set: (value: "terminal" | "problems") => {
+    sessions.panelView = value;
+  },
+});
 
 /** 拖拽手柄起始信息：拖动开始时的鼠标 Y 与面板高度 */
 const drag = ref<{ startY: number; startHeight: number } | null>(null);
@@ -49,13 +62,59 @@ onBeforeUnmount(() => {
       aria-label="调整终端面板高度"
       @mousedown="startResize"
     />
+    <header class="panel-tabs">
+      <button
+        type="button"
+        class="panel-tab"
+        :class="{ active: panelView === 'terminal' }"
+        @click="panelView = 'terminal'"
+      >
+        {{ t("terminal.title") }}
+      </button>
+      <button
+        type="button"
+        class="panel-tab"
+        :class="{ active: panelView === 'problems' }"
+        @click="panelView = 'problems'"
+      >
+        {{ t("problems.tab") }}
+      </button>
+    </header>
     <div class="panel-body">
-      <SessionsView />
+      <SessionsView v-show="panelView === 'terminal'" />
+      <ProblemsPanel v-if="panelView === 'problems'" />
     </div>
   </section>
 </template>
 
 <style scoped>
+.panel-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.panel-tab {
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 11px;
+  padding: 5px 10px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+
+.panel-tab:hover {
+  color: var(--text-primary);
+}
+
+.panel-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
 .terminal-panel {
   flex-shrink: 0;
   display: flex;

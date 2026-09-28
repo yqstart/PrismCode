@@ -1,26 +1,8 @@
-import { closeBracketsKeymap, completionKeymap } from "@codemirror/autocomplete";
-import {
-  defaultKeymap,
-  historyKeymap,
-  indentWithTab,
-} from "@codemirror/commands";
-import { foldKeymap } from "@codemirror/language";
-import { nextDiagnostic, previousDiagnostic } from "@codemirror/lint";
-import { searchKeymap } from "@codemirror/search";
-import { Prec, type Extension } from "@codemirror/state";
-import {
-  EditorView,
-  keymap,
-  type KeyBinding,
-} from "@codemirror/view";
-import {
-  goBackKeymap,
-  goForwardKeymap,
-  goToDefinitionKeymap,
-  type NavigationHandlers,
-} from "@/features/editor/navigation";
+// ==================== 编辑器快捷键清单 ====================
+// 仅供设置页展示与键位对照使用；实际绑定由编辑器内核的 keymap 注册。
+// 命令注册表落地后，本表将由注册表生成。
 
-/** 编辑器应用层快捷键的唯一键名来源。CodeMirror 会在注册时规范化大小写。 */
+/** 编辑器应用层快捷键的唯一键名来源（设置页展示与键位解析共用）。 */
 export const EDITOR_KEYS = {
   goToDefinition: "Mod-b",
   goToDefinitionLegacy: "Mod-Enter",
@@ -46,7 +28,7 @@ export type ShortcutStroke = ShortcutToken[];
 
 export interface EditorShortcutDescriptor {
   id: string;
-  /** CodeMirror key binding 语法；chord 用空格分隔。 */
+  /** 规范键位写法；chord 用空格分隔。 */
   key: string;
   /** 设置页使用的跨平台展示形式。一个元素代表一个 chord stroke。 */
   strokes: ShortcutStroke[];
@@ -191,139 +173,3 @@ export const EDITOR_SHORTCUTS: EditorShortcutDescriptor[] = [
     labelKey: "settings.shortcutEmmet",
   },
 ];
-
-export interface EditorKeymapHandlers {
-  navigation: NavigationHandlers;
-  onRename: (view: EditorView) => void;
-  onReferences: (view: EditorView) => void;
-  onOpenFind: (view: EditorView) => void;
-  onOpenReplace: (view: EditorView) => void;
-  onOpenRecentFiles: () => void;
-  onFormatDocument: () => void;
-  onFormatSelection: (view: EditorView) => void;
-  onEmmet: (view: EditorView) => boolean;
-}
-
-/** macOS Option+L 的 event.key 会变成 `¬`，必须用物理键码识别 WebStorm 格式化键。 */
-export function isReformatPhysicalKey(
-  event: Pick<KeyboardEvent, "metaKey" | "ctrlKey" | "altKey" | "shiftKey" | "code">,
-): boolean {
-  return (
-    (event.metaKey || event.ctrlKey) &&
-    event.altKey &&
-    !event.shiftKey &&
-    event.code === "KeyL"
-  );
-}
-
-/**
- * 构建编辑器 keymap。
- * 应用层命令必须通过 Prec.highest 注册，避免被 defaultKeymap 中同键的原生命令抢先消费。
- */
-export function createEditorKeymap(handlers: EditorKeymapHandlers): Extension {
-  const runReformat = (view: EditorView): boolean => {
-    if (view.state.selection.ranges.length === 1 && !view.state.selection.main.empty) {
-      handlers.onFormatSelection(view);
-    } else {
-      handlers.onFormatDocument();
-    }
-    return true;
-  };
-  const appBindings: KeyBinding[] = [
-    ...goToDefinitionKeymap(handlers.navigation),
-    goBackKeymap(handlers.navigation),
-    goForwardKeymap(handlers.navigation),
-    {
-      key: EDITOR_KEYS.recentFiles,
-      run: () => {
-        handlers.onOpenRecentFiles();
-        return true;
-      },
-    },
-    {
-      key: EDITOR_KEYS.rename,
-      run: (view) => {
-        handlers.onRename(view);
-        return true;
-      },
-    },
-    {
-      key: EDITOR_KEYS.references,
-      run: (view) => {
-        handlers.onReferences(view);
-        return true;
-      },
-    },
-    {
-      key: EDITOR_KEYS.openFind,
-      run: (view) => {
-        handlers.onOpenFind(view);
-        return true;
-      },
-    },
-    {
-      key: EDITOR_KEYS.openReplaceMac,
-      run: (view) => {
-        handlers.onOpenReplace(view);
-        return true;
-      },
-    },
-    {
-      key: EDITOR_KEYS.openReplace,
-      run: (view) => {
-        handlers.onOpenReplace(view);
-        return true;
-      },
-    },
-    {
-      key: EDITOR_KEYS.reformatCode,
-      run: runReformat,
-    },
-    {
-      key: EDITOR_KEYS.formatDocument,
-      run: () => {
-        handlers.onFormatDocument();
-        return true;
-      },
-    },
-    {
-      key: EDITOR_KEYS.formatSelection,
-      run: (view) => {
-        handlers.onFormatSelection(view);
-        return true;
-      },
-    },
-  ];
-
-  const nativeBindings: KeyBinding[] = [
-    ...closeBracketsKeymap,
-    ...defaultKeymap,
-    ...searchKeymap,
-    ...historyKeymap,
-    ...foldKeymap,
-    ...completionKeymap,
-    {
-      key: EDITOR_KEYS.nextDiagnostic,
-      run: nextDiagnostic,
-      shift: previousDiagnostic,
-      preventDefault: true,
-    },
-    {
-      key: EDITOR_KEYS.emmet,
-      run: (view) => handlers.onEmmet(view),
-    },
-    indentWithTab,
-  ];
-
-  return [
-    Prec.highest(
-      EditorView.domEventHandlers({
-        keydown(event, view) {
-          return isReformatPhysicalKey(event) ? runReformat(view) : false;
-        },
-      }),
-    ),
-    Prec.highest(keymap.of(appBindings)),
-    keymap.of(nativeBindings),
-  ];
-}

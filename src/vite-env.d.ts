@@ -6,6 +6,12 @@ declare module "*.vue" {
   export default component;
 }
 
+declare module "monaco-editor/languages/features/json/tokenization" {
+  export function createTokenizationSupport(
+    supportComments: boolean,
+  ): import("monaco-editor").languages.TokensProvider;
+}
+
 declare module "*.md?raw" {
   const content: string;
   export default content;

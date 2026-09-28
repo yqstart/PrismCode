@@ -126,6 +126,8 @@ pub struct GitStatusSnapshot {
     pub behind: usize,
     pub entries: Vec<GitStatusEntry>,
     pub conflict_count: usize,
+    /// 合并进行中（MERGE_HEAD 存在）：冲突解决后提交即完成合并
+    pub merge_in_progress: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -269,6 +271,7 @@ fn git_status_blocking(root: String) -> Result<GitStatusSnapshot, String> {
                 behind: 0,
                 entries: vec![],
                 conflict_count: 0,
+                merge_in_progress: false,
             });
         }
     };
@@ -352,6 +355,13 @@ fn git_status_blocking(root: String) -> Result<GitStatusSnapshot, String> {
         });
     }
 
+    let merge_in_progress = repo
+        .find_reference("MERGE_HEAD")
+        .map(|_| true)
+        .unwrap_or_else(|_| {
+            repo.path().join("MERGE_HEAD").exists()
+        });
+
     Ok(GitStatusSnapshot {
         initialized: true,
         branch: head_name,
@@ -361,6 +371,7 @@ fn git_status_blocking(root: String) -> Result<GitStatusSnapshot, String> {
         behind,
         entries,
         conflict_count,
+        merge_in_progress,
     })
 }
 
@@ -4082,6 +4093,7 @@ mod tests {
             behind: 0,
             entries: vec![],
             conflict_count: 0,
+            merge_in_progress: false,
         };
         let mut state = StatusCacheState {
             generation: 4,

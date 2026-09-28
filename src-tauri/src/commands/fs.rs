@@ -84,7 +84,9 @@ pub async fn read_text_file(root: String, path: String) -> Result<String, String
 }
 
 fn read_text_file_blocking(root: String, path: String) -> Result<String, String> {
-    const MAX_BYTES: u64 = 20 * 1024 * 1024; // 20MB（对齐 read_file_base64 的上限策略）
+    // 上限 50MB：超过此值直接拒绝（读进内存 + IPC 序列化成本过高）；
+    // 20MB~50MB 的文件由前端按体积分级关闭重特性（见 MonacoEditor 的大文件策略）。
+    const MAX_BYTES: u64 = 50 * 1024 * 1024;
     let root_path = PathBuf::from(&root);
     let file = resolve_inside_workspace(&root_path, Path::new(&path))?;
     if !file.is_file() {
