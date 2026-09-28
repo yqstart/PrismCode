@@ -79,6 +79,15 @@ try {
   await page.evaluate(() => window.addMarkers());
   await new Promise((resolve) => setTimeout(resolve, 400));
 
+  // 文案必须解析成人类可读文本，而不是回落到 i18n key
+  const filterTexts = await page.evaluate(() =>
+    Array.from(document.querySelectorAll(".problems .filter")).map((button) => button.textContent ?? ""),
+  );
+  assert.ok(
+    filterTexts.every((text) => !text.includes("problems.")),
+    `问题面板文案未解析：${filterTexts.join(" | ")}`,
+  );
+
   const rows = await page.evaluate(() => window.rowTexts());
   assert.equal(rows.length, 2, `两条 marker 应渲染两行，实际 ${rows.length}`);
   assert.ok(rows[0]!.includes("4:3"), `错误行应显示位置，实际 ${rows[0]}`);

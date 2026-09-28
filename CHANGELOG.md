@@ -2,6 +2,13 @@
 
 本文件遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 风格，版本号遵循语义化版本。
 
+## [4.0.1] - 2026-09-28
+
+### 修复
+
+- 底部面板的「问题」标签与问题面板内的筛选文案显示为原始 i18n key（如 `problems.tab`）：`problems` 命名空间被放进了 `settings` 之下，与调用方路径不一致，已移到顶层。
+- 问题面板自检补充文案解析断言，避免同类问题再次漏检。
+
 ## [4.0.0] - 2026-09-28
 
 ### 变更
@@ -243,6 +250,7 @@ Prism Code 1.0.0 是当前代码基线的首个可用大版本，定位为轻量
 - 文件访问、Git、搜索、SSH 和更新说明渲染均加入路径校验、错误处理、超时清理、敏感信息隔离和 Markdown 链接过滤。
 - 采用 MIT 许可证，纯开源免费；本版本坚持离线优先，不包含联网 AI 补全、AI 对话面板、AI Agent、MCP/Skills 生态或插件市场。
 
+[4.0.1]: https://github.com/yqstart/PrismCode/releases/tag/v4.0.1
 [4.0.0]: https://github.com/yqstart/PrismCode/releases/tag/v4.0.0
 [3.4.0]: https://github.com/yqstart/PrismCode/releases/tag/v3.4.0
 [3.3.0]: https://github.com/yqstart/PrismCode/releases/tag/v3.3.0
