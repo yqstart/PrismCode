@@ -31,6 +31,9 @@ jobs:
 
       - name: Typecheck & Vite build
         run: pnpm build
+        env:
+          # 与 Release 一致：Rollup 打包 Monaco 需要约 3GB 堆
+          NODE_OPTIONS: --max-old-space-size=4096
 
   rust:
     name: Rust check

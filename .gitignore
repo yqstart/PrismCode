@@ -38,3 +38,4 @@ dist-ssr
 
 # ZCode 内部会话/计划文件（非项目源码）
 .zcode/
+public/icon-theme

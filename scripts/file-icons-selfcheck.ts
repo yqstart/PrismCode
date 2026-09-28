@@ -69,6 +69,16 @@ try {
     };
   });
   assert.ok(after.version > 0, "预热后版本必须自增以触发图标重算");
+  assert.match(
+    after.tsUrl,
+    /^\/icon-theme\/.*\.svg$/,
+    `图标 URL 应指向静态目录（不经过打包），实际 ${after.tsUrl}`,
+  );
+  assert.match(
+    before.fileUrl,
+    /^\/icon-theme\/file\.svg$/,
+    `清单未就绪时应给通用图标，实际 ${before.fileUrl}`,
+  );
   assert.notEqual(after.tsUrl, before.fileUrl, ".ts 应解析到 TypeScript 专属图标");
   assert.ok(after.folderUrl.length > 0, "文件夹图标必须可解析");
   assert.ok(after.unknownUrl.length > 0, "未知扩展名应回退到通用文件图标");

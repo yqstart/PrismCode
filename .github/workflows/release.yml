@@ -189,6 +189,9 @@ jobs:
           # 更新包签名：仓库 Settings → Secrets 配置（内容为 .secrets/prismcode.key 全文）
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          # Rollup 打包 Monaco 的数千个 ESM 模块需要约 3GB 堆；
+          # macOS runner 默认上限约 2GB，不提升会直接 V8 堆溢出（exit 134）。
+          NODE_OPTIONS: --max-old-space-size=4096
         with:
           tagName: v__VERSION__
           releaseName: Prism Code v__VERSION__
