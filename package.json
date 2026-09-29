@@ -1,7 +1,7 @@
 {
   "name": "prismcode",
   "private": true,
-  "version": "4.0.1",
+  "version": "4.1.0",
   "license": "MIT",
   "type": "module",
   "scripts": {
@@ -38,6 +38,7 @@
     "test:formatting": "node --experimental-strip-types scripts/formatting-selfcheck.ts",
     "test:line-diff": "node --experimental-strip-types scripts/line-diff-selfcheck.ts",
     "test:git-graph": "node --experimental-strip-types scripts/git-graph-selfcheck.ts",
+    "test:language-budget": "node --experimental-strip-types scripts/language-budget-selfcheck.ts",
     "test:perf": "node --experimental-strip-types scripts/perf/editor-input-bench.ts"
   },
   "dependencies": {

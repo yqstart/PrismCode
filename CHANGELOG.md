@@ -2,6 +2,22 @@
 
 本文件遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 风格，版本号遵循语义化版本。
 
+## [4.1.0] - 2026-09-29
+
+### 变更
+
+- **语言服务内存预算**：TypeScript / JavaScript 语言服务改为「每个窗口同时最多一个 worker」。切换标签时停掉当前语言用不到的编译器（不再让 TS 与 JS 两套并存）；窗口失焦满 3 秒释放该窗口的 worker，重新聚焦后按需重建；关闭 Monaco 上游的 `keepIdleModels`（空闲 model 一分钟内未被使用即停止同步）。所有上限集中在 `src/features/editor/monaco/languageBudget.ts`。
+- Monaco 自带的 `workerManager.js` 由仓库内 `monaco/tsWorkerManager.ts` 顶替（vite 插件在解析阶段替换，dev 预构建与生产构建都覆盖），提供 worker 登记、按语言停用与挂起恢复。
+- **常驻编辑模型上限为 2**：每个窗口只保留当前标签与上一个标签的 Monaco model，其余标签的正文留在编辑器 store，重新打开时按 store 内容重建。更早标签不再保留撤销历史。
+- **额外类型注入按当前文件收口**：只注入当前文件的直接本地 import，最多 32 个文件且单个不超过 256 KB，集合整体替换（不再只增不删，也不再跨项目残留）。
+- **语义诊断只覆盖贴在编辑器上的 model**（`onlyVisible`），并显式声明标准库：默认 `es2022` + `dom`，项目 tsconfig 的 `lib` 直接透传（Node 项目写 `["es2022"]` 即不再加载 DOM 类型）。
+- 新增语言服务内存预算自测（`pnpm test:language-budget`），并给 Monaco 语言层 / 编辑器自检补上 worker 生命周期与失焦挂起断言。
+
+### 修复
+
+- 打开两个项目窗口时内存占用过高。此前每个窗口各持一套带 DOM 标准库的 TypeScript 检查器，打开过的文件与注入的类型定义会一直留在语言服务程序里，主线程还会为「查找引用」额外加载第二套 TypeScript 编译器且查完不释放。现在分别改为：失焦释放 worker、常驻 model 与额外注入设上限、查找引用结束后立即释放第二套编译器。
+- `.vue` script 段的诊断在「只校验可见 model」之后仍能正常产出（改由 Vue 桥接层主动拉取诊断并按等长映射写回 SFC）。
+
 ## [4.0.1] - 2026-09-28
 
 ### 修复
@@ -250,6 +266,7 @@ Prism Code 1.0.0 是当前代码基线的首个可用大版本，定位为轻量
 - 文件访问、Git、搜索、SSH 和更新说明渲染均加入路径校验、错误处理、超时清理、敏感信息隔离和 Markdown 链接过滤。
 - 采用 MIT 许可证，纯开源免费；本版本坚持离线优先，不包含联网 AI 补全、AI 对话面板、AI Agent、MCP/Skills 生态或插件市场。
 
+[4.1.0]: https://github.com/yqstart/PrismCode/releases/tag/v4.1.0
 [4.0.1]: https://github.com/yqstart/PrismCode/releases/tag/v4.0.1
 [4.0.0]: https://github.com/yqstart/PrismCode/releases/tag/v4.0.0
 [3.4.0]: https://github.com/yqstart/PrismCode/releases/tag/v3.4.0
