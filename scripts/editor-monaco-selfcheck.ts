@@ -21,6 +21,12 @@ declare global {
     editorApi: () => { scrollTo: (line: number, column: number) => void };
     contentWrites: Array<{ path: string; content: string }>;
     cursorWrites: Array<{ path: string; line: number; column: number }>;
+    /** 追加一个 .ts 标签并切过去（触发语言服务 worker） */
+    openTsTab: () => void;
+    languageWorkerCount: () => number;
+    /** 模拟窗口失焦 / 聚焦（headless 无法真失焦，覆盖 document.hasFocus 后派发事件） */
+    simulateBlur: () => void;
+    simulateFocus: () => void;
   }
 }
 
@@ -51,6 +57,7 @@ try {
       import MonacoEditor from '/src/features/editor/MonacoEditor.vue';
       import { monaco } from '/src/features/editor/monaco/setup.ts';
       import { useEditorStore } from '/src/stores/editor.ts';
+      import { languageWorkerCount } from '/src/features/editor/monaco/tsWorkerManager.ts';
 
       const contentA = ${JSON.stringify(contentA)};
       const contentB = ${JSON.stringify(contentB)};
@@ -110,6 +117,23 @@ try {
       window.tabContent = (index) => store.tabs[index].content;
       window.activeEditor = () => monaco.editor.getEditors()[0];
       window.editorApi = () => componentApi;
+      window.languageWorkerCount = languageWorkerCount;
+      window.openTsTab = () => {
+        const tsContent = 'const value: number = 1\\n';
+        store.tabs.push(makeTab('tab-ts', '/tmp/monaco-check-c.ts', tsContent));
+        path.value = '/tmp/monaco-check-c.ts';
+        content.value = tsContent;
+      };
+      // headless 里没法真正让窗口失焦：覆盖 document.hasFocus 再派发事件，
+      // 走的就是 MonacoEditor 里那条 blur/focus 处理链路。
+      window.simulateBlur = () => {
+        document.hasFocus = () => false;
+        window.dispatchEvent(new Event('blur'));
+      };
+      window.simulateFocus = () => {
+        document.hasFocus = () => true;
+        window.dispatchEvent(new Event('focus'));
+      };
     </script></body></html>`,
   );
   await server.listen();
@@ -227,6 +251,36 @@ try {
     return window.monaco.editor.getModels().map((model) => model.uri.path);
   });
   assert.deepEqual(disposed, ["/tmp/monaco-check-a.txt"], "未打开标签的 model 必须回收");
+
+  // 8. 失焦挂起：窗口失焦满 3 秒释放语言服务 worker，聚焦后按需重建
+  const suspendFlow = await page.evaluate(async () => {
+    window.openTsTab();
+    const waitForWorker = async () => {
+      const deadline = Date.now() + 20000;
+      let count = window.languageWorkerCount();
+      while (Date.now() < deadline && count < 1) {
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        count = window.languageWorkerCount();
+      }
+      return count;
+    };
+    const active = await waitForWorker();
+    window.simulateBlur();
+    await new Promise((resolve) => setTimeout(resolve, 3600));
+    const afterBlur = window.languageWorkerCount();
+    window.simulateFocus();
+    const afterFocus = await waitForWorker();
+    return { active, afterBlur, afterFocus };
+  });
+  assert.ok(
+    suspendFlow.active >= 1,
+    `TS 文件应创建语言服务 worker，实际 ${suspendFlow.active}`,
+  );
+  assert.equal(suspendFlow.afterBlur, 0, "窗口失焦满 3 秒后应释放语言服务 worker");
+  assert.ok(
+    suspendFlow.afterFocus >= 1,
+    `窗口重新聚焦后应重建语言服务 worker，实际 ${suspendFlow.afterFocus}`,
+  );
 
   const ignoredErrors = pageErrors.filter(
     (message) => !message.includes("__TAURI") && !message.includes("invoke"),

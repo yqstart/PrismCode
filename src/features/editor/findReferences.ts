@@ -106,6 +106,9 @@ export async function findReferences(
     }
   } catch {
     // 类型服务未就绪/解析失败时进入正则索引兜底。
+  } finally {
+    // 主线程这套 LanguageService（第二份编译器 + DOM 标准库）只在本次查询期间需要
+    tsService.release();
   }
 
   if (!refs.length) {

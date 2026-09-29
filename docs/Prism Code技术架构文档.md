@@ -67,6 +67,18 @@
 | 内置能力 | 大部分需自研或引第三方包 | 查找替换、差异对比、折叠、多光标、快速修复、粘性滚动、小地图、语义高亮 |
 | 键位 | CM6 keymap | 内置 action + `addKeybindingRules`，可在 **WebStorm / VS Code** 两套预设间切换 |
 
+**语言服务内存预算**：TypeScript worker 每个窗口一份（编译器与标准库内嵌，DOM 类型检查器是单窗口数百 MB 的底数），因此「同时活着几份」和「程序里有多少文件」都做成显式上限：
+
+| 约束 | 值 | 位置 |
+|---|---|---|
+| 常驻语言服务 worker / 窗口 | ≤ 1（TS↔JS 切换时停掉另一套） | `monaco/tsWorkerManager.ts` |
+| 失焦挂起 | 窗口失焦满 3s 释放 worker，聚焦后按需重建 | `MonacoEditor.vue` |
+| 常驻 Monaco model / 窗口 | 2（当前标签 + 上一个标签，其余正文留在 store） | `monaco/languageBudget.ts` |
+| 额外注入（未打开文件） | ≤ 32 个且单个 ≤ 256KB，只取当前文件的直接 import | `monaco/extraLibs.ts` |
+| 语义诊断范围 | 仅贴在编辑器上的 model（`onlyVisible`） | `monaco/tsProvider.ts` |
+
+`monaco/tsWorkerManager.ts` 顶替 Monaco 自带的 `workerManager.js`（vite 插件在解析时替换，dev 预构建与生产构建都覆盖）：上游 `keepIdleModels: true` 且只在配置变化时重启 worker，后台窗口的编译器会一直留在内存里。worker 注册表挂在 `globalThis` 上，因为 dev 下 Monaco 走依赖预构建、应用代码走源码，是两份模块实例。
+
 **回滚路径**：编辑器内核的对外契约集中在 `src/features/editor/MonacoEditor.vue`（props `path`/`content`、`defineExpose({ scrollTo })`、经 `stores/editor.ts` 读写内容与光标），语言能力集中在 `src/features/editor/monaco/*` provider。若需回退，替换该组件与 provider 目录即可，其余功能模块不受影响。
 
 ### 3.3 明确不做的自研

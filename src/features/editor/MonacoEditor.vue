@@ -10,13 +10,29 @@ import {
   type GitBlameController,
 } from "@/features/editor/monaco/decorations";
 import { registerMonacoThemes } from "@/features/editor/monacoTheme";
-import { configureTypeScript } from "@/features/editor/monaco/tsProvider";
+import {
+  configureTypeScript,
+  pokeTypeScriptDiagnostics,
+} from "@/features/editor/monaco/tsProvider";
 import { registerFormatProviders } from "@/features/editor/monaco/formatProvider";
 import { registerHtmlCssProviders } from "@/features/editor/monaco/htmlCssProvider";
 import { registerEmmetProvider } from "@/features/editor/monaco/emmetProvider";
 import { registerVueLanguage } from "@/features/editor/monaco/vueProvider";
 import { registerJsonEnvProviders } from "@/features/editor/monaco/jsonEnvProvider";
-import { installExtraLibs } from "@/features/editor/monaco/extraLibs";
+import {
+  installExtraLibs,
+  refreshActiveExtraLibs,
+} from "@/features/editor/monaco/extraLibs";
+import {
+  WORKER_SUSPEND_MS,
+  languageWorkerMode,
+  retainedModelPaths,
+  shouldSuspendLanguageWorkers,
+} from "@/features/editor/monaco/languageBudget";
+import {
+  setLanguageWorkersSuspended,
+  stopLanguageWorkersExcept,
+} from "@/features/editor/monaco/tsWorkerManager";
 import { registerUserSnippets } from "@/features/editor/monaco/snippetsProvider";
 import { applyKeymapPreset, registerOwnCommands } from "@/features/editor/monaco/actions";
 import { installEslint } from "@/features/editor/monaco/eslint";
@@ -28,6 +44,7 @@ import {
 } from "@/features/editor/monaco/breadcrumbs";
 import {
   installVueScriptDiagnostics,
+  refreshVueDiagnostics,
   registerVueScriptCompletions,
 } from "@/features/editor/monaco/vueScriptService";
 import { getEditorFontFamily } from "@/features/editor/fonts";
@@ -57,6 +74,13 @@ const { openAt, blameVisible } = storeToRefs(editorStore);
 
 let codeEditor: monaco.editor.IStandaloneCodeEditor | null = null;
 let currentPath = "";
+/** 上一个标签路径：语言服务只保留当前 + 上一个文件的 model */
+let previousRetainedPath = "";
+/** 失焦挂起计时器：窗口离开焦点满 WORKER_SUSPEND_MS 后释放语言服务 worker */
+let suspendTimer: ReturnType<typeof setTimeout> | undefined;
+let blurredAt = 0;
+/** 本窗口是否因失焦挂起过语言服务（聚焦时只有真挂起过才需要重启） */
+let languageWorkersSuspended = false;
 let applyingExternal = false;
 let resizeObserver: ResizeObserver | null = null;
 let measureRaf: number | null = null;
@@ -222,12 +246,24 @@ function attachGitDecorations(path: string): void {
   });
 }
 
-/** 关闭的标签对应的 model 需要回收，否则 Monaco 常驻持有全文 */
+/**
+ * 语言服务只保留有限文件的 model：当前标签 + 上一个标签。
+ * 其余标签的模型释放（正文由 editor store 持有，需要时按 store 内容重建），
+ * 否则 worker 里的类型程序会随打开过的每个文件持续变大。
+ */
 function pruneModels(): void {
-  const open = new Set(editorStore.tabs.map((tab) => tab.path));
+  const openPaths = editorStore.tabs.map((tab) => tab.path);
+  const kept = new Set(retainedModelPaths(currentPath, previousRetainedPath, openPaths));
+  const open = new Set(openPaths);
   for (const [path, model] of modelCache) {
-    if (open.has(path)) continue;
-    viewStateCache.delete(path);
+    if (kept.has(path)) continue;
+    // 未写回 store 的编辑先同步，模型释放后重新打开仍能恢复
+    const tab = editorStore.tabs.find((item) => item.path === path);
+    if (tab && !model.isDisposed() && model.getValue() !== tab.content) {
+      editorStore.setContent(path, model.getValue());
+    }
+    // 视图状态只在标签已关闭时丢弃；仍打开但被换出的标签保留滚动/折叠/光标
+    if (!open.has(path)) viewStateCache.delete(path);
     modelCache.delete(path);
     model.dispose();
   }
@@ -238,6 +274,7 @@ function switchDocument(path: string, content: string): void {
   if (currentPath && codeEditor.getModel()) {
     viewStateCache.set(currentPath, codeEditor.saveViewState());
   }
+  previousRetainedPath = currentPath;
   currentPath = path;
   pruneModels();
 
@@ -252,6 +289,10 @@ function switchDocument(path: string, content: string): void {
   codeEditor.updateOptions(largeFileOptions(model.getValue()));
   const viewState = viewStateCache.get(path);
   if (viewState) codeEditor.restoreViewState(viewState);
+  // 同一时刻只留当前语言需要的编译器（TS↔JS 切换时停掉另一套），
+  // 并把额外库换成这个文件的直接 import
+  stopLanguageWorkersExcept(languageWorkerMode(model.getLanguageId()));
+  void refreshActiveExtraLibs(model);
   attachGitDecorations(path);
   emitCursor();
   scheduleMeasure();
@@ -352,12 +393,44 @@ function createEditor(): void {
   breadcrumbController ??= trackSymbolChain(codeEditor, (chain) => {
     crumbs.value = chain;
   });
+  void refreshActiveExtraLibs(model);
   emitCursor();
   scheduleMeasure();
 }
 
 function handleWindowRestore(): void {
   if (document.hidden) return;
+  scheduleMeasure();
+}
+
+/**
+ * 窗口失焦：满 WORKER_SUSPEND_MS 后释放语言服务 worker（TypeScript 编译器
+ * 每个窗口一份，后台窗口不该常驻）。期间焦点回来则取消挂起。
+ */
+function handleWindowBlur(): void {
+  blurredAt = Date.now();
+  clearTimeout(suspendTimer);
+  suspendTimer = setTimeout(() => {
+    suspendTimer = undefined;
+    if (!shouldSuspendLanguageWorkers(document.hasFocus(), Date.now() - blurredAt)) return;
+    languageWorkersSuspended = true;
+    setLanguageWorkersSuspended(true);
+  }, WORKER_SUSPEND_MS);
+}
+
+/** 窗口重新聚焦：只有真的挂起过才重启语言服务（避免每次聚焦都重建编译器） */
+function handleWindowFocus(): void {
+  clearTimeout(suspendTimer);
+  suspendTimer = undefined;
+  if (languageWorkersSuspended) {
+    languageWorkersSuspended = false;
+    setLanguageWorkersSuspended(false);
+    const model = codeEditor?.getModel() ?? null;
+    stopLanguageWorkersExcept(languageWorkerMode(model?.getLanguageId() ?? ""));
+    // 挂起期间 worker 已销毁：重新校验当前 model，额外库保持原样（无需重读盘）
+    pokeTypeScriptDiagnostics();
+    if (model) void refreshVueDiagnostics(model);
+  }
   scheduleMeasure();
 }
 
@@ -369,7 +442,10 @@ onMounted(() => {
   installConflictResolver();
   installVueScriptDiagnostics();
   registerVueScriptCompletions();
-  installExtraLibs({ root: () => workspace.rootPath });
+  installExtraLibs({
+    root: () => workspace.rootPath,
+    activeModel: () => codeEditor?.getModel() ?? null,
+  });
   registerUserSnippets({ root: () => workspace.rootPath });
   eslintController = installEslint({
     root: () => workspace.rootPath,
@@ -394,11 +470,17 @@ onMounted(() => {
   void git.scheduleRefresh();
   window.addEventListener("focus", handleWindowRestore);
   document.addEventListener("visibilitychange", handleWindowRestore);
+  window.addEventListener("blur", handleWindowBlur);
+  window.addEventListener("focus", handleWindowFocus);
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener("focus", handleWindowRestore);
   document.removeEventListener("visibilitychange", handleWindowRestore);
+  window.removeEventListener("blur", handleWindowBlur);
+  window.removeEventListener("focus", handleWindowFocus);
+  clearTimeout(suspendTimer);
+  suspendTimer = undefined;
   host.value?.removeEventListener("wheel", onWheel, { capture: true });
   resizeObserver?.disconnect();
   resizeObserver = null;
@@ -528,8 +610,10 @@ watch(
 
 watch(
   () => workspace.rootPath,
-  (root) => {
-    void configureTypeScript(root);
+  async (root) => {
+    await configureTypeScript(root);
+    // 换项目后当前文件的 import 集合变了，重新注入额外库
+    await refreshActiveExtraLibs(codeEditor?.getModel() ?? null);
     attachGitDecorations(currentPath);
   },
 );

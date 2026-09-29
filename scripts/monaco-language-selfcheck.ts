@@ -16,6 +16,9 @@ declare global {
     monaco: typeof MonacoApi;
     compilerOptionsFromTsconfig: typeof compilerOptionsFromTsconfig;
     configureTypeScript: (root: string | null) => Promise<void>;
+    pokeTypeScriptDiagnostics: () => void;
+    languageWorkerCount: () => number;
+    setLanguageWorkersSuspended: (next: boolean) => void;
     registerFormatProviders: (options: {
       root: () => string | null;
       enabled: () => boolean;
@@ -61,7 +64,8 @@ try {
     <html><body><div id="host" style="height:300px;width:600px"></div>
     <script type="module">
       import { monaco } from '/src/features/editor/monaco/setup.ts';
-      import { compilerOptionsFromTsconfig, configureTypeScript } from '/src/features/editor/monaco/tsProvider.ts';
+      import { compilerOptionsFromTsconfig, configureTypeScript, pokeTypeScriptDiagnostics } from '/src/features/editor/monaco/tsProvider.ts';
+      import { languageWorkerCount, setLanguageWorkersSuspended } from '/src/features/editor/monaco/tsWorkerManager.ts';
       import { languageIdForPath } from '/src/features/editor/monaco/langSetup.ts';
       import { registerFormatProviders } from '/src/features/editor/monaco/formatProvider.ts';
       import { registerHtmlCssProviders } from '/src/features/editor/monaco/htmlCssProvider.ts';
@@ -75,6 +79,9 @@ try {
       window.monaco = monaco;
       window.compilerOptionsFromTsconfig = compilerOptionsFromTsconfig;
       window.configureTypeScript = configureTypeScript;
+      window.pokeTypeScriptDiagnostics = pokeTypeScriptDiagnostics;
+      window.languageWorkerCount = languageWorkerCount;
+      window.setLanguageWorkersSuspended = setLanguageWorkersSuspended;
       window.languageIdForPath = languageIdForPath;
       window.registerFormatProviders = registerFormatProviders;
       window.registerHtmlCssProviders = registerHtmlCssProviders;
@@ -159,6 +166,9 @@ try {
       moduleResolution: full.moduleResolution,
       targetClamped: full.target === map(null).target,
       moduleClamped: full.module === map(null).module,
+      emptyLib: empty.lib,
+      explicitLib: map({ compilerOptions: { lib: ["es2022"] } }).lib,
+      emptyArrayLib: map({ compilerOptions: { lib: [] } }).lib,
     };
   });
   assert.equal(mapped.emptyStrict, true, "默认 strict 开启");
@@ -168,6 +178,17 @@ try {
   assert.deepEqual(mapped.fullPaths, { "@/*": ["src/*"] }, "paths 必须透传");
   assert.equal(mapped.targetClamped, true, "es2022 收敛到 worker 支持的 ESNext");
   assert.equal(mapped.moduleClamped, true, "nodenext 收敛到 worker 支持的 ESNext");
+  assert.deepEqual(
+    mapped.emptyLib,
+    ["es2022", "dom"],
+    "未声明 lib 时用默认标准库（浏览器项目要 DOM）",
+  );
+  assert.deepEqual(
+    mapped.explicitLib,
+    ["es2022"],
+    "tsconfig 的 lib 必须透传（Node 项目据此不再加载 DOM）",
+  );
+  assert.deepEqual(mapped.emptyArrayLib, ["es2022", "dom"], "lib: [] 回落默认");
 
   // 3. 真实 worker 诊断：类型错误必须产出 marker
   const markers = await page.evaluate(async () => {
@@ -201,6 +222,34 @@ try {
     /not assignable|不能将类型|string/i,
     `诊断信息应为类型不兼容，实际 "${markers[0]!.message}"`,
   );
+
+  // 3b. 语言服务 worker 生命周期：常态一个 worker → 挂起归零 → 恢复重建
+  const workerLifecycle = await page.evaluate(async () => {
+    const uri = window.monaco.Uri.file("/tmp/prism-lang-check.ts");
+    const active = window.languageWorkerCount();
+    window.setLanguageWorkersSuspended(true);
+    const suspended = window.languageWorkerCount();
+    window.setLanguageWorkersSuspended(false);
+    window.pokeTypeScriptDiagnostics();
+    const deadline = Date.now() + 20000;
+    let resumed = 0;
+    let markerCount = 0;
+    while (Date.now() < deadline) {
+      resumed = window.languageWorkerCount();
+      markerCount = window.monaco.editor.getModelMarkers({ resource: uri }).length;
+      if (resumed >= 1 && markerCount > 0) break;
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+    return { active, suspended, resumed, markerCount };
+  });
+  assert.equal(
+    workerLifecycle.active,
+    1,
+    `单个 TS 文件应只有一个语言服务 worker，实际 ${workerLifecycle.active}`,
+  );
+  assert.equal(workerLifecycle.suspended, 0, "挂起后不得保留语言服务 worker");
+  assert.ok(workerLifecycle.resumed >= 1, "恢复后应重建语言服务 worker");
+  assert.ok(workerLifecycle.markerCount > 0, "恢复后类型诊断应重新可用");
 
   // 4. 格式化链路：provider → Monaco action → model 变更（内置 Prettier 引擎）
   const formatted = await page.evaluate(async () => {

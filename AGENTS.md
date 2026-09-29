@@ -31,7 +31,7 @@ Prism Code（棱镜编辑器）：基于 Tauri + Vue3 的轻量化桌面代码�
 
 - 桌面壳：Tauri 2
 - 前端：Vue 3 + TypeScript + Vite + Pinia
-- 编辑器内核：**Monaco Editor**（VSCode 同源；高亮/折叠/诊断/补全/跳转/查找/差异对比均为内置能力，按需注册 feature 与语言定义，装配入口 `src/features/editor/monaco/setup.ts`）。JS/TS 走 Monaco 的 TypeScript worker（编译器与标准库内嵌、Worker 线程、不联网，跨文件跳转/重命名/引用/诊断由 worker 承担）；HTML/CSS/SCSS/Less 走 `vscode-html/css-languageservice`（VSCode 同源）；Vue 为自研三态 Monarch 高亮 + 等长虚拟 TS 文件承接 script 段语义 + `vueBindings.ts` 注入 template 绑定；键位支持 **WebStorm / VS Code 双预设**
+- 编辑器内核：**Monaco Editor**（VSCode 同源；高亮/折叠/诊断/补全/跳转/查找/差异对比均为内置能力，按需注册 feature 与语言定义，装配入口 `src/features/editor/monaco/setup.ts`）。JS/TS 走 Monaco 的 TypeScript worker（编译器与标准库内嵌、Worker 线程、不联网，跨文件跳转/重命名/引用/诊断由 worker 承担）；HTML/CSS/SCSS/Less 走 `vscode-html/css-languageservice`（VSCode 同源）；Vue 为自研三态 Monarch 高亮 + 等长虚拟 TS 文件承接 script 段语义 + `vueBindings.ts` 注入 template 绑定；键位支持 **WebStorm / VS Code 双预设**。语言服务内存预算集中在 `monaco/languageBudget.ts`：每个窗口同时最多一个 TS/JS worker（失焦 3 秒释放，聚焦按需重建）、最多 2 个常驻 model、额外注入 ≤32 个文件且单个 ≤256KB；worker 生命周期由 `monaco/tsWorkerManager.ts` 顶替 Monaco 默认实现（vite 插件在解析时替换）
 - 搜索：Rust walk + 模糊/内容检索/替换（async + LRU 缓存）
 - Git：Rust `git2` + 系统 Git（状态/提交/冲突走 `git2`；push/rebase/delete-remote 等远端/兼容性敏感操作按需走系统 Git）
 - 主题：`prism-dark` / `dawn` / `midnight` / `cyberpunk`

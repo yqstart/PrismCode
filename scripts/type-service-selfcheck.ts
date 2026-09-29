@@ -4,7 +4,7 @@
 // 浏览器与 node 共用同一核心，此测试即核心行为的完成证据。
 
 import ts from "typescript";
-import { TsLanguageService, isAlreadyImported, autoImportInsertPos, buildAutoImportApply, type FileContentSource } from "../src/features/editor/typeService/tsService.ts";
+import { TsLanguageService, isAlreadyImported, autoImportInsertPos, type FileContentSource } from "../src/features/editor/typeService/tsService.ts";
 
 let failed = 0;
 let passed = 0;
@@ -190,45 +190,41 @@ console.log("== 语言服务符号能力 ==");
   );
 }
 
-// ==================== 自动导入 apply（fake view 直接验证插入行为） ====================
-console.log("== 自动导入 apply ==");
+// ==================== 自动导入判定（纯函数） ====================
+// buildAutoImportApply 随 Monaco 迁移移除（自动导入由 Monaco TS worker 的补全承担，
+// 不再有编辑器 view 适配层），这里只保留仍有实现的纯函数判定。
+console.log("== 自动导入判定 ==");
 {
   const doc = "const x = 1\n";
   assert("已导入判定", !isAlreadyImported(doc, "helper"));
   assert("已导入判定（存在 import）", isAlreadyImported("import { helper } from './a'\nconst x = 1", "helper"));
   assert("导入插入点：无 import → 文件开头", autoImportInsertPos("const x = 1\n") === 0);
   assert("导入插入点：首个 import 行尾", autoImportInsertPos("import a from 'b'\nconst x = 1"), "import a from 'b'\n".length);
+}
 
-  // fake view：捕获 dispatch 的事务
-  let captured: { changes?: unknown; userEvent?: string } | null = null;
-  const fakeView = {
-    dispatch: (tr: { changes?: unknown; userEvent?: string }) => {
-      captured = tr;
-    },
-  } as never;
+// ==================== release：查找引用后释放第二套编译器 ====================
+console.log("== release ==");
+{
+  const doc = files.get("/proj/obj.ts")!;
+  const pos = doc.lastIndexOf("obj.") + "obj.".length;
+  const fresh = new TsLanguageService();
+  fresh.init(ts, ROOT, memSource(files));
+  fresh.setFile("/proj/obj.ts", doc);
+  assert("release 前 ready", fresh.ready);
+  assert("release 前有类型感知补全", fresh.completionsAt("/proj/obj.ts", pos).length > 0);
 
-  const apply = buildAutoImportApply(
-    { name: "helper", sourceDisplay: "./utils", insertText: "helper" },
-    doc,
-  ) as (view: typeof fakeView, c: never, from: number, to: number) => void;
-  apply(fakeView, null as never, 10, 16);
-  assert("apply 插入符号与 import 两处 changes", Array.isArray((captured as { changes: unknown[] }).changes) && (captured as { changes: unknown[] }).changes.length === 2);
-  const changes = (captured as { changes: Array<{ from: number; to: number; insert: string }> }).changes;
-  assert("符号插入", changes[0].from === 10 && changes[0].to === 16 && changes[0].insert === "helper");
-  assert("import 插入到顶部", changes[1].from === 0 && changes[1].insert === "import { helper } from './utils';\n");
-  assert("userEvent 标记", captured?.userEvent === "input.complete");
+  fresh.release();
+  assert("release 后 ready 为 false", !fresh.ready);
+  assert("release 后 root 清空", fresh.currentRoot === "");
+  assert("release 后查询返回空数组", fresh.completionsAt("/proj/obj.ts", pos).length === 0);
 
-  // 已导入符号：apply 为纯文本（不重复导入）
-  const docImported = "import { helper } from './utils'\nconst x = 1\n";
-  const apply2 = buildAutoImportApply(
-    { name: "helper", sourceDisplay: "./utils" },
-    docImported,
+  // 同一模块可再次 init（下一次查找引用会重建，不需要重新加载 typescript）
+  fresh.init(ts, ROOT, memSource(files));
+  fresh.setFile("/proj/obj.ts", doc);
+  assert(
+    "重新 init 后恢复补全",
+    fresh.ready && fresh.completionsAt("/proj/obj.ts", pos).length > 0,
   );
-  assert("已导入 → 纯文本 apply", typeof apply2 === "string" && apply2 === "helper");
-
-  // 无 sourceDisplay：纯文本
-  const apply3 = buildAutoImportApply({ name: "local" }, doc);
-  assert("无导入来源 → 纯文本", typeof apply3 === "string");
 }
 
 // ==================== 汇总 ====================
