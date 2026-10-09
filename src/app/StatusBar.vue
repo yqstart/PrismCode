@@ -7,6 +7,8 @@ import { THEME_LABELS, THEME_ORDER } from "@/shared/themes";
 import { basename } from "@/shared/fs";
 import type { ThemeId } from "@/shared/types";
 import { useEditorStore } from "@/stores/editor";
+import { useJavaStore } from "@/stores/java";
+import { useUiStore } from "@/stores/ui";
 import { useGitStore } from "@/stores/git";
 import { useSettingsStore } from "@/stores/settings";
 import { useWorkspaceStore } from "@/stores/workspace";
@@ -17,12 +19,22 @@ const settings = useSettingsStore();
 const workspace = useWorkspaceStore();
 const editor = useEditorStore();
 const git = useGitStore();
+const javaStore = useJavaStore();
+const ui = useUiStore();
 const { editor: editorPrefs, theme } = storeToRefs(settings);
 const { activeTab } = storeToRefs(editor);
 const { snapshot } = storeToRefs(git);
 
 const themeMenuOpen = ref(false);
+const javaMenuOpen = ref(false);
 const branchesOpen = ref(false);
+const showJavaPill = computed(
+  () =>
+    activeTab.value?.language === "Java" ||
+    (activeTab.value ? /\.java$/i.test(activeTab.value.path) : false) ||
+    javaStore.status.state !== "stopped",
+);
+const javaStatusLabel = computed(() => t(`java.status.${javaStore.status.state}`));
 
 const lang = computed(() => activeTab.value?.language ?? "—");
 const cursor = computed(() => activeTab.value?.cursor ?? { line: 1, column: 1 });
@@ -80,8 +92,25 @@ function toggleBranches(event: MouseEvent) {
   branchesOpen.value = !branchesOpen.value;
 }
 
+function toggleJavaMenu(event: MouseEvent) {
+  event.stopPropagation();
+  themeMenuOpen.value = false;
+  branchesOpen.value = false;
+  javaMenuOpen.value = !javaMenuOpen.value;
+}
+
+async function runJavaAction(action: "start" | "stop" | "rebuild" | "logs" | "settings") {
+  javaMenuOpen.value = false;
+  if (action === "start") await javaStore.start();
+  else if (action === "stop") await javaStore.stop();
+  else if (action === "rebuild") await javaStore.rebuildIndex();
+  else if (action === "logs") await javaStore.viewLogs();
+  else ui.openSettings("java");
+}
+
 function onDocClick() {
   themeMenuOpen.value = false;
+  javaMenuOpen.value = false;
 }
 
 onMounted(() => {
@@ -113,6 +142,18 @@ onBeforeUnmount(() => {
       </div>
       <span class="sep">·</span>
       <span class="meta">{{ lang }}</span>
+      <div v-if="showJavaPill" class="java-switch" @click.stop>
+        <button type="button" class="java-btn" @click="toggleJavaMenu">
+          {{ javaStatusLabel }}
+        </button>
+        <div v-if="javaMenuOpen" class="java-menu" role="menu">
+          <button type="button" @click="runJavaAction('start')">{{ t("java.action.start") }}</button>
+          <button type="button" @click="runJavaAction('stop')">{{ t("java.action.stop") }}</button>
+          <button type="button" @click="runJavaAction('rebuild')">{{ t("java.action.rebuildIndex") }}</button>
+          <button type="button" @click="runJavaAction('logs')">{{ t("java.action.viewLogs") }}</button>
+          <button type="button" @click="runJavaAction('settings')">{{ t("java.action.openSettings") }}</button>
+        </div>
+      </div>
       <span class="sep">·</span>
       <span class="meta">UTF-8</span>
       <span v-if="dirty" class="dirty">{{ t("status.unsaved") }}</span>
@@ -272,6 +313,47 @@ onBeforeUnmount(() => {
 
 .conflict:hover {
   text-decoration: underline;
+}
+
+.java-switch {
+  position: relative;
+}
+
+.java-btn {
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--text-secondary);
+}
+
+.java-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.java-menu {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 6px);
+  min-width: 160px;
+  padding: 4px;
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-modal);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+}
+
+.java-menu button {
+  text-align: left;
+  padding: 6px 8px;
+  border-radius: 4px;
+  color: var(--text-primary);
+}
+
+.java-menu button:hover {
+  background: var(--bg-hover);
 }
 
 .theme-switch {

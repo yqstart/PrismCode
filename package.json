@@ -39,6 +39,8 @@
     "test:line-diff": "node --experimental-strip-types scripts/line-diff-selfcheck.ts",
     "test:git-graph": "node --experimental-strip-types scripts/git-graph-selfcheck.ts",
     "test:language-budget": "node --experimental-strip-types scripts/language-budget-selfcheck.ts",
+    "test:java": "node --experimental-strip-types scripts/java-selfcheck.ts",
+    "measure:memory": "node scripts/memory-report.mjs",
     "test:perf": "node --experimental-strip-types scripts/perf/editor-input-bench.ts"
   },
   "dependencies": {

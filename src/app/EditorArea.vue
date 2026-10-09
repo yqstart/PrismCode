@@ -14,6 +14,7 @@ import { revealInOsExplorer } from "@/shared/revealInOs";
 import { disambiguateTabLabels, tabTooltip } from "@/shared/tabLabel";
 import { useCompareStore } from "@/stores/compare";
 import { useEditorStore } from "@/stores/editor";
+import { useJavaStore } from "@/stores/java";
 import { useGitLogStore } from "@/stores/gitLog";
 import { useGitStore } from "@/stores/git";
 import { useSettingsStore } from "@/stores/settings";
@@ -694,9 +695,17 @@ const canDiscardActive = computed(
 // 「丢弃更改」仅在当前文件有可丢弃改动时显示（canDiscardActive）。
 const hasGitMenu = computed(() => gitSnapshot.value.initialized);
 
-const formatDocumentDisabled = computed(
-  () => !settings.editor.prettierEnabled,
-);
+const javaStore = useJavaStore();
+const isJavaFile = computed(() => {
+  const tab = activeTab.value;
+  if (!tab) return false;
+  return tab.language === "Java" || /\.java$/i.test(tab.path) || tab.path.startsWith("jdt:");
+});
+const formatDocumentDisabled = computed(() => {
+  if (activeTab.value?.virtual) return true;
+  if (isJavaFile.value) return false;
+  return !settings.editor.prettierEnabled;
+});
 
 function onEditorContextMenu(event: MouseEvent) {
   if (!activeTab.value || !showFileEditor.value) return;
@@ -755,6 +764,17 @@ function pointInMenu(
 async function formatFromEditor() {
   editorCtx.value = null;
   await editor.formatDocument();
+}
+
+async function runJava(id: "runFile" | "test" | "build" | "clean") {
+  editorCtx.value = null;
+  await javaStore.run(id);
+}
+
+async function restartJava() {
+  editorCtx.value = null;
+  await javaStore.stop();
+  await javaStore.start();
 }
 
 async function discardFromEditor() {
@@ -953,6 +973,8 @@ onBeforeUnmount(() => {
           v-else-if="showTextEditor"
           :path="activeTab.path"
           :content="activeTab.content"
+          :uri="activeTab.virtual?.uri"
+          :language-hint="activeTab.virtual ? 'java' : undefined"
           @contextmenu="onEditorContextMenu"
         />
         <!-- 预览分支必须与 showTextEditor 的 md 条件互补：渲染失败回退编辑态
@@ -1156,6 +1178,14 @@ onBeforeUnmount(() => {
           @click.stop
           @contextmenu.prevent
         >
+        <template v-if="isJavaFile">
+          <button type="button" @click="runJava('runFile')">{{ t("java.action.runFile") }}</button>
+          <button type="button" @click="runJava('test')">{{ t("java.action.test") }}</button>
+          <button type="button" @click="runJava('build')">{{ t("java.action.build") }}</button>
+          <button type="button" @click="runJava('clean')">{{ t("java.action.clean") }}</button>
+          <button type="button" @click="restartJava">{{ t("java.action.restart") }}</button>
+          <hr />
+        </template>
         <button
           type="button"
           :disabled="formatDocumentDisabled"

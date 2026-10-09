@@ -6,6 +6,7 @@ import {
   type GitConflictSides,
 } from "@/shared/gitApi";
 import { basename } from "@/shared/fs";
+import { planCompareTabEviction } from "@/features/git/compareTabs";
 import { useSessionsStore } from "@/stores/sessions";
 import { useWorkspaceStore } from "@/stores/workspace";
 
@@ -89,6 +90,15 @@ export const useCompareStore = defineStore("compare", () => {
       return existing.id;
     }
     tabs.value.push(tab);
+    const kept = new Set(
+      planCompareTabEviction(
+        tabs.value.slice(0, -1).map((item) => item.id),
+        activeId.value,
+        tab.id,
+      ),
+    );
+    kept.add(tab.id);
+    tabs.value = tabs.value.filter((item) => kept.has(item.id));
     activate(tab.id);
     return tab.id;
   }

@@ -32,6 +32,7 @@ import { useCompareStore } from "@/stores/compare";
 import { useGitStore } from "@/stores/git";
 import { useSessionsStore } from "@/stores/sessions";
 import { useSettingsStore } from "@/stores/settings";
+import { t } from "@/i18n";
 import { useWorkspaceStore } from "@/stores/workspace";
 
 export interface EditorTab {
@@ -48,6 +49,8 @@ export interface EditorTab {
   pinned: boolean;
   /** 相对磁盘有无未保存改动：setContent 时 O(1) 维护，供 dirtyPaths 增量更新 */
   dirty: boolean;
+  /** 反编译类等不落盘的只读标签 */
+  virtual?: { uri: string; language: string };
 }
 
 export interface EditorReferenceResult {
@@ -255,8 +258,9 @@ export const useEditorStore = defineStore("editor", () => {
     }
     const sessionRoot = root ?? useWorkspaceStore().rootPath;
     if (!sessionRoot) return;
+    const realTabs = tabs.value.filter((tab) => !tab.virtual);
     const session: EditorSession = {
-      tabs: tabs.value.map((tab) => ({
+      tabs: realTabs.map((tab) => ({
         path: tab.path,
         cursor: tab.cursor,
         pinned: tab.pinned,
@@ -264,8 +268,10 @@ export const useEditorStore = defineStore("editor", () => {
         content: tab.content,
         original: tab.original,
       })),
-      activePath: activePath.value,
-      recentPaths: recentPaths.value,
+      activePath: realTabs.some((tab) => tab.path === activePath.value)
+        ? activePath.value
+        : (realTabs[0]?.path ?? null),
+      recentPaths: recentPaths.value.filter((path) => !path.startsWith("jdt:")),
     };
     saveEditorSession(sessionRoot, session);
   }
@@ -565,7 +571,7 @@ export const useEditorStore = defineStore("editor", () => {
       const isCurrent = () =>
         scopeFor(path) === scope && generation === workspaceGeneration;
       const tab = tabs.value.find((t) => t.path === path);
-      if (!tab) continue;
+      if (!tab || tab.virtual) continue;
 
       try {
         const exists = await pathExists(scope, path);
@@ -673,7 +679,7 @@ export const useEditorStore = defineStore("editor", () => {
     for (const abs of absList) {
       if (!isCurrent()) return;
       const tab = tabs.value.find((t) => t.path === abs);
-      if (!tab) continue;
+      if (!tab || tab.virtual) continue;
       try {
         const exists = await pathExists(root, abs);
         if (!isCurrent()) return;
@@ -766,6 +772,35 @@ export const useEditorStore = defineStore("editor", () => {
   async function formatDocument(path?: string, options?: { quiet?: boolean }) {
     const workspace = useWorkspaceStore();
     const settings = useSettingsStore();
+    const targetPathEarly = path ?? activePath.value;
+    const earlyTab = tabs.value.find((tab) => tab.path === targetPathEarly);
+    if (
+      targetPathEarly &&
+      (earlyTab?.language === "Java" || /\.java$/i.test(targetPathEarly) || targetPathEarly.startsWith("jdt:"))
+    ) {
+      if (earlyTab?.virtual) {
+        if (!options?.quiet) workspace.showNotice(t("editor.virtualReadOnly"));
+        return;
+      }
+      try {
+        const { formatJavaText } = await import("@/features/java/javaSession");
+        const formatted = await formatJavaText(targetPathEarly, earlyTab?.content ?? "");
+        if (!earlyTab) return;
+        if (formatted !== earlyTab.content) {
+          markExternalUpdate(targetPathEarly);
+          earlyTab.content = formatted;
+          earlyTab.dirty = true;
+          if (!options?.quiet) workspace.showNotice(`已格式化 ${earlyTab.name}`);
+        } else if (!options?.quiet) {
+          workspace.showNotice("无需格式化");
+        }
+      } catch (error) {
+        if (!options?.quiet) {
+          workspace.showNotice(error instanceof Error ? error.message : String(error), 3200);
+        }
+      }
+      return;
+    }
     if (!settings.editor.prettierEnabled) {
       if (!options?.quiet) workspace.showNotice("请先在设置中启用代码格式化");
       return;
@@ -835,6 +870,10 @@ export const useEditorStore = defineStore("editor", () => {
       return;
     }
     const tab = activeTab.value;
+    if (tab.virtual) {
+      if (!options?.quiet && !options?.auto) workspace.showNotice(t("editor.virtualReadOnly"));
+      return;
+    }
     if (isRasterImagePath(tab.path)) return;
     if (options?.auto && autoSaveBlockedPaths.has(tab.path)) return;
     const tabPath = tab.path;
@@ -874,6 +913,7 @@ export const useEditorStore = defineStore("editor", () => {
         workspace.showNotice(`已保存 ${tab.name}`);
       }
       void git.scheduleRefresh();
+      void import("@/features/java/javaSession").then((module) => module.notifyJavaDidSave(tabPath));
     } catch (error) {
       if (!isCurrent()) return;
       if (!options?.quiet) {
@@ -891,6 +931,7 @@ export const useEditorStore = defineStore("editor", () => {
     const generation = workspaceGeneration;
     const dirty = tabs.value.filter(
       (t) =>
+        !t.virtual &&
         !isRasterImagePath(t.path) &&
         t.dirty &&
         !(options?.auto && autoSaveBlockedPaths.has(t.path)),
@@ -923,6 +964,7 @@ export const useEditorStore = defineStore("editor", () => {
         autoSaveBlockedPaths.delete(tab.path);
         externalConflictVersions.delete(tab.path);
         saved += 1;
+        void import("@/features/java/javaSession").then((module) => module.notifyJavaDidSave(tabPath));
       }
       if (!options?.quiet && saved > 0) {
         workspace.showNotice(
@@ -1136,6 +1178,33 @@ export const useEditorStore = defineStore("editor", () => {
     }
   }
 
+  function openVirtualTab(uri: string, title: string, content: string, language: string) {
+    const existing = tabs.value.find((tab) => tab.path === uri);
+    if (existing) {
+      existing.content = content;
+      existing.original = content;
+      existing.dirty = false;
+      existing.language = language;
+      existing.virtual = { uri, language };
+      activate(uri);
+      return;
+    }
+    tabs.value.push({
+      path: uri,
+      id: uri,
+      name: title,
+      language,
+      content,
+      original: content,
+      dirty: false,
+      pinned: false,
+      cursor: { line: 1, column: 1 },
+      previewNonce: Date.now(),
+      virtual: { uri, language },
+    });
+    activate(uri);
+  }
+
   /** 显式设置 MD 模式（写 localStorage）；不存在的 tab 不创建 */
   function setMdMode(path: string, mode: "preview" | "edit") {
     try {
@@ -1187,6 +1256,7 @@ export const useEditorStore = defineStore("editor", () => {
     restoreSession,
     openFile,
     openFileAt,
+    openVirtualTab,
     setContent,
     syncFromDisk,
     markExternalUpdate,

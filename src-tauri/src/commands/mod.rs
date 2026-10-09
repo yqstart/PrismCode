@@ -2,6 +2,8 @@ pub mod clipboard;
 pub mod dock_menu;
 pub mod fs;
 pub mod git;
+pub mod java;
+pub mod lsp;
 pub mod path_util;
 pub mod search;
 pub mod security_scoped;

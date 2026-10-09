@@ -2,7 +2,7 @@ import { ref } from "vue";
 import { defineStore } from "pinia";
 
 /** 设置面板分区标识 */
-export type SettingsNav = "editor" | "shortcuts" | "system";
+export type SettingsNav = "editor" | "java" | "shortcuts" | "system";
 
 export const useUiStore = defineStore("ui", () => {
   const settingsOpen = ref(false);

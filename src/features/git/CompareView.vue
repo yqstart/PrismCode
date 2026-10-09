@@ -270,7 +270,10 @@ onBeforeUnmount(() => {
 watch(
   () => props.active,
   async (active) => {
-    if (!active) return;
+    if (!active) {
+      destroyView();
+      return;
+    }
     await nextTick();
     if (!diffEditor) {
       createView();

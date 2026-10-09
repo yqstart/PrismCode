@@ -216,6 +216,7 @@ export function languageFromPath(path: string): string {
   if (name.endsWith(".scss") || name.endsWith(".sass")) return "Sass";
   if (name.endsWith(".yaml") || name.endsWith(".yml")) return "YAML";
   if (name.endsWith(".xml")) return "XML";
+  if (name.endsWith(".java")) return "Java";
   if (name.endsWith(".svg")) return "SVG";
   if (
     name.endsWith(".png") ||

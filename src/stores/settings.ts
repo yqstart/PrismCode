@@ -5,6 +5,7 @@ import {
   DEFAULT_SETTINGS,
   type AppSettings,
   type EditorPreferences,
+  type JavaPreferences,
   type SidePanelId,
   type ThemeId,
   isUpdateImportsOnMove,
@@ -158,12 +159,31 @@ function loadSettings(): AppSettings {
           : DEFAULT_SETTINGS.editor.keymap,
       },
       layout,
+      java: normalizeJava(parsed.java),
       autoCheckUpdates:
         parsed.autoCheckUpdates ?? DEFAULT_SETTINGS.autoCheckUpdates,
     };
   } catch {
     return structuredClone(DEFAULT_SETTINGS);
   }
+}
+
+function clampNumber(value: unknown, min: number, max: number, fallback: number): number {
+  const parsed = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, Math.round(parsed)));
+}
+
+function normalizeJava(value: Partial<JavaPreferences> | undefined): JavaPreferences {
+  return {
+    ...DEFAULT_SETTINGS.java,
+    ...value,
+    enabled: typeof value?.enabled === "boolean" ? value.enabled : DEFAULT_SETTINGS.java.enabled,
+    serverMemoryMb: clampNumber(value?.serverMemoryMb, 512, 4096, DEFAULT_SETTINGS.java.serverMemoryMb),
+    idleStopMinutes: clampNumber(value?.idleStopMinutes, 0, 60, DEFAULT_SETTINGS.java.idleStopMinutes),
+    jrePath: typeof value?.jrePath === "string" ? value.jrePath : "",
+    jdtlsPath: typeof value?.jdtlsPath === "string" ? value.jdtlsPath : "",
+  };
 }
 
 /** 同步原生标题栏 / 窗口控件外观（macOS 上主题为应用级） */
@@ -252,6 +272,14 @@ export const useSettingsStore = defineStore("settings", () => {
     { deep: true },
   );
 
+  watch(
+    () => settings.java.enabled,
+    (enabled) => {
+      if (enabled) return;
+      void import("@/features/java/javaSession").then((module) => module.stopJavaSession());
+    },
+  );
+
   const theme = computed(() => settings.theme);
   const locale = computed(() => settings.locale);
   const editor = computed(() => settings.editor);
@@ -264,6 +292,10 @@ export const useSettingsStore = defineStore("settings", () => {
 
   function patchEditor(patch: Partial<EditorPreferences>) {
     Object.assign(settings.editor, patch);
+  }
+
+  function patchJava(patch: Partial<JavaPreferences>) {
+    Object.assign(settings.java, normalizeJava({ ...settings.java, ...patch }));
   }
 
   function setSidebarCollapsed(collapsed: boolean) {
@@ -337,10 +369,12 @@ export const useSettingsStore = defineStore("settings", () => {
     theme,
     locale,
     editor,
+    java: computed(() => settings.java),
     layout,
     isDark,
     setTheme,
     patchEditor,
+    patchJava,
     setSidebarCollapsed,
     setSidebarWidth,
     setActivePanel,

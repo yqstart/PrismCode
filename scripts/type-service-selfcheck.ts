@@ -213,6 +213,15 @@ console.log("== release ==");
   assert("release 前 ready", fresh.ready);
   assert("release 前有类型感知补全", fresh.completionsAt("/proj/obj.ts", pos).length > 0);
 
+  fresh.setFile("/proj/obj.ts", doc);
+  assert("disposeProgram 前有文件", fresh.loadedFileCount > 0);
+  fresh.disposeProgram();
+  assert("disposeProgram 清掉宿主缓存", fresh.loadedFileCount === 0);
+  assert("disposeProgram 保留 root", fresh.currentRoot === ROOT);
+  assert("disposeProgram 后 ready 为 false", !fresh.ready);
+
+  fresh.init(ts, ROOT, memSource(files));
+  fresh.setFile("/proj/obj.ts", doc);
   fresh.release();
   assert("release 后 ready 为 false", !fresh.ready);
   assert("release 后 root 清空", fresh.currentRoot === "");

@@ -55,6 +55,11 @@ try {
           { severity: 8, message: '类型不兼容', startLineNumber: 4, startColumn: 3, endLineNumber: 4, endColumn: 8, source: 'ts' },
           { severity: 4, message: '未使用的变量', startLineNumber: 9, startColumn: 1, endLineNumber: 9, endColumn: 2, source: 'eslint' },
         ]);
+        const javaUri = monaco.Uri.file('/tmp/z-Broken.java');
+        const javaModel = monaco.editor.getModel(javaUri) ?? monaco.editor.createModel('class Broken { int value = "x"; }\\n', 'java', javaUri);
+        monaco.editor.setModelMarkers(javaModel, 'java', [
+          { severity: 8, message: '类型不匹配', startLineNumber: 1, startColumn: 1, endLineNumber: 1, endColumn: 4, source: 'Java' },
+        ]);
       };
       window.rowTexts = () =>
         Array.from(document.querySelectorAll('.problems .row')).map((row) => row.textContent ?? '');
@@ -89,7 +94,7 @@ try {
   );
 
   const rows = await page.evaluate(() => window.rowTexts());
-  assert.equal(rows.length, 2, `两条 marker 应渲染两行，实际 ${rows.length}`);
+  assert.equal(rows.length, 3, `三条 marker 应渲染三行，实际 ${rows.length}`);
   assert.ok(rows[0]!.includes("4:3"), `错误行应显示位置，实际 ${rows[0]}`);
   assert.ok(rows[0]!.includes("类型不兼容"), "应显示错误消息");
   assert.ok(rows[0]!.includes("ts"), "应显示来源");
@@ -102,8 +107,9 @@ try {
   });
   await new Promise((resolve) => setTimeout(resolve, 200));
   const filtered = await page.evaluate(() => window.rowTexts());
-  assert.equal(filtered.length, 1, "筛选错误后应只剩 1 行");
+  assert.equal(filtered.length, 2, "筛选错误后应剩 TS 与 Java 两行");
   assert.ok(filtered[0]!.includes("类型不兼容"), "保留的应是错误项");
+  assert.ok(rows.some((row) => row.includes("Java") && row.includes("类型不匹配")), "应显示 Java 诊断");
 
   // 点击跳转
   await page.evaluate(() => {

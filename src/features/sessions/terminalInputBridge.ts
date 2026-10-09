@@ -438,9 +438,9 @@ export function terminalBaseOptions() {
     letterSpacing: 0,
     allowProposedApi: true as const,
     macOptionIsMeta: true,
-    // 长时间运行的 dev server 可能持续输出日志；过大的回滚区会把历史
-    // 全部留在 WebView 内存里，和编辑器/资源树争抢渲染资源。
-    scrollback: 3000,
+    // 长时间运行的 dev server 可能持续输出日志；回滚区上限 1000 行，
+    // 避免历史全部留在 WebView 内存里，和编辑器/资源树争抢渲染资源。
+    scrollback: 1000,
     /** 右键点按选中整词（macOS 终端惯例） */
     rightClickSelectsWord: true,
     /** Shift+滚轮加速滚动回滚区（非 Vim 全屏时） */

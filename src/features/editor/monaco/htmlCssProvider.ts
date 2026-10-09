@@ -1,14 +1,11 @@
 // ==================== HTML / CSS 语言服务适配 ====================
 // 继续使用 VS Code 同源的 vscode-html-languageservice / vscode-css-languageservice，
 // 把 LSP 结果转成 Monaco 的 provider 返回。服务动态 import，独立 chunk。
-import type {
-  CompletionItem as LspCompletionItem,
-  Hover as LspHover,
-  MarkedString,
-  MarkupContent,
-  Range as LspRange,
-} from "vscode-languageserver-types";
-import type { IMarkdownString } from "monaco-editor/editor";
+import {
+  toLspPosition,
+  toMonacoCompletion,
+  toMonacoHover,
+} from "@/features/editor/lsp/convert";
 import type { HTMLDocument, LanguageService as HtmlLanguageService } from "vscode-html-languageservice";
 import type { LanguageService as CssLanguageService, Stylesheet } from "vscode-css-languageservice";
 import type { TextDocument } from "vscode-languageserver-textdocument";
@@ -75,39 +72,6 @@ const MARKUP_WORD_RE = /[\w:.#@\-]*$/;
 /** CSS 属性与选择器词法 */
 const STYLE_WORD_RE = /[\w@#.\-%]*$/;
 
-function toLspPosition(position: monaco.Position): { line: number; character: number } {
-  return { line: position.lineNumber - 1, character: position.column - 1 };
-}
-
-function toMonacoRange(range: LspRange): monaco.IRange {
-  return {
-    startLineNumber: range.start.line + 1,
-    startColumn: range.start.character + 1,
-    endLineNumber: range.end.line + 1,
-    endColumn: range.end.character + 1,
-  };
-}
-
-/** LSP 的 MarkupContent / MarkedString → Monaco 的 IMarkdownString */
-function toMarkdownString(value: MarkupContent | MarkedString): IMarkdownString {
-  if (typeof value === "string") return { value };
-  if ("kind" in value) return { value: value.value };
-  return { value: `\u0060\u0060\u0060${value.language}\n${value.value}\n\u0060\u0060\u0060` };
-}
-
-function toMonacoDocumentation(
-  value: string | MarkupContent | undefined,
-): string | IMarkdownString | undefined {
-  if (!value) return undefined;
-  if (typeof value === "string") return value;
-  return toMarkdownString(value);
-}
-
-/** textEdit 有两种形态：普通 TextEdit 与 InsertReplaceEdit */
-function editRange(edit: { range: LspRange } | { insert: LspRange; replace: LspRange }): LspRange {
-  return "range" in edit ? edit.range : edit.replace;
-}
-
 /** 用 textEdit 的精确范围，缺失时按词法回退到光标前词边界 */
 function fallbackRange(model: monaco.editor.ITextModel, position: monaco.Position, pattern: RegExp): monaco.IRange {
   const lineContent = model.getLineContent(position.lineNumber);
@@ -119,38 +83,6 @@ function fallbackRange(model: monaco.editor.ITextModel, position: monaco.Positio
     startColumn,
     endLineNumber: position.lineNumber,
     endColumn: position.column,
-  };
-}
-
-function toMonacoCompletion(
-  item: LspCompletionItem,
-  fallback: monaco.IRange,
-): monaco.languages.CompletionItem {
-  const edit = item.textEdit;
-  const insertText = edit ? edit.newText : (item.insertText ?? item.label);
-  return {
-    label: item.label,
-    kind: (item.kind ?? 1) as monaco.languages.CompletionItemKind,
-    detail: item.detail,
-    documentation: toMonacoDocumentation(item.documentation),
-    insertText,
-    insertTextRules: /[$][\d{]/.test(insertText)
-      ? monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
-      : undefined,
-    range: edit ? toMonacoRange(editRange(edit)) : fallback,
-    sortText: item.sortText,
-    filterText: item.filterText,
-    preselect: item.preselect,
-  };
-}
-
-function toMonacoHover(hover: LspHover | null): monaco.languages.Hover | null {
-  if (!hover) return null;
-  return {
-    range: hover.range ? toMonacoRange(hover.range) : undefined,
-    contents: hover.contents
-      ? (Array.isArray(hover.contents) ? hover.contents : [hover.contents]).map(toMarkdownString)
-      : [],
   };
 }
 

@@ -345,6 +345,7 @@ pub fn run() {
             initial_targets,
         ))
         .manage(commands::ssh::SshState::default())
+        .manage(commands::lsp::LspState::default())
         .setup(|app| {
             let handle = app.handle();
 
@@ -488,6 +489,13 @@ pub fn run() {
             // dev-only：模拟"push 卡住 N ms"，让 __ipcSelfCheck 在真机
             // 量化"卡住期间并发 IPC 的最大耗时"。release 构建下函数立即返回错误。
             commands::git::dev_fake_block,
+            commands::lsp::lsp_start,
+            commands::lsp::lsp_send,
+            commands::lsp::lsp_stop,
+            commands::lsp::lsp_logs,
+            commands::java::java_probe_runtime,
+            commands::java::java_launch_plan,
+            commands::java::java_rebuild_index,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
@@ -512,6 +520,8 @@ pub fn run() {
                 // 文件时先拦住退出，等前端落盘或用户确认后再走 confirm_app_exit。
                 if state.has_unsaved_light() && !state.exit_confirmed.load(Ordering::SeqCst) {
                     api.prevent_exit();
+                } else {
+                    commands::lsp::stop_all_sessions(app);
                 }
                 let _ = app.emit("app://will-exit", ());
             }
@@ -524,6 +534,7 @@ pub fn run() {
             } = &event
             {
                 app.state::<AppLifecycleState>().clear_window(label);
+                commands::lsp::stop_window_sessions(app, label);
             }
         });
 }

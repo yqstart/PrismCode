@@ -112,6 +112,21 @@
 ### walkdir / ignore / regex / chrono / serde / serde_json / base64
 - 许可证：MIT 和/或 Apache-2.0 / Unlicense（以各 crate 为准）
 
+### Eclipse JDT Language Server
+- 仓库：https://github.com/eclipse-jdtls/eclipse.jdt.ls
+- 许可证：EPL-2.0
+- 用途：内置离线 Java 语言服务（补全、诊断、跳转、格式化）
+
+### Eclipse Temurin
+- 来源：https://adoptium.net/
+- 许可证：GPLv2 with Classpath Exception
+- 用途：随应用分发的 Java 21 运行时（jlink 裁剪）
+
+### Project Lombok
+- 仓库：https://github.com/projectlombok/lombok
+- 许可证：MIT
+- 用途：可选 Java agent，让语言服务识别 Lombok 注解
+
 ### 传递依赖中的 MPL-2.0 组件（如 cssparser、selectors 等）
 - 许可证：MPL-2.0（弱 copyleft）
 - 说明：本产品未修改其源文件；若未来修改，须按 MPL-2.0 公开对应文件改动。

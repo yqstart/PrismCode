@@ -16,6 +16,8 @@ import {
 } from "@/features/editor/monaco/tsProvider";
 import { registerFormatProviders } from "@/features/editor/monaco/formatProvider";
 import { registerHtmlCssProviders } from "@/features/editor/monaco/htmlCssProvider";
+import { installJavaProviders } from "@/features/editor/monaco/javaProviders";
+import { currentJavaClient, ensureJavaSession } from "@/features/java/javaSession";
 import { registerEmmetProvider } from "@/features/editor/monaco/emmetProvider";
 import { registerVueLanguage } from "@/features/editor/monaco/vueProvider";
 import { registerJsonEnvProviders } from "@/features/editor/monaco/jsonEnvProvider";
@@ -61,6 +63,8 @@ registerVueLanguage();
 const props = defineProps<{
   path: string;
   content: string;
+  uri?: string;
+  languageHint?: string;
 }>();
 
 const host = ref<HTMLDivElement | null>(null);
@@ -200,10 +204,11 @@ function scheduleMeasure(): void {
 function ensureModel(path: string, content: string): monaco.editor.ITextModel {
   const cached = modelCache.get(path);
   if (cached) return cached;
+  const useHint = props.path === path && Boolean(props.uri || props.languageHint);
   const model = monaco.editor.createModel(
     content,
-    languageForContent(path, content),
-    monaco.Uri.file(path),
+    useHint && props.languageHint ? props.languageHint : languageForContent(path, content),
+    useHint && props.uri ? monaco.Uri.parse(props.uri) : monaco.Uri.file(path),
   );
   modelCache.set(path, model);
   return model;
@@ -215,7 +220,8 @@ function ensureModel(path: string, content: string): monaco.editor.ITextModel {
  */
 function applyIndentOptions(): void {
   for (const model of modelCache.values()) {
-    model.updateOptions({ tabSize: editorPrefs.value.tabSize, insertSpaces: true });
+    const tabSize = model.getLanguageId() === "java" ? 4 : editorPrefs.value.tabSize;
+    model.updateOptions({ tabSize, insertSpaces: true });
   }
 }
 
@@ -228,7 +234,7 @@ function disposeGitDecorations(): void {
 
 function attachGitDecorations(path: string): void {
   disposeGitDecorations();
-  if (!codeEditor) return;
+  if (!codeEditor || path.startsWith("jdt:")) return;
   const root = workspace.rootPath;
   if (!root) return;
   const relPath = relativeToRoot(root, path);
@@ -286,7 +292,10 @@ function switchDocument(path: string, content: string): void {
   }
   codeEditor.setModel(model);
   applyIndentOptions();
-  codeEditor.updateOptions(largeFileOptions(model.getValue()));
+  codeEditor.updateOptions({
+    ...largeFileOptions(model.getValue()),
+    readOnly: path.startsWith("jdt:"),
+  });
   const viewState = viewStateCache.get(path);
   if (viewState) codeEditor.restoreViewState(viewState);
   // 同一时刻只留当前语言需要的编译器（TS↔JS 切换时停掉另一套），
@@ -437,6 +446,10 @@ function handleWindowFocus(): void {
 onMounted(() => {
   void configureTypeScript(workspace.rootPath);
   registerHtmlCssProviders();
+  installJavaProviders({
+    ensureSession: () => ensureJavaSession("file-open"),
+    client: currentJavaClient,
+  });
   registerEmmetProvider();
   registerJsonEnvProviders();
   installConflictResolver();
@@ -519,6 +532,9 @@ watch(
   (path) => {
     switchDocument(path, props.content);
     void git.scheduleRefresh();
+    if (/\.java$/i.test(path) || path.startsWith("jdt:")) {
+      void ensureJavaSession("file-open");
+    }
   },
 );
 

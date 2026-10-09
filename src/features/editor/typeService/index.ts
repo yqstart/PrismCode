@@ -74,6 +74,30 @@ export function syncOpenedFile(path: string, content: string): boolean {
   return true;
 }
 
+let programReleaseTimer: ReturnType<typeof setTimeout> | undefined;
+
+/** 取消已排队的程序释放（新一次查找开始时调用） */
+export function cancelTypeScriptProgramRelease(): void {
+  if (programReleaseTimer === undefined) return;
+  clearTimeout(programReleaseTimer);
+  programReleaseTimer = undefined;
+}
+
+/** 立即丢掉当前 TS 程序，保留已加载的 typescript 模块 */
+export function releaseTypeScriptProgram(): void {
+  cancelTypeScriptProgramRelease();
+  tsService.disposeProgram();
+}
+
+/** 查找结束后延迟释放，连续查询会重新计时 */
+export function scheduleTypeScriptProgramRelease(delayMs = 8000): void {
+  cancelTypeScriptProgramRelease();
+  programReleaseTimer = setTimeout(() => {
+    programReleaseTimer = undefined;
+    tsService.disposeProgram();
+  }, delayMs);
+}
+
 /**
  * 准备一个 JS/TS 文件及其相对 import 闭包，供补全、hover、定义、引用、
  * 诊断和重命名共用。只注册 JS/TS 家族文件，Vue SFC 由 Vue 适配层处理，
@@ -85,6 +109,9 @@ export async function ensureTypeScriptProgram(
   content: string,
   maxDepth = 8,
 ): Promise<boolean> {
+  if (tsService.currentRoot && tsService.currentRoot !== root) {
+    tsService.disposeProgram();
+  }
   if (!(await ensureTypeService(root))) return false;
   tsService.setFile(filePath, content);
 

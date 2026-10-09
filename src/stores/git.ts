@@ -943,7 +943,12 @@ export const useGitStore = defineStore("git", () => {
   }
 
   async function loadMoreLog() {
-    await loadLog(logLimit.value + 80);
+    const MAX_LOG_COMMITS = 400;
+    if (logLimit.value >= MAX_LOG_COMMITS) {
+      useWorkspaceStore().showNotice(t("gitLog.limitReached", { count: MAX_LOG_COMMITS }));
+      return;
+    }
+    await loadLog(Math.min(MAX_LOG_COMMITS, logLimit.value + 80));
   }
 
   function noticeRebaseConflict(raw: string) {

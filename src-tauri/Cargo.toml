@@ -32,6 +32,7 @@ chrono = "0.4.45"
 tauri-plugin-pty = "0.3.1"
 ssh2 = { version = "0.9.4", features = ["vendored-openssl"] }
 base64 = "0.22"
+sha2 = "0.10"
 tokio = { version = "1", features = ["time", "rt", "rt-multi-thread", "macros", "process", "io-util", "sync"] }
 
 # tauri-plugin-pty 0.3.1 的 read/exitstatus 命令包含同步阻塞 IO；使用本地补丁

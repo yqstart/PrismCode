@@ -78,11 +78,25 @@ export interface LayoutState {
   terminalPanelHeight: number;
 }
 
+export interface JavaPreferences {
+  /** 启用 Java 语言服务 */
+  enabled: boolean;
+  /** 语言服务 JVM 堆上限，512..4096 */
+  serverMemoryMb: number;
+  /** 无 Java 文件且窗口不活跃时自动停止的分钟数，0 表示不停 */
+  idleStopMinutes: number;
+  /** 覆盖内置运行时，留空用内置 */
+  jrePath: string;
+  /** 覆盖内置 JDTLS，留空用内置 */
+  jdtlsPath: string;
+}
+
 export interface AppSettings {
   theme: ThemeId;
   locale: "zh-CN" | "en-US";
   editor: EditorPreferences;
   layout: LayoutState;
+  java: JavaPreferences;
   /** 启动时自动检查 GitHub Release 更新 */
   autoCheckUpdates: boolean;
 }
@@ -117,6 +131,13 @@ export const DEFAULT_SETTINGS: AppSettings = {
       height: 280,
     },
     terminalPanelHeight: 240,
+  },
+  java: {
+    enabled: true,
+    serverMemoryMb: 1024,
+    idleStopMinutes: 10,
+    jrePath: "",
+    jdtlsPath: "",
   },
   autoCheckUpdates: true,
 };

@@ -55,6 +55,7 @@ const WATCH_IGNORE_NAMES = new Set([
 /** 高频外部写盘时只在安静窗口刷新，避免终端日志/构建器拖垮整个 WebView。 */
 const WATCH_FLUSH_DEBOUNCE_MS = 700;
 const WATCH_FLUSH_MIN_INTERVAL_MS = 1000;
+const MAX_PENDING_WATCH_PATHS = 2000;
 
 /** 终端 / 外部 git 命令会改这些路径；需触发状态刷新，但不要刷新资源树 */
 function isGitMetaPath(path: string): boolean {
@@ -144,6 +145,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
  const selfWriteUntil = new Map<string, number>();
  let pendingWatchPaths = new Set<string>();
  let pendingWatchNeedsTreeRefresh = false;
+ let pendingGitRefresh = false;
  /**
   * 工作区代际计数：openFolder 每次提交新工作区时自增。异步读取
   * （loadChildren/refreshTree/refreshDirsForPaths）在 await 之后校验代际，
@@ -303,10 +305,15 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   window.clearTimeout(gitRefreshTimer);
   pendingWatchPaths = new Set();
   pendingWatchNeedsTreeRefresh = false;
+  pendingGitRefresh = false;
   lastWatchFlushAt = 0;
  }
 
  function scheduleGitRefresh() {
+  if (typeof document !== "undefined" && document.hidden) {
+   pendingGitRefresh = true;
+   return;
+  }
   window.clearTimeout(gitRefreshTimer);
   gitRefreshTimer = window.setTimeout(() => {
    void useGitStore().refresh();
@@ -387,6 +394,10 @@ export const useWorkspaceStore = defineStore("workspace", () => {
    }
    if (shouldIgnoreWatchPath(p)) continue;
    pendingWatchPaths.add(p);
+   if (pendingWatchPaths.size > MAX_PENDING_WATCH_PATHS) {
+    pendingWatchPaths = new Set();
+    pendingWatchNeedsTreeRefresh = true;
+   }
   }
   if (gitTouched) scheduleGitRefresh();
   if (!pendingWatchPaths.size) return;
@@ -396,7 +407,9 @@ export const useWorkspaceStore = defineStore("workspace", () => {
  }
 
  async function flushWatchChanges() {
-  if (!rootPath.value || !pendingWatchPaths.size) return;
+  if (!rootPath.value) return;
+  if (!pendingWatchPaths.size && !pendingWatchNeedsTreeRefresh) return;
+  if (typeof document !== "undefined" && document.hidden) return;
   if (refreshing.value && refreshingEpoch === workspaceEpoch) {
    // 当前刷新结束后由 finally 重新安排，不能提前清空这批路径。
    refreshAgain = true;
@@ -412,6 +425,9 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   window.clearTimeout(gitRefreshTimer);
   refreshAgain = false;
   await refreshFromDisk(changed, { quiet: true, refreshTree });
+  void import("@/features/java/javaSession").then((module) =>
+   module.notifyJavaWatchedFiles(changed),
+  );
   if (pendingWatchPaths.size) scheduleWatchFlush();
  }
 
@@ -568,6 +584,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     // workspaceSymbols 是跨编辑器能力共享的单例；切根前递增代际，
     // 使旧工作区在途扫描即使晚返回也不能污染新索引。
     workspaceSymbols.clear();
+    void import("@/features/java/javaSession").then((module) => module.stopJavaSession());
    }
    workspaceEpoch += 1;
    rootPath.value = selected;
@@ -1286,6 +1303,19 @@ export const useWorkspaceStore = defineStore("workspace", () => {
  watchState(rootPath, (root) => {
   if (root) void syncWindowTitle(root);
  });
+
+ if (typeof document !== "undefined") {
+  document.addEventListener("visibilitychange", () => {
+   if (document.hidden) return;
+   if (pendingGitRefresh) {
+    pendingGitRefresh = false;
+    scheduleGitRefresh();
+   }
+   if (pendingWatchPaths.size || pendingWatchNeedsTreeRefresh) {
+    void flushWatchChanges();
+   }
+  });
+ }
 
  return {
   rootPath,

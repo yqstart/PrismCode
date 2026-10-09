@@ -16,7 +16,7 @@
 | 阶段 | **功能定版**：核心功能集已收敛，进入优化迭代期（性能 / 流畅度 / 交互体验） |
 | 明确不做 | AI/模型联网补全、AI 对话面板、AI Agent、MCP / Skills 生态、插件市场、Volar/外部 tsserver 接管语言服务 |
 
-已落地能力：资源树、多标签编辑、全局搜索 / 替换、Git（Commit / Log / Branches / Rebase / 冲突）、本地终端、SSH 远程 Shell、四主题、中英文界面、本地语言智能、会话恢复、应用内更新。
+已落地能力：资源树、多标签编辑、全局搜索 / 替换、Git（Commit / Log / Branches / Rebase / 冲突）、本地终端、SSH 远程 Shell、四主题、中英文界面、本地语言智能（含内置 Java / JDTLS）、会话恢复、应用内更新。
 
 ---
 
@@ -78,6 +78,8 @@
 | 语义诊断范围 | 仅贴在编辑器上的 model（`onlyVisible`） | `monaco/tsProvider.ts` |
 
 `monaco/tsWorkerManager.ts` 顶替 Monaco 自带的 `workerManager.js`（vite 插件在解析时替换，dev 预构建与生产构建都覆盖）：上游 `keepIdleModels: true` 且只在配置变化时重启 worker，后台窗口的编译器会一直留在内存里。worker 注册表挂在 `globalThis` 上，因为 dev 下 Monaco 走依赖预构建、应用代码走源码，是两份模块实例。
+
+**Java 语言服务**：内置 Eclipse JDTLS 1.61.0 与 Temurin 21 jlink JRE，随安装包分发，不联网。Rust 只负责 LSP 帧、进程和生命周期（`commands/lsp.rs`、`commands/java.rs`）；补全、诊断、hover、签名、跳转、引用、重命名、格式化、大纲、代码操作和只读反编译 `jdt://` 由前端 `features/java/*` 接到 Monaco。运行、测试、构建、清理走本地终端里的 Maven/Gradle 或 `java` 命令，不含调试器。索引缓存在 `~/.prismcode/java`，超过 30 天的工作区数据会被清理。开发时用 `PRISMCODE_JAVA_ROOT="$PWD/.artifacts" pnpm tauri:dev`，先跑 `scripts/prepare-jdtls.mjs` 与 `scripts/prepare-jre.mjs`。
 
 **回滚路径**：编辑器内核的对外契约集中在 `src/features/editor/MonacoEditor.vue`（props `path`/`content`、`defineExpose({ scrollTo })`、经 `stores/editor.ts` 读写内容与光标），语言能力集中在 `src/features/editor/monaco/*` provider。若需回退，替换该组件与 provider 目录即可，其余功能模块不受影响。
 

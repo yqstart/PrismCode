@@ -121,6 +121,23 @@ export class TsLanguageService {
   return this.root;
  }
 
+ /** 宿主已登记的源文件数量（不含标准库） */
+ get loadedFileCount(): number {
+  return this.fileContents.size;
+ }
+
+ /**
+  * 丢掉当前程序，保留 typescript 模块、root、内容源和标准库。
+  * 下次查询会按同一 root 重建 LanguageService。
+  */
+ disposeProgram(): void {
+  this.service?.dispose();
+  this.service = null;
+  this.fileContents.clear();
+  this.fileVersions.clear();
+  this.scriptNames = [];
+ }
+
  /**
   * 初始化（加载 typescript 模块后调用；同模块同 root 重复调用幂等）
   *
@@ -432,11 +449,7 @@ export class TsLanguageService {
   * 避免第二套编译器（含 DOM 标准库与检查器缓存）常驻内存。
   */
  release(): void {
-  this.service?.dispose();
-  this.service = null;
-  this.fileContents.clear();
-  this.fileVersions.clear();
-  this.scriptNames = [];
+  this.disposeProgram();
   this.libFiles.clear();
   this.root = "";
  }

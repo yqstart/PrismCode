@@ -4,7 +4,12 @@
 
 import { useEditorStore } from "@/stores/editor";
 import { workspaceSymbols } from "@/features/editor/workspaceSymbols";
-import { ensureTypeScriptProgram, tsService } from "@/features/editor/typeService";
+import {
+  cancelTypeScriptProgramRelease,
+  ensureTypeScriptProgram,
+  scheduleTypeScriptProgramRelease,
+  tsService,
+} from "@/features/editor/typeService";
 import { createVueScriptContext, isInVueScript } from "@/features/editor/vueScript";
 import { readTextFile } from "@/shared/fs";
 
@@ -67,6 +72,7 @@ export async function findReferences(
     forRename = false,
   } = options;
   if (!word) return [];
+  cancelTypeScriptProgramRelease();
   let refs: ReferenceLocation[] = [];
 
   // JS/TS 优先走 TypeScript LanguageService，避免正则把同名属性/字符串
@@ -107,8 +113,8 @@ export async function findReferences(
   } catch {
     // 类型服务未就绪/解析失败时进入正则索引兜底。
   } finally {
-    // 主线程这套 LanguageService（第二份编译器 + DOM 标准库）只在本次查询期间需要
-    tsService.release();
+    // 主线程这套 LanguageService 延迟释放：连续查找会取消上一次计时并复用程序
+    scheduleTypeScriptProgramRelease();
   }
 
   if (!refs.length) {

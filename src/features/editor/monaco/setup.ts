@@ -67,6 +67,7 @@ import { createTokenizationSupport } from "monaco-editor/languages/features/json
 import "monaco-editor/languages/definitions/markdown/register";
 import "monaco-editor/languages/definitions/yaml/register";
 import "monaco-editor/languages/definitions/xml/register";
+import "monaco-editor/languages/definitions/java/register";
 
 // 子路径 register 不会挂到 monaco.languages 上；按官方 index.js 的形态
 // 单独导出 typescript 命名空间（worker 工厂、默认值、枚举都在这里）。

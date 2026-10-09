@@ -18,8 +18,30 @@ fn open_repo(root: &str) -> Result<Repository, String> {
 /// `git_unpushed_commits` 进程内 LRU 缓存：
 /// 同一 (root, branch, local_oid) 在 30s 内复用上次结果，避免大仓库反复 revwalk 卡顿 PushDialog 打开
 const UNPUSHED_CACHE_TTL: Duration = Duration::from_secs(30);
+const UNPUSHED_CACHE_MAX_ENTRIES: usize = 8;
+const MAX_TEXT_PAYLOAD_BYTES: usize = 8 * 1024 * 1024;
+const PAYLOAD_TOO_LARGE: &str = "文件过大，无法在编辑器中打开对比";
 
 type UnpushedCacheValue = (Instant, Vec<GitCommitInfo>);
+
+fn ensure_text_payload(text: &str) -> Result<(), String> {
+    if text.len() > MAX_TEXT_PAYLOAD_BYTES {
+        Err(PAYLOAD_TOO_LARGE.to_string())
+    } else {
+        Ok(())
+    }
+}
+
+fn enforce_unpushed_cache_capacity(cache: &mut HashMap<String, UnpushedCacheValue>) {
+    while cache.len() > UNPUSHED_CACHE_MAX_ENTRIES {
+        let oldest = cache
+            .iter()
+            .min_by_key(|(_, (written_at, _))| *written_at)
+            .map(|(key, _)| key.clone());
+        let Some(key) = oldest else { break };
+        cache.remove(&key);
+    }
+}
 
 fn unpushed_cache() -> &'static Mutex<HashMap<String, UnpushedCacheValue>> {
     static CACHE: OnceLock<Mutex<HashMap<String, UnpushedCacheValue>>> = OnceLock::new();
@@ -1370,6 +1392,7 @@ fn git_diff_blocking(
     })
     .map_err(|e| e.to_string())?;
 
+    ensure_text_payload(&patch)?;
     Ok(GitDiffResult {
         path: path.unwrap_or_else(|| "工作区".into()),
         patch,
@@ -1405,7 +1428,9 @@ pub async fn git_head_text(root: String, path: String) -> Result<String, String>
     let handle = tokio::task::spawn_blocking(move || {
         let repo = open_repo(&root)?;
         ensure_repo_paths(&repo, std::slice::from_ref(&path))?;
-        head_file_text(&repo, &path)
+        let text = head_file_text(&repo, &path)?;
+        ensure_text_payload(&text)?;
+        Ok(text)
     });
     match tokio::time::timeout(Duration::from_secs(10), handle).await {
         Ok(Ok(r)) => r,
@@ -1464,27 +1489,30 @@ fn git_file_sides_blocking(
     let repo = open_repo(&root)?;
     ensure_repo_paths(&repo, std::slice::from_ref(&path))?;
     let staged = staged.unwrap_or(false);
-    if staged {
-        Ok(GitFileSides {
+    let sides = if staged {
+        GitFileSides {
             path: path.clone(),
             left: head_file_text(&repo, &path)?,
             right: index_file_text(&repo, &path)?.unwrap_or_default(),
             left_label: "HEAD".into(),
             right_label: "已暂存".into(),
-        })
+        }
     } else {
         let left = {
             let indexed = index_file_text(&repo, &path)?;
             indexed.map_or_else(|| head_file_text(&repo, &path), Ok)?
         };
-        Ok(GitFileSides {
+        GitFileSides {
             path: path.clone(),
             left,
             right: workdir_file_text(&repo, &path)?,
             left_label: "索引".into(),
             right_label: "工作区".into(),
-        })
-    }
+        }
+    };
+    ensure_text_payload(&sides.left)?;
+    ensure_text_payload(&sides.right)?;
+    Ok(sides)
 }
 
 /// 冲突分栏：ours / theirs / base / working。
@@ -1528,6 +1556,10 @@ fn git_conflict_sides_blocking(
         None => String::new(),
     };
     let working = workdir_file_text(&repo, &path)?;
+    ensure_text_payload(&base)?;
+    ensure_text_payload(&ours)?;
+    ensure_text_payload(&theirs)?;
+    ensure_text_payload(&working)?;
 
     Ok(GitConflictSides {
         path,
@@ -2684,6 +2716,7 @@ fn git_unpushed_commits_blocking(
     // 写入缓存
     if let Ok(mut guard) = unpushed_cache().lock() {
         guard.insert(cache_key, (Instant::now(), commits.clone()));
+        enforce_unpushed_cache_capacity(&mut guard);
     }
     Ok(commits)
 }
@@ -4021,6 +4054,30 @@ pub async fn dev_fake_block(ms: u64) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn oversized_side_is_rejected() {
+        let big = "a".repeat(MAX_TEXT_PAYLOAD_BYTES + 1);
+        assert_eq!(ensure_text_payload(&big).unwrap_err(), PAYLOAD_TOO_LARGE);
+        assert!(ensure_text_payload("fn main() {}").is_ok());
+    }
+
+    #[test]
+    fn unpushed_cache_respects_capacity() {
+        let mut cache = HashMap::<String, UnpushedCacheValue>::new();
+        let start = Instant::now();
+        for index in 0..UNPUSHED_CACHE_MAX_ENTRIES + 1 {
+            cache.insert(
+                format!("k{index}"),
+                (start + Duration::from_millis(index as u64), Vec::new()),
+            );
+        }
+        enforce_unpushed_cache_capacity(&mut cache);
+        assert_eq!(cache.len(), UNPUSHED_CACHE_MAX_ENTRIES);
+        assert!(!cache.contains_key("k0"));
+        assert!(cache.contains_key(&format!("k{UNPUSHED_CACHE_MAX_ENTRIES}")));
+    }
+
     use std::process::Command;
     use std::time::Duration;
 

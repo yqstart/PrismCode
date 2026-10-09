@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { Check, X } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
 import { EDITOR_FONT_OPTIONS } from "@/features/editor/fonts";
@@ -8,6 +8,7 @@ import { THEME_LABELS } from "@/shared/themes";
 import { checkForAppUpdate, getAppVersion } from "@/shared/appUpdate";
 import { PLAIN_INPUT_ATTRS } from "@/shared/plainInput";
 import { formatShortcut, isMacOS } from "@/shared/platform";
+import { useJavaStore } from "@/stores/java";
 import { useSettingsStore } from "@/stores/settings";
 import { useUiStore } from "@/stores/ui";
 import { useWorkspaceStore } from "@/stores/workspace";
@@ -19,10 +20,11 @@ const { t } = useI18n();
 const settings = useSettingsStore();
 const ui = useUiStore();
 const workspace = useWorkspaceStore();
-const { theme, editor, locale } = storeToRefs(settings);
+const javaStore = useJavaStore();
+const { theme, editor, locale, java } = storeToRefs(settings);
 const editorFonts = EDITOR_FONT_OPTIONS;
 
-type NavId = "editor" | "shortcuts" | "system";
+type NavId = "editor" | "java" | "shortcuts" | "system";
 
 const activeNav = ref<NavId>(ui.settingsNav);
 const appVersion = ref("…");
@@ -31,6 +33,17 @@ const checkingUpdate = ref(false);
 onMounted(async () => {
   appVersion.value = await getAppVersion();
 });
+
+watch(
+  () => ui.settingsNav,
+  (nav) => {
+    activeNav.value = nav;
+  },
+);
+
+async function probeJava() {
+  await javaStore.detect();
+}
 
 async function onCheckUpdate() {
   if (checkingUpdate.value) return;
@@ -53,6 +66,7 @@ const themes: ThemeMeta[] = [
 
 const navItems = computed(() => [
   { id: "editor" as const, label: t("settings.navEditor") },
+  { id: "java" as const, label: t("settings.navJava") },
   { id: "shortcuts" as const, label: t("settings.navShortcuts") },
   { id: "system" as const, label: t("settings.navAbout") },
 ]);
@@ -410,6 +424,79 @@ function onOverlayClick(event: MouseEvent) {
                   <option value="never">{{ t("settings.updateImportsOnMoveNever") }}</option>
                 </select>
               </label>
+            </div>
+          </template>
+
+          <template v-else-if="activeNav === 'java'">
+            <div class="ui-card section">
+              <h3>{{ t("settings.navJava") }}</h3>
+              <p class="desc">{{ t("java.settings.subtitle") }}</p>
+              <label class="field">
+                <span class="field-label">{{ t("java.settings.enabled") }}</span>
+                <p class="desc">{{ t("java.settings.enabledDesc") }}</p>
+                <button
+                  type="button"
+                  class="ui-toggle"
+                  role="switch"
+                  :aria-checked="java.enabled"
+                  :data-on="java.enabled"
+                  @click="settings.patchJava({ enabled: !java.enabled })"
+                />
+              </label>
+              <label class="field">
+                <span class="field-label">{{ t("java.settings.memory") }}</span>
+                <p class="desc">{{ t("java.settings.memoryDesc") }}</p>
+                <input
+                  class="ui-input"
+                  type="number"
+                  min="512"
+                  max="4096"
+                  v-bind="PLAIN_INPUT_ATTRS"
+                  :value="java.serverMemoryMb"
+                  @change="settings.patchJava({ serverMemoryMb: Number(($event.target as HTMLInputElement).value) })"
+                />
+              </label>
+              <label class="field">
+                <span class="field-label">{{ t("java.settings.idle") }}</span>
+                <p class="desc">{{ t("java.settings.idleDesc") }}</p>
+                <input
+                  class="ui-input"
+                  type="number"
+                  min="0"
+                  max="60"
+                  v-bind="PLAIN_INPUT_ATTRS"
+                  :value="java.idleStopMinutes"
+                  @change="settings.patchJava({ idleStopMinutes: Number(($event.target as HTMLInputElement).value) })"
+                />
+              </label>
+              <label class="field">
+                <span class="field-label">{{ t("java.settings.jrePath") }}</span>
+                <p class="desc">{{ t("java.settings.jrePathDesc") }}</p>
+                <input
+                  class="ui-input"
+                  type="text"
+                  v-bind="PLAIN_INPUT_ATTRS"
+                  :value="java.jrePath"
+                  @change="settings.patchJava({ jrePath: ($event.target as HTMLInputElement).value })"
+                />
+              </label>
+              <label class="field">
+                <span class="field-label">{{ t("java.settings.jdtlsPath") }}</span>
+                <p class="desc">{{ t("java.settings.jdtlsPathDesc") }}</p>
+                <input
+                  class="ui-input"
+                  type="text"
+                  v-bind="PLAIN_INPUT_ATTRS"
+                  :value="java.jdtlsPath"
+                  @change="settings.patchJava({ jdtlsPath: ($event.target as HTMLInputElement).value })"
+                />
+              </label>
+              <button type="button" class="ui-btn" @click="probeJava">
+                {{ t("java.settings.probe") }}
+              </button>
+              <p v-if="javaStore.runtime" class="desc">
+                {{ t("java.settings.probeOk", { version: javaStore.runtime.javaVersion, jdtls: javaStore.runtime.jdtlsVersion }) }}
+              </p>
             </div>
           </template>
 

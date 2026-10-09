@@ -2,7 +2,7 @@ use serde::Serialize;
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use super::path_util::{ensure_inside_workspace, resolve_inside_workspace, walk_files};
 
@@ -173,13 +173,21 @@ fn match_ext(path: &Path, extensions: &Option<Vec<String>>) -> bool {
         .any(|e| e.trim_start_matches('.').eq_ignore_ascii_case(&ext))
 }
 
+const WALK_CACHE_MAX_BYTES: usize = 24 * 1024 * 1024;
+
+fn entry_bytes(files: &[PathBuf]) -> usize {
+    files.iter().map(|path| path.as_os_str().len() + 32).sum()
+}
+
 /// 文件列表缓存（root + 忽略规则 为 key），避免每次搜索重复全量遍历目录树。
 /// 搜索结果天然按最新磁盘状态返回，故不主动失效；工作区切换会改变 root，自动换 key。
 struct WalkCache {
     /// key → (写入时间, 文件列表)；TTL 过期后视为未命中，重新遍历
-    map: HashMap<String, (std::time::Instant, Vec<PathBuf>)>,
+    map: HashMap<String, (std::time::Instant, Arc<Vec<PathBuf>>)>,
     order: Vec<String>,
+    bytes: usize,
     max: usize,
+    byte_budget: usize,
 }
 
 /// 文件列表缓存有效期：新建/删除文件后最多 3s 内出现在搜索结果
@@ -187,10 +195,16 @@ const WALK_CACHE_TTL: std::time::Duration = std::time::Duration::from_secs(3);
 
 impl WalkCache {
     fn new(max: usize) -> Self {
+        Self::with_budget(max, WALK_CACHE_MAX_BYTES)
+    }
+
+    fn with_budget(max: usize, byte_budget: usize) -> Self {
         Self {
             map: HashMap::new(),
             order: Vec::new(),
+            bytes: 0,
             max,
+            byte_budget,
         }
     }
 
@@ -198,35 +212,63 @@ impl WalkCache {
         format!("{root}\u{0}{}", extra_ignores.join("\u{1}"))
     }
 
-    fn get(&mut self, key: &str) -> Option<Vec<PathBuf>> {
-        if let Some((written_at, files)) = self.map.get(key) {
-            if written_at.elapsed() < WALK_CACHE_TTL {
-                // 命中且未过期：提升为最近使用
-                if let Some(pos) = self.order.iter().position(|k| k == key) {
-                    self.order.remove(pos);
-                }
-                self.order.push(key.to_string());
-                return Some(files.clone());
-            }
-            // 过期：本次按未命中处理（下方 insert 会覆盖）
+    fn remove_key(&mut self, key: &str) {
+        if let Some((_, files)) = self.map.remove(key) {
+            self.bytes = self.bytes.saturating_sub(entry_bytes(&files));
         }
-        None
+        if let Some(pos) = self.order.iter().position(|item| item == key) {
+            self.order.remove(pos);
+        }
     }
 
-    fn insert(&mut self, key: String, files: Vec<PathBuf>) {
-        // 过期 key 重新计算时先移除旧的 LRU 位置；否则 order 会出现
-        // 重复项，后续淘汰可能误删刚写入的 map 条目。
-        if self.map.remove(&key).is_some() {
-            if let Some(pos) = self.order.iter().position(|k| k == &key) {
-                self.order.remove(pos);
-            }
+    fn drop_expired(&mut self) {
+        let expired: Vec<String> = self
+            .map
+            .iter()
+            .filter(|(_, (written_at, _))| written_at.elapsed() >= WALK_CACHE_TTL)
+            .map(|(key, _)| key.clone())
+            .collect();
+        for key in expired {
+            self.remove_key(&key);
         }
-        self.map.insert(key.clone(), (std::time::Instant::now(), files));
+    }
+
+    fn evict_overflow(&mut self) {
+        while self.bytes > self.byte_budget || self.order.len() > self.max {
+            let Some(lru) = self.order.first().cloned() else {
+                break;
+            };
+            self.remove_key(&lru);
+        }
+    }
+
+    fn get(&mut self, key: &str) -> Option<Arc<Vec<PathBuf>>> {
+        let expired = match self.map.get(key) {
+            Some((written_at, _)) => written_at.elapsed() >= WALK_CACHE_TTL,
+            None => return None,
+        };
+        if expired {
+            self.remove_key(key);
+            return None;
+        }
+        if let Some(pos) = self.order.iter().position(|item| item == key) {
+            self.order.remove(pos);
+        }
+        self.order.push(key.to_string());
+        self.map.get(key).map(|(_, files)| Arc::clone(files))
+    }
+
+    fn insert(&mut self, key: String, files: Arc<Vec<PathBuf>>) {
+        self.drop_expired();
+        self.remove_key(&key);
+        if entry_bytes(&files) > self.byte_budget {
+            return;
+        }
+        self.bytes += entry_bytes(&files);
+        self.map
+            .insert(key.clone(), (std::time::Instant::now(), files));
         self.order.push(key);
-        while self.order.len() > self.max {
-            let lru = self.order.remove(0);
-            self.map.remove(&lru);
-        }
+        self.evict_overflow();
     }
 }
 
@@ -237,7 +279,7 @@ fn walk_cache() -> &'static Mutex<WalkCache> {
 }
 
 /// 获取（带缓存的）工作区文件列表。磁盘已变化时结果可能短暂滞后，搜索内容本身始终读最新。
-fn cached_walk_files(root: &Path, extra: &[String]) -> Result<Vec<PathBuf>, String> {
+fn cached_walk_files(root: &Path, extra: &[String]) -> Result<Arc<Vec<PathBuf>>, String> {
     let root_str = root.to_string_lossy().to_string();
     let key = WalkCache::cache_key(&root_str, extra);
     {
@@ -246,9 +288,9 @@ fn cached_walk_files(root: &Path, extra: &[String]) -> Result<Vec<PathBuf>, Stri
             return Ok(files);
         }
     }
-    let files = walk_files(root, extra)?;
+    let files = Arc::new(walk_files(root, extra)?);
     let mut cache = walk_cache().lock().unwrap();
-    cache.insert(key, files.clone());
+    cache.insert(key, Arc::clone(&files));
     Ok(files)
 }
 
@@ -306,7 +348,7 @@ pub async fn search_files(
         ensure_inside_workspace(&root_path, &root_path)?;
 
         let mut hits = Vec::with_capacity(max.min(4096));
-        for path in cached_walk_files(&root_path, &extra)? {
+        for path in cached_walk_files(&root_path, &extra)?.iter() {
             // 每 256 个文件检查一次是否过期，过期立即返回释放线程
             if gen_stale(gen) {
                 // 代际是进程级的，可能是另一个窗口发起了搜索；不能把当前
@@ -370,7 +412,7 @@ pub async fn search_content(
         ensure_inside_workspace(&root_path, &root_path)?;
 
         let mut hits = Vec::new();
-        for path in cached_walk_files(&root_path, &extra)? {
+        for path in cached_walk_files(&root_path, &extra)?.iter() {
             // 每 64 个文件检查一次是否过期（内容搜索读文件较慢，检查更频繁）
             if gen_stale(gen) {
                 // 代际是进程级的，可能是另一个窗口发起了搜索；不能把当前
@@ -454,8 +496,9 @@ pub async fn replace_in_files(
                 .collect::<Result<_, _>>()?
         } else {
             cached_walk_files(&root_path, &extra)?
-                .into_iter()
+                .iter()
                 .filter(|p| match_ext(p, &extensions))
+                .cloned()
                 .collect()
         };
 
@@ -546,4 +589,49 @@ pub async fn replace_in_files(
         })
     })
     .await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::Duration;
+
+    fn sample(name: &str) -> Arc<Vec<PathBuf>> {
+        Arc::new(vec![PathBuf::from(name)])
+    }
+
+    #[test]
+    fn evicts_lru_by_byte_budget() {
+        let mut cache = WalkCache::with_budget(32, 160);
+        cache.insert("a".into(), sample(&"a".repeat(40)));
+        cache.insert("b".into(), sample(&"b".repeat(40)));
+        cache.insert("c".into(), sample(&"c".repeat(40)));
+        assert!(!cache.map.contains_key("a"));
+        assert!(cache.map.contains_key("b"));
+        assert!(cache.map.contains_key("c"));
+        assert!(cache.bytes <= 160);
+    }
+
+    #[test]
+    fn expired_entry_is_dropped_on_write() {
+        let mut cache = WalkCache::new(32);
+        cache.insert("old".into(), sample("old"));
+        if let Some(entry) = cache.map.get_mut("old") {
+            entry.0 = std::time::Instant::now()
+                .checked_sub(Duration::from_secs(4))
+                .expect("回拨时间");
+        }
+        cache.insert("new".into(), sample("new"));
+        assert!(!cache.map.contains_key("old"));
+        assert!(cache.map.contains_key("new"));
+        assert_eq!(cache.bytes, entry_bytes(cache.map.get("new").expect("new").1.as_ref()));
+    }
+
+    #[test]
+    fn oversized_entry_is_not_cached() {
+        let mut cache = WalkCache::with_budget(32, 64);
+        cache.insert("huge".into(), sample(&"h".repeat(128)));
+        assert!(cache.map.is_empty());
+        assert_eq!(cache.bytes, 0);
+    }
 }

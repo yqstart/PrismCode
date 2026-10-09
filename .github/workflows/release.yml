@@ -36,20 +36,20 @@ jobs:
           # macos-latest = Apple Silicon；原生构建，无需交叉编译
           - name: macOS Apple Silicon
             platform: macos-latest
-            args: ""
+            args: "--config src-tauri/tauri.jdtls.conf.json"
             rust_targets: ""
           # macos-15-intel = 官方 Intel runner；避免在 ARM 上交叉编译导致 openssl-sys 找不到
           - name: macOS Intel
             platform: macos-15-intel
-            args: ""
+            args: "--config src-tauri/tauri.jdtls.conf.json"
             rust_targets: ""
           - name: Linux x64
             platform: ubuntu-24.04
-            args: ""
+            args: "--config src-tauri/tauri.jdtls.conf.json"
             rust_targets: ""
           - name: Windows x64
             platform: windows-latest
-            args: ""
+            args: "--config src-tauri/tauri.jdtls.conf.json"
             rust_targets: ""
 
     runs-on: ${{ matrix.platform }}
@@ -117,6 +117,19 @@ jobs:
       - name: Install frontend dependencies
         if: steps.select.outputs.run == 'true'
         run: pnpm install --frozen-lockfile
+
+      - name: Cache bundled Java downloads
+        if: steps.select.outputs.run == 'true'
+        uses: actions/cache@v4
+        with:
+          path: .artifacts/downloads
+          key: java-artifacts-${{ hashFiles('third_party/jdtls/manifest.json', 'third_party/jre/manifest.json') }}
+
+      - name: Prepare bundled JDTLS and JRE
+        if: steps.select.outputs.run == 'true'
+        run: |
+          node scripts/prepare-jdtls.mjs
+          node scripts/prepare-jre.mjs
 
       # 从 CHANGELOG.md 生成 Release 正文（变更项 + 安装说明），与应用内「新功能」同源
       - name: Prepare release notes
