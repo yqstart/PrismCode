@@ -127,6 +127,12 @@
 - 许可证：MIT
 - 用途：可选 Java agent，让语言服务识别 Lombok 注解
 
+### Java Debug Server for Visual Studio Code（java-debug）
+- 仓库：https://github.com/microsoft/java-debug
+- 分发：`com.microsoft.java.debug.plugin-0.53.1.jar`（Maven Central，见 `third_party/debug-adapter/manifest.json`）
+- 许可证：EPL-1.0（随包附 `LICENSE.txt`，来源见上表 `licenseURL`）
+- 用途：随包分发的 Java 调试适配器，由内置 JDTLS 装载，提供断点/单步/变量（DAP over TCP）
+
 ### 传递依赖中的 MPL-2.0 组件（如 cssparser、selectors 等）
 - 许可证：MPL-2.0（弱 copyleft）
 - 说明：本产品未修改其源文件；若未来修改，须按 MPL-2.0 公开对应文件改动。

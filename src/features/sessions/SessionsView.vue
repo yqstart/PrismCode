@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { ChevronDown, Plus, TerminalSquare, X } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
+import { onMounted, watch } from "vue";
+import JavaRunChips from "@/features/sessions/JavaRunChips.vue";
 import LocalTerminal from "@/features/sessions/LocalTerminal.vue";
 import PackageScriptsMenu from "@/features/sessions/PackageScriptsMenu.vue";
+import { useJavaStore } from "@/stores/java";
 import { usePackageScriptsStore } from "@/stores/packageScripts";
 import { useSessionsStore } from "@/stores/sessions";
 import { useWorkspaceStore } from "@/stores/workspace";
@@ -12,9 +15,21 @@ const { t } = useI18n();
 const sessions = useSessionsStore();
 const workspace = useWorkspaceStore();
 const pkg = usePackageScriptsStore();
+const java = useJavaStore();
 const { localTerminals, activeLocalId } = storeToRefs(sessions);
 // 勾选展示到顶栏的脚本（勾选集合为空时整槽隐藏）
 const { pinnedScripts } = storeToRefs(pkg);
+
+// 顶栏芯片只在面板可见时有意义：打开面板与切换工作区时各重算一次运行配置
+onMounted(() => {
+  void java.refreshRunConfigurations();
+});
+watch(
+  () => workspace.rootPath,
+  () => {
+    void java.refreshRunConfigurations();
+  },
+);
 
 function onAddLocal() {
   sessions.addLocalTerminal(workspace.rootPath);
@@ -51,8 +66,9 @@ function onAddLocal() {
       >
         <Plus :size="14" />
       </button>
-      <div v-if="pinnedScripts.length" class="scripts-slot">
-        <PackageScriptsMenu variant="compact" />
+      <div v-if="pinnedScripts.length || java.runConfigurations.length" class="scripts-slot">
+        <JavaRunChips />
+        <PackageScriptsMenu v-if="pinnedScripts.length" variant="compact" />
       </div>
       <button
         type="button"

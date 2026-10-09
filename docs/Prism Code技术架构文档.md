@@ -79,7 +79,7 @@
 
 `monaco/tsWorkerManager.ts` 顶替 Monaco 自带的 `workerManager.js`（vite 插件在解析时替换，dev 预构建与生产构建都覆盖）：上游 `keepIdleModels: true` 且只在配置变化时重启 worker，后台窗口的编译器会一直留在内存里。worker 注册表挂在 `globalThis` 上，因为 dev 下 Monaco 走依赖预构建、应用代码走源码，是两份模块实例。
 
-**Java 语言服务**：内置 Eclipse JDTLS 1.61.0 与 Temurin 21 jlink JRE，随安装包分发，不联网。Rust 只负责 LSP 帧、进程和生命周期（`commands/lsp.rs`、`commands/java.rs`）；补全、诊断、hover、签名、跳转、引用、重命名、格式化、大纲、代码操作和只读反编译 `jdt://` 由前端 `features/java/*` 接到 Monaco。运行、测试、构建、清理走本地终端里的 Maven/Gradle 或 `java` 命令，不含调试器。索引缓存在 `~/.prismcode/java`，超过 30 天的工作区数据会被清理。开发时用 `PRISMCODE_JAVA_ROOT="$PWD/.artifacts" pnpm tauri:dev`，先跑 `scripts/prepare-jdtls.mjs` 与 `scripts/prepare-jre.mjs`。
+**Java 语言服务**：内置 Eclipse JDTLS 1.61.0 与 Temurin 21 jlink JRE，随安装包分发，不联网。Rust 只负责 LSP 帧、进程和生命周期（`commands/lsp.rs`、`commands/java.rs`）；补全、诊断、hover、签名、跳转、引用、重命名、格式化、大纲、代码操作和只读反编译 `jdt://` 由前端 `features/java/*` 接到 Monaco。运行、测试、构建、清理走本地终端里的 Maven/Gradle 或 `java` 命令，不含调试器。索引缓存在 `~/.prismcode/java`，超过 30 天的工作区数据会被清理。开发时用 `PRISMCODE_JAVA_ROOT="$PWD/.artifacts" pnpm tauri:dev`，先跑 `scripts/prepare-jdtls.mjs`、`scripts/prepare-jre.mjs` 与 `scripts/prepare-debug-adapter.mjs`。
 
 **回滚路径**：编辑器内核的对外契约集中在 `src/features/editor/MonacoEditor.vue`（props `path`/`content`、`defineExpose({ scrollTo })`、经 `stores/editor.ts` 读写内容与光标），语言能力集中在 `src/features/editor/monaco/*` provider。若需回退，替换该组件与 provider 目录即可，其余功能模块不受影响。
 
@@ -326,7 +326,7 @@ PrismCode/
 
 前端只通过类型化封装调用（`src/shared/` 下的 API 包装），不直接拼裸字符串命令。
 
-**命令命名空间**（Rust `commands/*.rs`）：`fs.*`（读写 / watch / pathExists）、`search.*`（files / content / replace）、`git.*`（status / stage / commit / branch / push / pull / rebase / stash / conflict…）、`ssh.*`（profile / connect / shell）、`tooling.*`（format_with_prettier / lint_with_eslint）、`window_chrome.*`（macOS 红绿灯）。
+**命令命名空间**（Rust `commands/*.rs`）：`fs.*`（读写 / watch / pathExists）、`search.*`（files / content / replace）、`git.*`（status / stage / commit / branch / push / pull / rebase / stash / conflict…）、`ssh.*`（profile / connect / shell）、`tooling.*`（format_with_prettier / lint_with_eslint）、`window_chrome.*`（macOS 红绿灯）、`maven.*`（scan / diagnostics）、`runconfig.*`（generate / resolve / launch_plan / toolchains）、`spring.*`（index）、`lsp.*`（start / send / stop / logs）、`dap.*`（connect / send / stop / logs / probe_adapter）、`java.*`（probe_runtime / launch_plan / rebuild_index）。
 
 **事件**：
 - `fs://changed`：外部文件变更
@@ -341,6 +341,7 @@ PrismCode/
 | 千级文件打开 | 无明显卡顿 | 资源树懒加载子目录、Rust 侧遍历、搜索 LRU 缓存 + async |
 | 内存 | 显著低于 VSCode | Monaco 内核 + worker 按需加载、编辑器实例与 model 按标签生命周期回收、终端/SSH 连接生命周期 |
 | 编辑时延 | 输入无感 | 诊断/搜索防抖、TypeScript 服务在 Worker 线程按需加载、装饰刷新与光标写回按帧合并；2MB/5MB 双阈值大文件降级（`monaco/largeFile.ts`） |
+| Java 工程增量 | 常驻内存与包体不明显增长 | 随包增量约 3MB（java-debug jar）；Maven/Spring 全走有界扫描与上限（2 万条元数据、3000 个 Java 文件、500 个配置文件、3 秒预算）；DAP 会话随面板收起即停，不常驻 |
 | 跨平台 | Win / Mac / Linux | CI 4 平台构建矩阵（arm64 / x86_64 / Linux / Windows） |
 
 ---
@@ -355,7 +356,71 @@ PrismCode/
 
 ---
 
-## 15. 相关文档
+## 15. Java 工程能力（Maven / Spring / 调试）
+
+随包分发三样东西：JDTLS 1.61.0（语言服务）、Temurin 21 jlink JRE、java-debug 0.53.1（调试适配器）。全部离线，不联网、不启 Maven/Gradle daemon、不引入 tree-sitter 或 SDK。
+
+### 15.1 命令层
+
+| 模块 | 职责 | 边界 |
+|---|---|---|
+| `commands/maven.rs` | 只读 `<modules>` 声明式模块图（根在首位）、`mvn` 输出诊断解析 | 只解析 pom.xml 文本；`packaging=pom` 判定为聚合器；非 Maven 根返回空数组不报错 |
+| `commands/runconfig.rs` | 生成运行配置、三层合并、启动计划、工具链探测 | `kind` 仅 `java.current-file｜maven.module｜spring-boot.maven｜gradle.task`；Gradle 只按插件 id 映射任务，不查 task 模型 |
+| `commands/spring.rs` | 配置键 / 取值 / Bean / 注入 / HTTP 端点 / 诊断 | 全正则扫描；依赖元数据只读 `~/.m2` jar 的 `spring-configuration-metadata.json`（进程内缓存、3 秒预算、上限 2 万条）；`textOverrides` 限 50 文件 / 单 256KB |
+| `commands/dap.rs` | DAP 会话（TCP）、调试适配器定位 | 复用 `commands/lsp.rs` 的 Content-Length 帧与窗口清理；每窗口 1 个会话 |
+
+Maven 模块选择与运行都以**反应堆根**为工作目录（`-pl <module>` 相对根解析），子模块另有 `-f` 之外的语义一律不做。
+
+### 15.2 运行配置分层
+
+```
+生成层（每次现算，不落盘）
+  └─ 项目层  <项目>/.prismcode/run/project.json（团队共享的覆盖，按 id 对齐）
+       └─ 本地层  前端传入（不落盘）
+```
+
+覆盖按配置 id 对齐，未写字段保留下层值；生成层里不存在的 id 只报诊断、不新增（避免出缺 `command` 的条目）。工具链（mvn / gradle / java）缺失时给诊断但不阻断。
+
+**启动计划**把一条配置投射成 `{cwd, command, args, env, debugPort}`，由前端拼成一行终端命令执行；调试态注入 JDWP：
+
+| kind | JDWP 注入点 |
+|---|---|
+| `spring-boot.maven` | `-Dspring-boot.run.jvmArguments=…`（插件给 fork 出的应用 JVM 单独开了参数通道） |
+| `maven.module` | `MAVEN_OPTS` |
+| `gradle.task` | `JAVA_TOOL_OPTIONS` |
+| `java.current-file` | 直接作为 `java` 的参数 |
+
+调试端口由 Rust `TcpListener::bind("127.0.0.1:0")` 现取现放；每次都注入一处，绝不叠加两遍 `agentlib`。
+
+### 15.3 Spring 索引与前端消费
+
+`spring_index` 一次返回配置键、取值、Bean、注入、端点与诊断；前端 **不常驻** 大对象，只在打开配置/Java 文件或点「Spring 端点」时按需拉取（`ensureSpringIndex`）。
+
+- properties / yml 键补全：`features/editor/monaco/springProviders.ts`（`properties` 语言为仓内自注册的最小 Monarch 定义，Monaco 0.57 未内置）。
+- `@Value` 未知键诊断：写回 Monaco marker（owner `spring`）；全大写下划线的键按环境变量处理，不做诊断。
+- 端点列表：只读虚拟标签 `spring:endpoints`（`shared/virtualPaths.ts` 统一只读 scheme 判定：`jdt:`、`spring:`）。
+
+### 15.4 调试链路（关键约束）
+
+java-debug **不是**可执行进程：它是 Eclipse 插件 jar（无 `Main-Class`，也不支持 `--stdio`），必须由 JDTLS 装载，DAP 走它开出的 TCP 端口。完整链路：
+
+```
+runconfig_launch_plan{debug:true} → cwd/command/args/env + debugPort
+  → 终端起目标（suspend=y，等待调试器）
+  → dap_probe_adapter（jar 路径，写进 initializationOptions.bundles）
+  → JDTLS 语言服务就绪 → workspace/executeCommand vscode.java.startDebugSession → TCP 端口
+  → dap_connect(port) → initialize → attach{hostName,port=debugPort}
+  → setBreakpoints（全部已设断点）→ configurationDone
+  → 适配器自行恢复被挂起的目标（客户端不要再发 continue）
+```
+
+失败处理：30 秒连不上则打断终端里的目标（Ctrl-C）并停会话，提示「调试连接超时，请重试」；窗口销毁、应用退出、面板收起都会 `dap_stop`，调试器不常驻。
+
+打包：`third_party/debug-adapter/manifest.json`（钉 jar 的 SHA256/SHA1/大小与 EPL-1.0 许可）+ `scripts/prepare-debug-adapter.mjs`（下载校验、写 `adapter.json`），资源映射在 `src-tauri/tauri.jdtls.conf.json`。缺失时可用 `PRISMCODE_JAVA_DEBUG_JAR`（jar 路径）或 `PRISMCODE_JAVA_DEBUG_HOME`（目录）覆盖。契约由 `src-tauri/tests/java_debug_packaging.rs` 钉住（清单 ↔ 前端调用点 ↔ jlink 模块清单）。
+
+---
+
+## 16. 相关文档
 
 | 文档 | 路径 |
 |---|---|

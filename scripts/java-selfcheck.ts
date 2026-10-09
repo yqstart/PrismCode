@@ -20,7 +20,21 @@ import {
   toDidChangeParams,
   workspaceEditBlockReason,
 } from "../src/features/java/jdtls.ts";
-import { detectJavaBuildTool, javaRunCommands } from "../src/shared/javaRun.ts";
+import {
+  detectJavaBuildTool,
+  javaRunCommands,
+  launchCommandLine,
+  quoteArg,
+  runActionOf,
+} from "../src/shared/javaRun.ts";
+import {
+  completionItems,
+  emptySpringIndex,
+  formatEndpointList,
+  isSpringConfigPath,
+  springMarkerInputs,
+  type SpringIndex,
+} from "../src/shared/springIndex.ts";
 
 assert.equal(pathToUri("/Users/me/Hello World.java"), "file:///Users/me/Hello%20World.java");
 assert.equal(pathToUri("C:\\src\\中文.java"), "file:///C:/src/%E4%B8%AD%E6%96%87.java");
@@ -120,5 +134,127 @@ assert.equal(kept.length, MAX_COMPARE_TABS);
 assert.equal(kept.includes("g"), true);
 assert.equal(kept.includes("f"), true);
 assert.equal(kept.includes("a"), false);
+
+// ==================== 运行配置芯片：动作归类与命令行拼装 ====================
+assert.equal(runActionOf({ kind: "spring-boot.maven", args: ["-B", "spring-boot:run"] }), "run");
+assert.equal(runActionOf({ kind: "java.current-file", args: [] }), "run");
+assert.equal(runActionOf({ kind: "maven.module", args: ["-B", "-ntp", "-pl", "app", "test"] }), "test");
+assert.equal(runActionOf({ kind: "maven.module", args: ["-B", "-DskipTests", "package"] }), "package");
+assert.equal(runActionOf({ kind: "maven.module", args: ["-B", "clean"] }), "clean");
+assert.equal(runActionOf({ kind: "gradle.task", args: [":app:bootRun"] }), "run");
+assert.equal(runActionOf({ kind: "gradle.task", args: [":app:quarkusDev"] }), "run");
+assert.equal(runActionOf({ kind: "gradle.task", args: [":app:build"] }), "package");
+assert.equal(runActionOf({ kind: "gradle.task", args: [":app:jar"] }), null);
+
+const jdwp = "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=127.0.0.1:5005";
+assert.equal(quoteArg("./mvnw"), "./mvnw");
+assert.equal(quoteArg(jdwp), jdwp, "无空格的 JVM 参数不加引号");
+assert.equal(quoteArg("/tmp/My Class.java"), '"/tmp/My Class.java"');
+assert.equal(quoteArg(""), '""');
+assert.equal(launchCommandLine({ command: "./mvnw", args: ["-B", "test"], env: {} }), "./mvnw -B test");
+assert.equal(
+  launchCommandLine({ command: "./mvnw", args: ["-B", "test"], env: { MAVEN_OPTS: jdwp } }, false),
+  `MAVEN_OPTS=${jdwp} ./mvnw -B test`,
+);
+assert.equal(
+  launchCommandLine({ command: "./gradlew", args: [":app:test"], env: { JAVA_TOOL_OPTIONS: jdwp } }, true),
+  `$env:JAVA_TOOL_OPTIONS='${jdwp}'; ./gradlew :app:test`,
+);
+assert.equal(
+  launchCommandLine({
+    command: "./mvnw",
+    args: ["-B", "-Dspring-boot.run.jvmArguments=" + jdwp, "spring-boot:run"],
+    env: {},
+  }),
+  `./mvnw -B -Dspring-boot.run.jvmArguments=${jdwp} spring-boot:run`,
+);
+
+// ==================== Spring 索引：补全 / 诊断 / 端点文本 ====================
+const springIndex: SpringIndex = {
+  properties: [
+    { name: "server.port", defaultValue: "8080", source: "project" },
+    {
+      name: "spring.datasource.url",
+      defaultValue: null,
+      source: "spring-boot-autoconfigure.jar",
+    },
+    { name: "server.port", defaultValue: "9090", source: "重复项应被去重" },
+  ],
+  values: [
+    { path: "src/main/resources/application.properties", name: "server.port", value: "8081" },
+    { path: "src/main/resources/application.yml", name: "custom.flag", value: "on" },
+  ],
+  beans: [],
+  injections: [],
+  endpoints: [
+    { path: "src/main/java/app/BController.java", method: "POST", route: "/b", line: 10 },
+    { path: "src/main/java/app/AController.java", method: "GET", route: "/hello", line: 30 },
+    { path: "src/main/java/app/AController.java", method: "GET", route: "/ping", line: 12 },
+  ],
+  diagnostics: [{ path: "src/main/java/app/App.java", line: 7, message: "未找到配置项 app.missing" }],
+};
+assert.deepEqual(emptySpringIndex(), {
+  properties: [],
+  values: [],
+  beans: [],
+  injections: [],
+  endpoints: [],
+  diagnostics: [],
+});
+
+assert.equal(isSpringConfigPath("src/main/resources/application.properties"), true);
+assert.equal(isSpringConfigPath("application-dev.yml"), true);
+assert.equal(isSpringConfigPath("bootstrap.yaml"), true);
+assert.equal(isSpringConfigPath("bootstrap-test.properties"), true);
+assert.equal(isSpringConfigPath("myapplication.properties"), false);
+assert.equal(isSpringConfigPath("application.json"), false);
+assert.equal(isSpringConfigPath("src/main/java/App.java"), false);
+
+const candidates = completionItems(springIndex, "serv", "src/main/resources/application.properties");
+assert.deepEqual(
+  candidates.map((item) => item.name),
+  ["server.port", "spring.datasource.url", "custom.flag"],
+  "元数据键在前、项目值键去重补漏",
+);
+assert.equal(candidates[0]?.detail, "8080", "detail 用默认值");
+assert.equal(candidates[1]?.detail, "spring-boot-autoconfigure.jar", "无默认值时用来源");
+assert.equal(candidates[2]?.detail, "src/main/resources/application.yml", "项目键用声明文件");
+assert.deepEqual(
+  completionItems(springIndex, "server.port=8081", "src/main/resources/application.properties").map(
+    (item) => item.name,
+  ),
+  ["spring.datasource.url", "custom.flag"],
+  "当前行已写完整键名时同名候选被过滤",
+);
+assert.deepEqual(
+  completionItems(springIndex, "custom.flag: on", "src/main/resources/application.yml").map(
+    (item) => item.name,
+  ),
+  ["server.port", "spring.datasource.url"],
+  "yml 按冒号切分已写键名",
+);
+
+const endpointList = formatEndpointList(springIndex.endpoints);
+assert.equal(endpointList.split("\n")[0], "# Spring 端点（3）");
+assert.deepEqual(endpointList.split("\n").slice(1), [
+  "GET  /ping  src/main/java/app/AController.java:12",
+  "GET  /hello  src/main/java/app/AController.java:30",
+  "POST  /b  src/main/java/app/BController.java:10",
+]);
+assert.equal(formatEndpointList([]), "未找到 Spring 端点");
+
+assert.deepEqual(springMarkerInputs(springIndex), [
+  { path: "src/main/java/app/App.java", line: 7, message: "未找到配置项 app.missing" },
+]);
+const springMarker = toMonacoMarker(
+  {
+    range: { start: { line: 6, character: 0 }, end: { line: 6, character: 10 } },
+    severity: 2,
+    message: "未找到配置项 app.missing",
+  },
+  "Spring",
+);
+assert.equal(springMarker.source, "Spring");
+assert.equal(springMarker.severity, MARKER_SEVERITY.warning);
 
 console.log("java-selfcheck ok");

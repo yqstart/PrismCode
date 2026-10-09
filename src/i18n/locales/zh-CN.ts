@@ -139,8 +139,95 @@ export const zhCN = {
       jrePathDesc: "留空使用内置运行时",
       jdtlsPath: "JDTLS 路径",
       jdtlsPathDesc: "留空使用内置语言服务",
+      adapterPath: "调试适配器路径",
+      adapterPathDesc: "java-debug 插件 jar 或其所在目录，留空使用内置（开发时可为 .artifacts/debug-adapter 下的版本目录）",
       probe: "检测运行时",
       probeOk: "Java {version} · JDTLS {jdtls}",
+    },
+  },
+  maven: {
+    module: {
+      label: "Maven 模块",
+    },
+    notice: {
+      diagnosticsPublished: "已将 Maven 诊断写入问题面板",
+      diagnosticsEmpty: "Maven 输出里没有可定位的诊断",
+    },
+  },
+  run: {
+    group: {
+      title: "运行配置",
+      root: "根项目",
+    },
+    action: {
+      test: "测试",
+      package: "打包",
+      clean: "清理",
+      run: "运行",
+      debug: "调试",
+    },
+    refresh: "重新扫描运行配置",
+  },
+  spring: {
+    endpoints: {
+      title: "Spring 端点",
+      open: "Spring 端点",
+      empty: "未找到 Spring 端点",
+    },
+    notice: {
+      indexFailed: "Spring 索引失败：{detail}",
+      unavailable: "Spring 索引不可用：请先打开工作区",
+    },
+  },
+  debug: {
+    tab: "调试",
+    port: "端口 {port}",
+    state: {
+      idle: "未启动",
+      starting: "启动中",
+      running: "运行中",
+      paused: "已暂停",
+      stopped: "已停止",
+    },
+    reason: {
+      breakpoint: "断点命中",
+      step: "单步完成",
+      pause: "已暂停",
+      exception: "异常",
+      entry: "进入程序",
+      other: "暂停（{reason}）",
+    },
+    action: {
+      continue: "继续",
+      pause: "暂停",
+      stepOver: "单步跳过",
+      stepInto: "单步进入",
+      stepOut: "单步跳出",
+      stop: "停止",
+    },
+    section: {
+      threads: "线程",
+      frames: "调用栈",
+      variables: "变量",
+      output: "输出",
+    },
+    empty: {
+      threads: "暂无线程",
+      frames: "未命中暂停",
+      variables: "暂无变量",
+      output: "暂无输出",
+    },
+    breakpoint: {
+      toggle: "切换断点（第 {line} 行）",
+    },
+    hint: {
+      breakpoints: "共 {count} 个断点 · 在行号左侧点击可增删",
+    },
+    notice: {
+      adapterMissing: "缺少调试适配器：请先运行 node scripts/prepare-debug-adapter.mjs，或设置 PRISMCODE_JAVA_DEBUG_JAR",
+      adapterUnavailable: "调试适配器未就绪：请确认 Java 语言服务已启动（java-debug 由 JDTLS 装载）",
+      connectTimeout: "调试连接超时，请重试",
+      adapterExited: "调试会话已结束",
     },
   },
   settings: {

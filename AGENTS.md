@@ -7,7 +7,7 @@ Prism Code（棱镜编辑器）：基于 Tauri + Vue3 的轻量化桌面代码�
 - **定位**：轻量级、快速、顺滑的跨平台桌面代码编辑器
 - **当前阶段**：功能**定版**（2026-08-10）——核心功能集（资源树 / 编辑 / 搜索 / Git / 终端·SSH / 主题 / 本地语言智能）全部收敛，进入**优化迭代期**
 - **后续方向**：围绕性能、流畅度、交互体验持续打磨，不再扩展大功能模块
-- **已落地**：离线代码补全、JS/TS 类型服务、Vue SFC script/template 辅助、会话恢复
+- **已落地**：离线代码补全、JS/TS 类型服务、Vue SFC script/template 辅助、会话恢复、Maven 运行配置、Spring 索引、JDWP 调试器
 - **明确不做**：任何 AI/模型联网补全、AI 对话面板、AI Agent、MCP / Skills 生态、插件市场
 
 ## 文档索引
@@ -21,7 +21,7 @@ Prism Code（棱镜编辑器）：基于 Tauri + Vue3 的轻量化桌面代码�
 | 多平台发布 | `docs/多平台发布.md` |
 | 开源准备清单 | `docs/开源准备清单.md` |
 | 开源许可 | `LICENSE`（MIT） |
-| 第三方声明 | `THIRD-PARTY-NOTICES.md` |
+| 第三方声明 | `THIRD-PARTY-NOTICES.md`（含随包分发的 java-debug，EPL-1.0） |
 | 贡献指南 | `CONTRIBUTING.md` |
 | 安全政策 | `SECURITY.md` |
 | 行为准则 | `CODE_OF_CONDUCT.md` |
@@ -31,7 +31,7 @@ Prism Code（棱镜编辑器）：基于 Tauri + Vue3 的轻量化桌面代码�
 
 - 桌面壳：Tauri 2
 - 前端：Vue 3 + TypeScript + Vite + Pinia
-- 编辑器内核：**Monaco Editor**（VSCode 同源；高亮/折叠/诊断/补全/跳转/查找/差异对比均为内置能力，按需注册 feature 与语言定义，装配入口 `src/features/editor/monaco/setup.ts`）。JS/TS 走 Monaco 的 TypeScript worker（编译器与标准库内嵌、Worker 线程、不联网，跨文件跳转/重命名/引用/诊断由 worker 承担）；HTML/CSS/SCSS/Less 走 `vscode-html/css-languageservice`（VSCode 同源）；Java 走内置 JDTLS 1.61.0 + Temurin 21 jlink JRE（离线，进程由 Rust LSP 宿主托管，协议在前端；运行/测试从本地终端执行 Maven/Gradle/JUnit，不含调试器）；Vue 为自研三态 Monarch 高亮 + 等长虚拟 TS 文件承接 script 段语义 + `vueBindings.ts` 注入 template 绑定；键位支持 **WebStorm / VS Code 双预设**。语言服务内存预算集中在 `monaco/languageBudget.ts`：每个窗口同时最多一个 TS/JS worker（失焦 3 秒释放，聚焦按需重建）、最多 2 个常驻 model、额外注入 ≤32 个文件且单个 ≤256KB；worker 生命周期由 `monaco/tsWorkerManager.ts` 顶替 Monaco 默认实现（vite 插件在解析时替换）
+- 编辑器内核：**Monaco Editor**（VSCode 同源；高亮/折叠/诊断/补全/跳转/查找/差异对比均为内置能力，按需注册 feature 与语言定义，装配入口 `src/features/editor/monaco/setup.ts`）。JS/TS 走 Monaco 的 TypeScript worker（编译器与标准库内嵌、Worker 线程、不联网，跨文件跳转/重命名/引用/诊断由 worker 承担）；HTML/CSS/SCSS/Less 走 `vscode-html/css-languageservice`（VSCode 同源）；Java 走内置 JDTLS 1.61.0 + Temurin 21 jlink JRE（离线，进程由 Rust LSP 宿主托管，协议在前端）。**Java 工程能力**分四处落地：Maven 反应堆语义在 `commands/maven.rs`（只读 `<modules>` 声明式图 + mvn 输出诊断，不启 Maven/daemon）；运行配置在 `commands/runconfig.rs`（生成层 + `.prismcode/run/project.json` 项目层 + 前端本地层合并，`kind` 只有 `java.current-file｜maven.module｜spring-boot.maven｜gradle.task` 四种，Gradle 仅做插件→任务映射）；Spring 索引在 `commands/spring.rs`（正则有界扫描配置键/取值/Bean/注入/端点，依赖元数据只读 `~/.m2` jar 的 `spring-configuration-metadata.json`，进程内缓存 + 3 秒预算）；调试器在 `commands/dap.rs`（java-debug 0.53.1 作为 **JDTLS 插件**经 `initializationOptions.bundles` 装载，DAP 走 `vscode.java.startDebugSession` 返回的本地 TCP 端口，帧仍复用 `commands/lsp.rs`；jlink 模块清单必须含 `jdk.jdi`）。运行/测试/调试命令统一由本地终端执行（`runconfig_launch_plan` 给出 cwd/command/args/env，调试态注入 JDWP `suspend=y`）；Vue 为自研三态 Monarch 高亮 + 等长虚拟 TS 文件承接 script 段语义 + `vueBindings.ts` 注入 template 绑定；键位支持 **WebStorm / VS Code 双预设**。语言服务内存预算集中在 `monaco/languageBudget.ts`：每个窗口同时最多一个 TS/JS worker（失焦 3 秒释放，聚焦按需重建）、最多 2 个常驻 model、额外注入 ≤32 个文件且单个 ≤256KB；worker 生命周期由 `monaco/tsWorkerManager.ts` 顶替 Monaco 默认实现（vite 插件在解析时替换）
 - 搜索：Rust walk + 模糊/内容检索/替换（async + LRU 缓存）
 - Git：Rust `git2` + 系统 Git（状态/提交/冲突走 `git2`；push/rebase/delete-remote 等远端/兼容性敏感操作按需走系统 Git）
 - 主题：`prism-dark` / `dawn` / `midnight` / `cyberpunk`
@@ -42,11 +42,11 @@ Prism Code（棱镜编辑器）：基于 Tauri + Vue3 的轻量化桌面代码�
 ```
 src/
   app/                 # AppShell、TitleBar、ActivityBar、SideBar、EditorArea、StatusBar
-  features/            # explorer / git / search / editor / settings / sessions / ssh
+  features/            # explorer / git / search / editor / settings / sessions / ssh / java / debug / problems
   stores/              # settings / workspace / ui / editor / git / search / sessions / ssh
   styles/              # tokens、themes、global
   shared/
-src-tauri/             # Tauri 后端、Git/搜索命令、PTY 插件、窗口与文件能力
+src-tauri/             # Tauri 后端、Git/搜索/Maven/运行配置/Spring/DAP 命令、PTY 插件、窗口与文件能力
 .github/               # CI、Issue / PR 模板
 ```
 

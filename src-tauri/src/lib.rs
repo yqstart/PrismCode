@@ -346,6 +346,7 @@ pub fn run() {
         ))
         .manage(commands::ssh::SshState::default())
         .manage(commands::lsp::LspState::default())
+        .manage(commands::dap::DapState::default())
         .setup(|app| {
             let handle = app.handle();
 
@@ -496,6 +497,18 @@ pub fn run() {
             commands::java::java_probe_runtime,
             commands::java::java_launch_plan,
             commands::java::java_rebuild_index,
+            commands::maven::maven_scan,
+            commands::maven::maven_diagnostics,
+            commands::runconfig::runconfig_generate,
+            commands::runconfig::runconfig_resolve,
+            commands::runconfig::runconfig_launch_plan,
+            commands::runconfig::runconfig_toolchains,
+            commands::spring::spring_index,
+            commands::dap::dap_connect,
+            commands::dap::dap_send,
+            commands::dap::dap_stop,
+            commands::dap::dap_logs,
+            commands::dap::dap_probe_adapter,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
@@ -522,6 +535,9 @@ pub fn run() {
                     api.prevent_exit();
                 } else {
                     commands::lsp::stop_all_sessions(app);
+                    // 调试会话没有「保留到下次启动」的语义：真退出时一律收掉。
+                    // 退出被拦下时不能停，否则用户还没保存文件就把调试器拆了。
+                    commands::dap::stop_all_sessions(app);
                 }
                 let _ = app.emit("app://will-exit", ());
             }
@@ -535,6 +551,7 @@ pub fn run() {
             {
                 app.state::<AppLifecycleState>().clear_window(label);
                 commands::lsp::stop_window_sessions(app, label);
+                commands::dap::stop_window_sessions(app, label);
             }
         });
 }

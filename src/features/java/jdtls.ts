@@ -81,8 +81,16 @@ export function clientCapabilities(): unknown {
   };
 }
 
-export function initializationOptions(): unknown {
-  return { extendedClientCapabilities: { classFileContentsSupport: true } };
+/**
+ * initialize 参数。`bundles` 是 jdt.ls 装载扩展插件的唯一入口：
+ * java-debug（调试适配器）就靠它装进语言服务进程，之后才可能
+ * `vscode.java.startDebugSession` 拿到 DAP 端口。没有 jar 时不带这个键。
+ */
+export function initializationOptions(bundles: readonly string[] = []): unknown {
+  return {
+    extendedClientCapabilities: { classFileContentsSupport: true },
+    ...(bundles.length ? { bundles: [...bundles] } : {}),
+  };
 }
 
 export function javaSettings(): unknown {

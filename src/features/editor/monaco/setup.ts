@@ -83,6 +83,33 @@ monaco.languages.register({
 });
 monaco.languages.setTokensProvider("json", createTokenizationSupport(true));
 
+// 0.57 未内置 properties 语言（basic-languages 与 languages/definitions 目录均无），
+// 注册一个极简版本：注释（#/!）、键、分隔符、值四类 token 足够。
+const propertiesLanguage: monaco.languages.IMonarchLanguage = {
+  defaultToken: "",
+  tokenPostfix: ".properties",
+  tokenizer: {
+    root: [
+      [/^\s*[#!].*$/, "comment"],
+      [/^\s*[^=\s:]+/, "key"],
+      [/\s*[=:]\s*/, "delimiter"],
+      [/\\./, "string.escape"],
+      [/[^\\]+/, "string"],
+      [/\\/, "string.escape"],
+    ],
+  },
+};
+monaco.languages.register({
+  id: "properties",
+  extensions: [".properties"],
+  aliases: ["Properties", "properties"],
+  mimetypes: ["text/x-java-properties"],
+});
+monaco.languages.setMonarchTokensProvider("properties", propertiesLanguage);
+monaco.languages.setLanguageConfiguration("properties", {
+  comments: { lineComment: "#" },
+});
+
 globalThis.MonacoEnvironment = {
   getWorker(_workerId, label) {
     if (label === "typescript" || label === "javascript") return new tsWorker();

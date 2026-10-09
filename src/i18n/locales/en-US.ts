@@ -140,8 +140,95 @@ export const enUS = {
       jrePathDesc: "Leave empty to use the bundled runtime",
       jdtlsPath: "JDTLS path",
       jdtlsPathDesc: "Leave empty to use the bundled language server",
+      adapterPath: "Debug adapter path",
+      adapterPathDesc: "java-debug plugin jar or its directory; leave empty to use the bundled one",
       probe: "Detect runtime",
       probeOk: "Java {version} · JDTLS {jdtls}",
+    },
+  },
+  maven: {
+    module: {
+      label: "Maven module",
+    },
+    notice: {
+      diagnosticsPublished: "Maven diagnostics were written to the problems panel",
+      diagnosticsEmpty: "No locatable diagnostics in Maven output",
+    },
+  },
+  run: {
+    group: {
+      title: "Run configurations",
+      root: "Root project",
+    },
+    action: {
+      test: "Test",
+      package: "Package",
+      clean: "Clean",
+      run: "Run",
+      debug: "Debug",
+    },
+    refresh: "Rescan run configurations",
+  },
+  spring: {
+    endpoints: {
+      title: "Spring Endpoints",
+      open: "Spring Endpoints",
+      empty: "No Spring endpoints found",
+    },
+    notice: {
+      indexFailed: "Spring index failed: {detail}",
+      unavailable: "Spring index unavailable: open a workspace first",
+    },
+  },
+  debug: {
+    tab: "Debug",
+    port: "Port {port}",
+    state: {
+      idle: "Not started",
+      starting: "Starting",
+      running: "Running",
+      paused: "Paused",
+      stopped: "Stopped",
+    },
+    reason: {
+      breakpoint: "Breakpoint hit",
+      step: "Step finished",
+      pause: "Paused",
+      exception: "Exception",
+      entry: "Entry point",
+      other: "Paused ({reason})",
+    },
+    action: {
+      continue: "Continue",
+      pause: "Pause",
+      stepOver: "Step over",
+      stepInto: "Step into",
+      stepOut: "Step out",
+      stop: "Stop",
+    },
+    section: {
+      threads: "Threads",
+      frames: "Call stack",
+      variables: "Variables",
+      output: "Output",
+    },
+    empty: {
+      threads: "No threads",
+      frames: "Not paused",
+      variables: "No variables",
+      output: "No output",
+    },
+    breakpoint: {
+      toggle: "Toggle breakpoint (line {line})",
+    },
+    hint: {
+      breakpoints: "{count} breakpoints · click the left gutter to add or remove",
+    },
+    notice: {
+      adapterMissing: "Debug adapter missing: run node scripts/prepare-debug-adapter.mjs or set PRISMCODE_JAVA_DEBUG_JAR",
+      adapterUnavailable: "Debug adapter unavailable: make sure the Java language server is running (java-debug is loaded by JDTLS)",
+      connectTimeout: "Debug connection timed out, please retry",
+      adapterExited: "Debug session ended",
     },
   },
   settings: {

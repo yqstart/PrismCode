@@ -13,7 +13,8 @@ const MAX_HEADER_BYTES: usize = 64 * 1024;
 const MAX_MESSAGE_BYTES: usize = 64 * 1024 * 1024;
 const LSP_READ_BUF_BYTES: usize = 32 * 1024;
 const LSP_STDERR_LOG_LINES: usize = 500;
-const LSP_STOP_GRACE_MS: u64 = 2000;
+/// 会话收尾宽限期：先关标准输入，超时才强杀（DAP 调试会话共用同一节奏）
+pub(crate) const LSP_STOP_GRACE_MS: u64 = 2000;
 
 pub fn frame_message(body: &str) -> Vec<u8> {
     let header = format!("Content-Length: {}\r\n\r\n", body.len());
@@ -157,7 +158,7 @@ impl LspState {
 }
 
 /// `Some` 表示进程已经结束（退出码可能为空）；`None` 表示仍在运行。
-fn poll_child(child: &Mutex<Child>) -> Result<Option<Option<i32>>, String> {
+pub(crate) fn poll_child(child: &Mutex<Child>) -> Result<Option<Option<i32>>, String> {
     let mut guard = child
         .lock()
         .map_err(|error| format!("停止语言服务失败: {error}"))?;
@@ -168,11 +169,23 @@ fn poll_child(child: &Mutex<Child>) -> Result<Option<Option<i32>>, String> {
     }
 }
 
-fn emit_exit(app: &AppHandle, window: &str, session_id: &str, code: Option<i32>, emitted: &AtomicBool) {
+/// 会话结束时只发一次退出事件：读线程与停止命令可能同时收尾。
+/// 事件名由调用方给出，DAP 会话借同一实现发 `dap://exit/...`。
+pub(crate) fn emit_session_exit(
+    app: &AppHandle,
+    window: &str,
+    event: &str,
+    code: Option<i32>,
+    emitted: &AtomicBool,
+) {
     if emitted.swap(true, Ordering::SeqCst) {
         return;
     }
-    let _ = app.emit_to(window, &format!("lsp://exit/{session_id}"), code);
+    let _ = app.emit_to(window, event, code);
+}
+
+fn emit_exit(app: &AppHandle, window: &str, session_id: &str, code: Option<i32>, emitted: &AtomicBool) {
+    emit_session_exit(app, window, &format!("lsp://exit/{session_id}"), code, emitted);
 }
 
 #[tauri::command]

@@ -324,6 +324,15 @@ fn resolve_runtime(
     })
 }
 
+/// 随包分发的 JRE 里的 java 可执行文件。运行配置在 PATH 上没有 java 时用它兜底；
+/// 找不到返回 None，由调用方决定是报诊断还是换方案。
+pub fn bundled_java_binary(app: &AppHandle, override_path: Option<&str>) -> Option<PathBuf> {
+    let roots = resource_roots(app);
+    let home = locate_jre(&roots, override_path).ok()?;
+    let binary = java_binary(&home);
+    binary.is_file().then_some(binary)
+}
+
 fn prism_java_root() -> Result<PathBuf, String> {
     let home = std::env::var("HOME")
         .or_else(|_| std::env::var("USERPROFILE"))

@@ -202,7 +202,7 @@ export function toMonacoHover(hover: LspHover | null): Monaco.languages.Hover | 
   };
 }
 
-export function toMonacoMarker(diagnostic: LspDiagnostic): Monaco.editor.IMarkerData {
+export function toMonacoMarker(diagnostic: LspDiagnostic, source = "Java"): Monaco.editor.IMarkerData {
   const range = toMonacoRange(diagnostic.range);
   const severity =
     diagnostic.severity === 1
@@ -218,7 +218,7 @@ export function toMonacoMarker(diagnostic: LspDiagnostic): Monaco.editor.IMarker
     ...range,
     severity,
     message: diagnostic.message,
-    source: "Java",
+    source,
     code: diagnostic.code !== undefined ? String(diagnostic.code) : undefined,
   };
 }

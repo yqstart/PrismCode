@@ -21,6 +21,7 @@ import { currentJavaClient, ensureJavaSession } from "@/features/java/javaSessio
 import { registerEmmetProvider } from "@/features/editor/monaco/emmetProvider";
 import { registerVueLanguage } from "@/features/editor/monaco/vueProvider";
 import { registerJsonEnvProviders } from "@/features/editor/monaco/jsonEnvProvider";
+import { installSpringProviders } from "@/features/editor/monaco/springProviders";
 import {
   installExtraLibs,
   refreshActiveExtraLibs,
@@ -51,8 +52,12 @@ import {
 } from "@/features/editor/monaco/vueScriptService";
 import { getEditorFontFamily } from "@/features/editor/fonts";
 import { relativeToRoot } from "@/shared/fs";
+import { isReadOnlyVirtualPath } from "@/shared/virtualPaths";
+import { installBreakpointGlyphs, type BreakpointController } from "@/features/debug/breakpointGlyphs";
 import { useEditorStore } from "@/stores/editor";
+import { useDebugStore } from "@/stores/debug";
 import { useGitStore } from "@/stores/git";
+import { useJavaStore } from "@/stores/java";
 import { useSettingsStore } from "@/stores/settings";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { useI18n } from "@/i18n";
@@ -73,6 +78,7 @@ const editorStore = useEditorStore();
 const settings = useSettingsStore();
 const workspace = useWorkspaceStore();
 const git = useGitStore();
+const debug = useDebugStore();
 const { theme, editor: editorPrefs } = storeToRefs(settings);
 const { openAt, blameVisible } = storeToRefs(editorStore);
 
@@ -101,6 +107,7 @@ let keymapController: { dispose(): void } | null = null;
 let ownCommands: { dispose(): void } | null = null;
 let eslintController: ReturnType<typeof installEslint> | null = null;
 let breadcrumbController: BreadcrumbController | null = null;
+let breakpointController: BreakpointController | null = null;
 
 /** 光标所在符号链（Monaco 无内置面包屑，自研 DOM 条） */
 const crumbs = ref<SymbolCrumb[]>([]);
@@ -116,7 +123,8 @@ const viewStateCache = new Map<string, monaco.editor.ICodeEditorViewState | null
 const EDITOR_OPTIONS: monaco.editor.IStandaloneEditorConstructionOptions = {
   automaticLayout: false,
   detectIndentation: false,
-  glyphMargin: false,
+  // 断点圆点画在 glyph margin：打开这一列，宽度由 lineDecorationsWidth 兜住
+  glyphMargin: true,
   lineDecorationsWidth: 12,
   scrollBeyondLastLine: true,
   padding: { top: 6, bottom: 200 },
@@ -234,7 +242,7 @@ function disposeGitDecorations(): void {
 
 function attachGitDecorations(path: string): void {
   disposeGitDecorations();
-  if (!codeEditor || path.startsWith("jdt:")) return;
+  if (!codeEditor || isReadOnlyVirtualPath(path)) return;
   const root = workspace.rootPath;
   if (!root) return;
   const relPath = relativeToRoot(root, path);
@@ -294,7 +302,7 @@ function switchDocument(path: string, content: string): void {
   applyIndentOptions();
   codeEditor.updateOptions({
     ...largeFileOptions(model.getValue()),
-    readOnly: path.startsWith("jdt:"),
+    readOnly: isReadOnlyVirtualPath(path),
   });
   const viewState = viewStateCache.get(path);
   if (viewState) codeEditor.restoreViewState(viewState);
@@ -392,6 +400,17 @@ function createEditor(): void {
   });
   applyIndentOptions();
   codeEditor.updateOptions(largeFileOptions(model.getValue()));
+  // 断点：真值在 debug store，只读虚拟标签（jdt:/spring:）不允许下断点
+  if (!isReadOnlyVirtualPath(currentPath)) {
+    breakpointController?.dispose();
+    breakpointController = installBreakpointGlyphs(codeEditor, {
+      linesFor: () => debug.linesFor(currentPath),
+      toggle: (line) => {
+        if (isReadOnlyVirtualPath(currentPath)) return;
+        void debug.toggleBreakpoint(currentPath, line);
+      },
+    });
+  }
   ownCommands = registerOwnCommands(codeEditor, {
     onToggleWordWrap: () => {
       settings.patchEditor({ wordWrap: !settings.editor.wordWrap });
@@ -452,6 +471,11 @@ onMounted(() => {
   });
   registerEmmetProvider();
   registerJsonEnvProviders();
+  const javaStore = useJavaStore();
+  installSpringProviders({
+    index: () => javaStore.springIndex,
+    ensureIndex: () => javaStore.ensureSpringIndex(),
+  });
   installConflictResolver();
   installVueScriptDiagnostics();
   registerVueScriptCompletions();
@@ -473,6 +497,7 @@ onMounted(() => {
     onError: (message) => workspace.showNotice(message, 3200),
   });
   createEditor();
+  maybeStartJavaSession(props.path);
   if (host.value) {
     host.value.addEventListener("wheel", onWheel, { capture: true, passive: false });
     if (typeof ResizeObserver !== "undefined") {
@@ -486,6 +511,12 @@ onMounted(() => {
   window.addEventListener("blur", handleWindowBlur);
   window.addEventListener("focus", handleWindowFocus);
 });
+
+// 断点集合（含其它窗口改动）变化后重画当前文件的标记
+watch(
+  () => debug.linesFor(props.path).join(","),
+  () => breakpointController?.sync(),
+);
 
 onBeforeUnmount(() => {
   window.removeEventListener("focus", handleWindowRestore);
@@ -510,6 +541,8 @@ onBeforeUnmount(() => {
     cursorRaf = null;
   }
   disposeGitDecorations();
+  breakpointController?.dispose();
+  breakpointController = null;
   breadcrumbController?.dispose();
   breadcrumbController = null;
   keymapController?.dispose();
@@ -527,14 +560,23 @@ onBeforeUnmount(() => {
   viewStateCache.clear();
 });
 
+/**
+ * Java 文件需要语言服务：切到 `.java` / `jdt:` 时按需拉起。
+ * 启动时首个标签就是 Java 文件的情况不会触发 path watcher（值没变过），
+ * 所以 onMounted 里也要补一次，否则要等用户切一次标签才有补全与诊断。
+ */
+function maybeStartJavaSession(path: string): void {
+  if (/\.java$/i.test(path) || path.startsWith("jdt:")) {
+    void ensureJavaSession("file-open");
+  }
+}
+
 watch(
   () => props.path,
   (path) => {
     switchDocument(path, props.content);
     void git.scheduleRefresh();
-    if (/\.java$/i.test(path) || path.startsWith("jdt:")) {
-      void ensureJavaSession("file-open");
-    }
+    maybeStartJavaSession(path);
   },
 );
 

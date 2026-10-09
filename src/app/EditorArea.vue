@@ -707,6 +707,11 @@ const formatDocumentDisabled = computed(() => {
   return !settings.editor.prettierEnabled;
 });
 
+/** 虚拟标签的 Monaco 语言 id：jdt 打开时传的是展示名 "Java"，端点标签传的就是 id 本身 */
+function virtualMonacoLanguage(language: string): string {
+  return language === "Java" ? "java" : language;
+}
+
 function onEditorContextMenu(event: MouseEvent) {
   if (!activeTab.value || !showFileEditor.value) return;
   if (compareFocused.value || gitLogFocused.value) return;
@@ -974,7 +979,7 @@ onBeforeUnmount(() => {
           :path="activeTab.path"
           :content="activeTab.content"
           :uri="activeTab.virtual?.uri"
-          :language-hint="activeTab.virtual ? 'java' : undefined"
+          :language-hint="activeTab.virtual ? virtualMonacoLanguage(activeTab.virtual.language) : undefined"
           @contextmenu="onEditorContextMenu"
         />
         <!-- 预览分支必须与 showTextEditor 的 md 条件互补：渲染失败回退编辑态

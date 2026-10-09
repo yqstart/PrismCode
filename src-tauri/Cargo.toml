@@ -27,6 +27,10 @@ tauri-plugin-fs = { version = "2.5.1", features = ["watch"] }
 walkdir = "2.5.0"
 git2 = { version = "0.21.0", features = ["vendored-libgit2", "vendored-openssl", "https", "ssh"] }
 regex = "1.13.1"
+# Maven 反应堆只读 pom.xml 解析；默认关闭编码探测与 serde，保持依赖最小
+quick-xml = { version = "0.41", default-features = false }
+# 只读依赖 jar 里的 Spring 元数据；只要 deflate 解压，不要 bzip2/zstd/xz 那一堆
+zip = { version = "4", default-features = false, features = ["deflate-flate2"] }
 ignore = "0.4.31"
 chrono = "0.4.45"
 tauri-plugin-pty = "0.3.1"

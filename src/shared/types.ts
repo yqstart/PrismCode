@@ -89,6 +89,8 @@ export interface JavaPreferences {
   jrePath: string;
   /** 覆盖内置 JDTLS，留空用内置 */
   jdtlsPath: string;
+  /** 覆盖内置调试适配器（java-debug 插件 jar 或它所在的目录），留空用内置 */
+  adapterPath: string;
 }
 
 export interface AppSettings {
@@ -138,6 +140,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     idleStopMinutes: 10,
     jrePath: "",
     jdtlsPath: "",
+    adapterPath: "",
   },
   autoCheckUpdates: true,
 };

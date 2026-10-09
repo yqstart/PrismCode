@@ -1,5 +1,5 @@
 // ==================== 路径 → Monaco 语言 id ====================
-// Monaco 未内置 vue/env，两者由 vueProvider.ts / envProvider.ts 自行注册；
+// Monaco 未内置 vue/env/properties，三者由 vueProvider.ts / jsonEnvProvider.ts / setup.ts 自行注册；
 // 其余 id 与 monaco-editor 0.57 的语言定义一致。
 
 import { basename } from "@/shared/fs";
@@ -32,6 +32,7 @@ export function languageIdForPath(path: string): string {
   if (name.endsWith(".rs")) return "rust";
   if (name.endsWith(".go")) return "go";
   if (name.endsWith(".java")) return "java";
+  if (name.endsWith(".properties")) return "properties";
   if (name.endsWith(".toml")) return "ini";
   if (name.endsWith(".ini") || name.endsWith(".cfg") || name.endsWith(".conf")) return "ini";
   if (name.endsWith(".sql")) return "sql";

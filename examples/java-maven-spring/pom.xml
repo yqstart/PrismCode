@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Java 运行/调试链路的黄金夹具：
+  根是聚合器（packaging=pom），只有 app 子模块声明 spring-boot-maven-plugin。
+  运行配置生成必须跳过根、只在 app 上给出 run/debug。
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>3.2.12</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>com.example</groupId>
+  <artifactId>prism-demo</artifactId>
+  <version>1.0.0</version>
+  <packaging>pom</packaging>
+  <name>prism-demo</name>
+
+  <modules>
+    <module>app</module>
+  </modules>
+
+  <properties>
+    <java.version>17</java.version>
+  </properties>
+</project>

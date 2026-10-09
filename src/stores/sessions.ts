@@ -26,8 +26,8 @@ export interface LocalTerminalSession {
 export const useSessionsStore = defineStore("sessions", () => {
   /** 终端底部面板是否展开（对应 AppShell 中 TerminalPanel 的 v-show） */
   const open = ref(false);
-  /** 底部面板当前视图：终端 / 问题 */
-  const panelView = ref<"terminal" | "problems">("terminal");
+  /** 底部面板当前视图：终端 / 问题 / 调试 */
+  const panelView = ref<"terminal" | "problems" | "debug">("terminal");
   const focused = ref(false);
   /**
    * 快捷键收起后面板仍保活：视图保持挂载、PTY 不销毁，
@@ -146,6 +146,16 @@ export const useSessionsStore = defineStore("sessions", () => {
   }
 
   /** 打开底部面板并切到问题视图（状态栏与快捷键入口） */
+  /**
+   * 切到底部面板的调试视图：调试芯片点击时用，面板没开就一并打开。
+   * 复用 openSessions 是为了拿到同一条不变式（viewHydrated 置位 + 保证有一个终端），
+   * 调试目标本来就要在那个终端里跑。
+   */
+  function showDebug(): void {
+    openSessions();
+    panelView.value = "debug";
+  }
+
   function showProblems(cwd: string | null = null): void {
     panelView.value = "problems";
     openSessions(cwd);
@@ -363,6 +373,17 @@ export const useSessionsStore = defineStore("sessions", () => {
     localIdle.value[id] = false;
   }
 
+  /**
+   * 向活动本地终端发一次 Ctrl-C。调试目标以 suspend=y 挂起时连不上调试器，
+   * 必须能打断它，否则终端里会留下一个永远不动的 JVM。
+   */
+  function interruptLocalTerminal(terminalId?: string) {
+    const id = terminalId ?? activeLocalId.value;
+    if (!id || !localTerminals.value.some((item) => item.id === id)) return;
+    writeSeq += 1;
+    pendingLocalWrite.value = { terminalId: id, data: "\u0003", seq: writeSeq };
+  }
+
   function consumePendingLocalWrite(seq: number) {
     if (pendingLocalWrite.value?.seq === seq) {
       pendingLocalWrite.value = null;
@@ -378,6 +399,7 @@ export const useSessionsStore = defineStore("sessions", () => {
   return {
     open,
     panelView,
+    showDebug,
     showProblems,
     focused,
     dormant,
@@ -401,6 +423,7 @@ export const useSessionsStore = defineStore("sessions", () => {
     activateLocal,
     setLocalIdle,
     runInLocalTerminal,
+    interruptLocalTerminal,
     consumePendingLocalWrite,
   };
 });

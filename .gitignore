@@ -13,6 +13,11 @@ dist
 dist-ssr
 *.local
 
+# Maven / Gradle 构建产物（examples 下的夹具会生成）
+target/
+build/
+.gradle/
+
 # 环境变量（示例用 *.example 提交）
 .env
 .env.*

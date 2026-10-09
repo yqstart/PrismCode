@@ -1,0 +1,18 @@
+{
+  "version": "0.53.1",
+  "jarName": "com.microsoft.java.debug.plugin-0.53.1.jar",
+  "archiveURL": "https://repo1.maven.org/maven2/com/microsoft/java/com.microsoft.java.debug.plugin/0.53.1/com.microsoft.java.debug.plugin-0.53.1.jar",
+  "archiveSHA256": "4f4778d452a6a0665536f43ce4e32403a24be6593336b80dc85a322912859e24",
+  "archiveSHA1": "dfc433d62cbb5bb71cfe87f1ee5363c549dccc92",
+  "archiveSize": 2960556,
+  "license": "EPL-1.0",
+  "licenseURL": "https://raw.githubusercontent.com/microsoft/java-debug/0.53.1/LICENSE.txt",
+  "licenseSHA256": "f494326c16bc95ebb14874ea5fa2c16a963eb36d1f2ab6fe99490073709771c1",
+  "requiredJreModules": [
+    "jdk.jdi",
+    "jdk.jdwp.agent"
+  ],
+  "transport": "tcp",
+  "startCommand": "vscode.java.startDebugSession",
+  "pluginInjection": "initializationOptions.bundles"
+}

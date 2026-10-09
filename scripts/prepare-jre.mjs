@@ -53,6 +53,8 @@ const modules = [
   "jdk.crypto.ec",
   "jdk.localedata",
   "jdk.jdwp.agent",
+  // JDI：java-debug 插件（调试适配器）依赖 com.sun.jdi.*，java.se 不含任何 jdk.* 模块
+  "jdk.jdi",
 ].join(",");
 
 function sha256File(path) {

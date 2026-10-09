@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, ref } from "vue";
 import SessionsView from "@/features/sessions/SessionsView.vue";
 import ProblemsPanel from "@/features/problems/ProblemsPanel.vue";
+import DebugPanel from "@/features/debug/DebugPanel.vue";
 import { useSettingsStore } from "@/stores/settings";
 import { useSessionsStore } from "@/stores/sessions";
 import { useI18n } from "@/i18n";
@@ -10,10 +11,10 @@ const settings = useSettingsStore();
 const { t } = useI18n();
 const sessions = useSessionsStore();
 
-/** 底部面板级视图：终端 / 问题（终端用 v-show 保活 PTY） */
+/** 底部面板级视图：终端 / 问题 / 调试（终端与调试用 v-show 保活） */
 const panelView = computed({
   get: () => sessions.panelView,
-  set: (value: "terminal" | "problems") => {
+  set: (value: "terminal" | "problems" | "debug") => {
     sessions.panelView = value;
   },
 });
@@ -79,9 +80,18 @@ onBeforeUnmount(() => {
       >
         {{ t("problems.tab") }}
       </button>
+      <button
+        type="button"
+        class="panel-tab"
+        :class="{ active: panelView === 'debug' }"
+        @click="panelView = 'debug'"
+      >
+        {{ t("debug.tab") }}
+      </button>
     </header>
     <div class="panel-body">
       <SessionsView v-show="panelView === 'terminal'" />
+      <DebugPanel v-show="panelView === 'debug'" />
       <ProblemsPanel v-if="panelView === 'problems'" />
     </div>
   </section>

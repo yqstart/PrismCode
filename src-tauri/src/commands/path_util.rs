@@ -18,6 +18,28 @@ pub const DEFAULT_IGNORES: &[&str] = &[
 /// node_modules / target / dist / out 等均可见（懒加载，不会一开始就卡）
 pub const TREE_IGNORES: &[&str] = &[".git", ".DS_Store"];
 
+/// 工作区根不存在时的统一中文错误
+pub const WORKSPACE_MISSING: &str = "工作区不存在";
+
+/// 校验工作区根存在且是目录，返回归一化（canonicalize）后的路径。
+///
+/// 归一化必须紧跟存在性检查：macOS 的 `/var` 与 `/private/var` 是同一目录的两个
+/// 名字，不归一化会让各处 `strip_prefix` 全部失败，诊断路径退化成文件名。
+pub fn canonical_workspace_root(value: &Path) -> Result<PathBuf, String> {
+    let metadata = fs::metadata(value).map_err(|_| WORKSPACE_MISSING.to_string())?;
+    if !metadata.is_dir() {
+        return Err(WORKSPACE_MISSING.to_string());
+    }
+    value
+        .canonicalize()
+        .map_err(|_| WORKSPACE_MISSING.to_string())
+}
+
+/// 字符串版：IPC 命令的入参都是字符串
+pub fn existing_workspace_root(value: &str) -> Result<PathBuf, String> {
+    canonical_workspace_root(Path::new(value))
+}
+
 /// 将工作区内的绝对/相对路径解析为可用于实际文件操作的绝对路径，
 /// 同时拒绝父目录穿越和指向工作区外的符号链接。
 pub fn resolve_inside_workspace(root: &Path, target: &Path) -> Result<PathBuf, String> {

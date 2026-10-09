@@ -70,6 +70,47 @@ let idleInstalled = false;
 let idleTimer: ReturnType<typeof setTimeout> | undefined;
 let watchTimer: ReturnType<typeof setTimeout> | undefined;
 let pendingWatch = new Set<string>();
+/** 随包分发的 java-debug 插件 jar：只在进程内解析一次 */
+let debugAdapterJar: string | null | undefined;
+
+/**
+ * 调试适配器 jar 的绝对路径。必须在 initialize 之前拿到：jdt.ls 只在
+ * initializationOptions 里接受插件清单，启动之后再补就晚了。
+ */
+async function debugAdapterBundles(): Promise<string[]> {
+  if (debugAdapterJar === undefined) {
+    try {
+      const adapter = await invoke<{ jarPath: string } | null>("dap_probe_adapter", {
+        adapterPath: useSettingsStore().java.adapterPath || null,
+      });
+      debugAdapterJar = adapter?.jarPath ?? null;
+    } catch {
+      debugAdapterJar = null;
+    }
+  }
+  return debugAdapterJar ? [debugAdapterJar] : [];
+}
+
+/**
+ * 让 jdt.ls 内的 java-debug 插件起一个 DAP 服务端，返回它的 TCP 端口。
+ * 端口为 null 表示插件没装上或语言服务不可用。
+ */
+export async function startJavaDebugServer(): Promise<number | null> {
+  const ready = await ensureJavaSession("manual");
+  const client = ready ? session?.client ?? null : null;
+  if (!client) return null;
+  const result = await client.request("workspace/executeCommand", {
+    command: "vscode.java.startDebugSession",
+    arguments: [],
+  });
+  const port =
+    typeof result === "number"
+      ? result
+      : typeof result === "string"
+        ? Number.parseInt(result, 10)
+        : Number.NaN;
+  return Number.isInteger(port) && port > 0 ? port : null;
+}
 
 function patchStatus(patch: Partial<JavaStatus>): void {
   javaStatus.value = { ...javaStatus.value, ...patch };
@@ -404,7 +445,7 @@ async function startJavaSession(): Promise<boolean> {
         processId: null,
         rootUri,
         workspaceFolders: [{ uri: rootUri, name: root.split(/[/\\]/).pop() || root }],
-        initializationOptions: initializationOptions(),
+        initializationOptions: initializationOptions(await debugAdapterBundles()),
         capabilities: clientCapabilities(),
       },
       INITIALIZE_TIMEOUT_MS,

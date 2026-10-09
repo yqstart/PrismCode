@@ -123,13 +123,14 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .artifacts/downloads
-          key: java-artifacts-${{ hashFiles('third_party/jdtls/manifest.json', 'third_party/jre/manifest.json') }}
+          key: java-artifacts-${{ hashFiles('third_party/jdtls/manifest.json', 'third_party/jre/manifest.json', 'third_party/debug-adapter/manifest.json') }}
 
-      - name: Prepare bundled JDTLS and JRE
+      - name: Prepare bundled JDTLS / JRE / debug adapter
         if: steps.select.outputs.run == 'true'
         run: |
           node scripts/prepare-jdtls.mjs
           node scripts/prepare-jre.mjs
+          node scripts/prepare-debug-adapter.mjs
 
       # 从 CHANGELOG.md 生成 Release 正文（变更项 + 安装说明），与应用内「新功能」同源
       - name: Prepare release notes

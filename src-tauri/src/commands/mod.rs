@@ -1,11 +1,15 @@
 pub mod clipboard;
+pub mod dap;
 pub mod dock_menu;
 pub mod fs;
 pub mod git;
 pub mod java;
 pub mod lsp;
+pub mod maven;
 pub mod path_util;
+pub mod runconfig;
 pub mod search;
+pub mod spring;
 pub mod security_scoped;
 pub mod ssh;
 pub mod tooling;

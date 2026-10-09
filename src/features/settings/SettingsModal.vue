@@ -491,6 +491,17 @@ function onOverlayClick(event: MouseEvent) {
                   @change="settings.patchJava({ jdtlsPath: ($event.target as HTMLInputElement).value })"
                 />
               </label>
+              <label class="field">
+                <span class="field-label">{{ t("java.settings.adapterPath") }}</span>
+                <p class="desc">{{ t("java.settings.adapterPathDesc") }}</p>
+                <input
+                  class="ui-input"
+                  type="text"
+                  v-bind="PLAIN_INPUT_ATTRS"
+                  :value="java.adapterPath"
+                  @change="settings.patchJava({ adapterPath: ($event.target as HTMLInputElement).value })"
+                />
+              </label>
               <button type="button" class="ui-btn" @click="probeJava">
                 {{ t("java.settings.probe") }}
               </button>

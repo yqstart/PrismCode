@@ -99,12 +99,13 @@ function toggleJavaMenu(event: MouseEvent) {
   javaMenuOpen.value = !javaMenuOpen.value;
 }
 
-async function runJavaAction(action: "start" | "stop" | "rebuild" | "logs" | "settings") {
+async function runJavaAction(action: "start" | "stop" | "rebuild" | "logs" | "endpoints" | "settings") {
   javaMenuOpen.value = false;
   if (action === "start") await javaStore.start();
   else if (action === "stop") await javaStore.stop();
   else if (action === "rebuild") await javaStore.rebuildIndex();
   else if (action === "logs") await javaStore.viewLogs();
+  else if (action === "endpoints") await javaStore.openSpringEndpoints();
   else ui.openSettings("java");
 }
 
@@ -151,6 +152,7 @@ onBeforeUnmount(() => {
           <button type="button" @click="runJavaAction('stop')">{{ t("java.action.stop") }}</button>
           <button type="button" @click="runJavaAction('rebuild')">{{ t("java.action.rebuildIndex") }}</button>
           <button type="button" @click="runJavaAction('logs')">{{ t("java.action.viewLogs") }}</button>
+          <button type="button" @click="runJavaAction('endpoints')">{{ t("spring.endpoints.open") }}</button>
           <button type="button" @click="runJavaAction('settings')">{{ t("java.action.openSettings") }}</button>
         </div>
       </div>

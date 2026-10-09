@@ -3,7 +3,8 @@
   "bundle": {
     "resources": {
       "../.artifacts/jdtls": "jdtls",
-      "../.artifacts/jre": "jre"
+      "../.artifacts/jre": "jre",
+      "../.artifacts/debug-adapter": "debug-adapter"
     }
   }
 }

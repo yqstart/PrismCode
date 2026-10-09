@@ -2,6 +2,20 @@
 
 本文件遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 风格，版本号遵循语义化版本。
 
+## [未发布]
+
+### 新增
+
+- **Java 运行配置**：底部终端面板顶栏新增按模块的运行芯片（测试 / 打包 / 清理 / 运行 / 调试），点击即在本地终端执行对应命令，终端忙时自动新开。后端 `commands/maven.rs` 只读声明式 `<modules>` 模块图（不启 Maven、不起 daemon），`commands/runconfig.rs` 负责生成 / 分层合并（生成层 + `.prismcode/run/project.json` 项目层 + 前端本地层）/ 启动计划 / 工具链探测；配置 `kind` 收敛为 `java.current-file | maven.module | spring-boot.maven | gradle.task` 四个字面量。聚合模块（`packaging=pom`）不产出可运行配置，直接请求运行会返回中文错误。
+- **Spring 索引**：`commands/spring.rs` 有界扫描 `application*.properties/yml` 与 Java 注解，产出配置键、取值、Bean、注入、HTTP 端点与诊断；依赖元数据只读 `~/.m2` 里 jar 的 `spring-configuration-metadata.json`（进程内缓存 + 3 秒预算）。前端据此提供 properties/yml 键补全、`@Value` 未知键诊断（写回 Monaco marker）与端点只读标签（状态栏 Java 菜单 →「Spring 端点」）。
+- **Java 调试器**：随包分发 java-debug 0.53.1（`third_party/debug-adapter/manifest.json` + `scripts/prepare-debug-adapter.mjs`，EPL-1.0），由内置 JDTLS 经 `initializationOptions.bundles` 装载，DAP 走它开出的本地 TCP 端口（Rust 侧 `commands/dap.rs` 复用 LSP 的 Content-Length 帧）。底部面板新增「调试」视图：线程 / 调用栈 / 变量 / 输出 + 继续 / 暂停 / 单步跳过 / 单步进入 / 单步跳出 / 停止；编辑器行号左侧点击可增删断点。调试启动链为「取端口 → 终端起目标（`suspend=y`）→ attach → 同步断点 → 恢复运行」，30 秒连不上会打断目标并提示重试。
+
+### 变更
+
+- jlink JRE 模块清单加入 `jdk.jdi`：java-debug 依赖 `com.sun.jdi.*`，而 `java.se` 不聚合任何 `jdk.*` 模块，缺失会在插件加载时报 `NoClassDefFoundError`。
+- 底部面板视图由「终端 / 问题」扩展为「终端 / 问题 / 调试」。
+- `.gitignore` 补充 `target/`、`build/`、`.gradle/`：`examples/` 下的 Maven 夹具会生成构建产物。
+
 ## [4.1.0] - 2026-09-29
 
 ### 变更
