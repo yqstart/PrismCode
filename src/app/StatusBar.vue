@@ -24,6 +24,15 @@ const { snapshot } = storeToRefs(git);
 
 const themeMenuOpen = ref(false);
 const javaMenuOpen = ref(false);
+
+/** 状态栏时钟（IDEA 右下角 widget）：分钟精度，每 30 秒对齐刷新 */
+const now = ref(new Date());
+let clockTimer: number | undefined;
+const clock = computed(() => {
+  const hh = String(now.value.getHours()).padStart(2, "0");
+  const mm = String(now.value.getMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
+});
 const showJavaPill = computed(
   () =>
     activeTab.value?.language === "Java" ||
@@ -81,10 +90,14 @@ function onDocClick() {
 
 onMounted(() => {
   window.addEventListener("click", onDocClick);
+  clockTimer = window.setInterval(() => {
+    now.value = new Date();
+  }, 30_000);
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener("click", onDocClick);
+  if (clockTimer !== undefined) window.clearInterval(clockTimer);
 });
 </script>
 
@@ -190,6 +203,8 @@ onBeforeUnmount(() => {
           </div>
         </Transition>
       </div>
+      <span class="sep">·</span>
+      <span class="clock">{{ clock }}</span>
     </div>
   </footer>
 </template>
@@ -270,6 +285,13 @@ onBeforeUnmount(() => {
 .crumb-sep {
   color: var(--text-muted);
   flex-shrink: 0;
+}
+
+/* 状态栏时钟（IDEA 右下角） */
+.clock {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
 }
 
 .sep {

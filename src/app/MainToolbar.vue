@@ -11,7 +11,9 @@ import {
   ChevronDown,
   FolderOpen,
   BranchUp,
+  More,
   Play,
+  Refresh,
   Search,
   Settings,
 } from "reicon-vue";
@@ -278,6 +280,38 @@ async function launchDebug() {
   await debug.start(target.javaConfig.id);
 }
 
+/** Run widget ⋮：编辑运行配置（打开设置 Java 分区）/ 重新扫描 */
+const runMoreOpen = ref(false);
+const runMoreBtn = ref<HTMLButtonElement | null>(null);
+const runMoreStyle = ref<Record<string, string>>({});
+
+async function toggleRunMore() {
+  if (runMoreOpen.value) {
+    runMoreOpen.value = false;
+    return;
+  }
+  runMoreOpen.value = true;
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  const el = runMoreBtn.value;
+  if (el) {
+    const rect = el.getBoundingClientRect();
+    runMoreStyle.value = {
+      left: `${rect.right - 200}px`,
+      top: `${rect.bottom + 4}px`,
+    };
+  }
+}
+
+function editRunConfigurations() {
+  runMoreOpen.value = false;
+  ui.openSettings("java");
+}
+
+async function rescanRunConfigurations() {
+  runMoreOpen.value = false;
+  await java.refreshRunConfigurations();
+}
+
 // ==================== 右侧动作 ====================
 
 function openSearchEverywhere() {
@@ -299,23 +333,30 @@ function onDocPointer(event: MouseEvent) {
       runMenuOpen.value = false;
     }
   }
+  if (runMoreOpen.value) {
+    const menu = document.getElementById("prism-run-more-menu");
+    if (!runMoreBtn.value?.contains(target) && !menu?.contains(target)) {
+      runMoreOpen.value = false;
+    }
+  }
 }
 
-function onKey(event: KeyboardEvent) {
+function onKeyMain(event: KeyboardEvent) {
   if (event.key !== "Escape") return;
   projectMenuOpen.value = false;
   runMenuOpen.value = false;
+  runMoreOpen.value = false;
 }
 
 onMounted(() => {
   document.addEventListener("mousedown", onDocPointer);
-  window.addEventListener("keydown", onKey);
+  window.addEventListener("keydown", onKeyMain);
   window.addEventListener("resize", placeProjectMenu);
 });
 
 onUnmounted(() => {
   document.removeEventListener("mousedown", onDocPointer);
-  window.removeEventListener("keydown", onKey);
+  window.removeEventListener("keydown", onKeyMain);
   window.removeEventListener("resize", placeProjectMenu);
 });
 </script>
@@ -385,6 +426,17 @@ onUnmounted(() => {
         @click="launchDebug"
       >
         <Bug weight="Filled" :size="15" />
+      </button>
+      <button
+        ref="runMoreBtn"
+        type="button"
+        class="tool-btn"
+        :title="t('run.more')"
+        :aria-label="t('run.more')"
+        :aria-expanded="runMoreOpen"
+        @click="toggleRunMore"
+      >
+        <More weight="Filled" :size="15" />
       </button>
     </div>
 
@@ -488,6 +540,26 @@ onUnmounted(() => {
             <span class="pop-row-path">{{ item.hint }}</span>
           </button>
         </template>
+      </div>
+    </Transition>
+  </Teleport>
+
+  <Teleport to="body">
+    <Transition name="popover">
+      <div
+        v-if="runMoreOpen"
+        id="prism-run-more-menu"
+        class="toolbar-pop"
+        :style="runMoreStyle"
+        role="menu"
+      >
+        <button type="button" class="pop-row" @click="editRunConfigurations">
+          {{ t("run.editConfigurations") }}
+        </button>
+        <button type="button" class="pop-row" @click="rescanRunConfigurations">
+          <Refresh :size="13" />
+          {{ t("run.refresh") }}
+        </button>
       </div>
     </Transition>
   </Teleport>

@@ -176,6 +176,8 @@ export const zhCN = {
       debug: "调试",
     },
     refresh: "重新扫描运行配置",
+    editConfigurations: "编辑运行配置…",
+    more: "运行设置",
     configurations: "运行配置",
     scripts: "npm 脚本",
     debugUnsupported: "npm 脚本暂不支持调试",

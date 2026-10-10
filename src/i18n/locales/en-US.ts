@@ -177,6 +177,8 @@ export const enUS = {
       debug: "Debug",
     },
     refresh: "Rescan run configurations",
+    editConfigurations: "Edit Run Configurations…",
+    more: "Run options",
     configurations: "Run configurations",
     scripts: "npm scripts",
     debugUnsupported: "Debugging npm scripts is not supported yet",
