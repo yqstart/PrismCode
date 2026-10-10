@@ -28,9 +28,15 @@
 - 仓库：https://github.com/vuejs/pinia
 - 许可证：MIT
 
-### Lucide（lucide-vue-next）
-- 仓库：https://github.com/lucide-icons/lucide
-- 许可证：ISC
+### Reicon（reicon-vue）
+- 仓库：https://github.com/dqev/reicon
+- 许可证：MIT
+- 用途：界面图标（工具窗口条、窗口头、面板头与各处操作图标）
+
+### Inter（@fontsource-variable/inter）
+- 字体仓库：https://github.com/rsms/inter ；分发：https://github.com/fontsource/fontsource
+- 许可证：OFL-1.1（SIL Open Font License 1.1）
+- 用途：界面 UI 字体（随包分发、离线可用；中文回退系统字体）
 
 ### Material Icon Theme（material-icon-theme）
 - 仓库：https://github.com/material-extensions/vscode-material-icon-theme

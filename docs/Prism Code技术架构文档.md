@@ -50,7 +50,7 @@
 | SSH | **Rust `ssh2`（libssh2，vendored）** | 主机列表、凭据、远程 Shell |
 | 终端 | **`@xterm/xterm` + `tauri-plugin-pty` 0.3.1（本地阻塞 IO 补丁）** | 本地 PTY；同步读写/等待/终止操作走 `spawn_blocking`，SSH 走 ssh2 原生通道 |
 | 主题 | **CSS 变量 + Monaco `defineTheme`** | 六套主题，编辑器颜色与语法 token 同步 |
-| 图标 | **Lucide**（控件）+ **Material Icon Theme**（文件图标） | 细线控件；文件类型对齐 VS Code |
+| 图标 | **Reicon**（控件，`reicon-vue`，Filled / Outline 双重量）+ **Material Icon Theme**（文件图标） | 工具窗口条与操作图标用 Filled；文件类型对齐 VS Code |
 | 包管理 | pnpm | `pnpm-lock.yaml` 入库，CI `--frozen-lockfile` |
 
 ### 3.2 编辑器内核：为什么选 Monaco
