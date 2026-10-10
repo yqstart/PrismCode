@@ -63,6 +63,7 @@ import {
 } from "@/shared/gitApi";
 import { t } from "@/i18n";
 import { relativeToRoot } from "@/shared/fs";
+import { useSettingsStore } from "@/stores/settings";
 import { useWorkspaceStore } from "@/stores/workspace";
 
 const EMPTY: GitStatusSnapshot = {
@@ -964,14 +965,12 @@ export const useGitStore = defineStore("git", () => {
         ? raw.slice(idx + "GIT_REBASE_CONFLICT|||".length).trim()
         : raw;
     workspace.showNotice(msg || t("git.rebaseConflictDefault"), 5200);
-    void useSettingsStoreOpenCommit();
+    void openCommitToolWindow();
   }
 
-  async function useSettingsStoreOpenCommit() {
-    const { useSettingsStore } = await import("@/stores/settings");
-    const settings = useSettingsStore();
-    settings.setActivePanel("commit");
-    settings.setSidebarCollapsed(false);
+  /** 操作完成后把左侧工具窗口切到 Commit 面板 */
+  function openCommitToolWindow() {
+    useSettingsStore().openCommitPanel();
   }
 
   async function showDiff(path?: string, staged?: boolean) {
@@ -1524,7 +1523,7 @@ export const useGitStore = defineStore("git", () => {
   }
 
   async function openFirstConflict() {
-    await useSettingsStoreOpenCommit();
+    openCommitToolWindow();
     const path = conflictEntries.value[0]?.path;
     if (path) await openConflictCompare(path);
   }

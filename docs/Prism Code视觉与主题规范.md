@@ -331,10 +331,15 @@ Midnight / Cyberpunk / IntelliJ Dark / IntelliJ Light 各自维护完整语法�
 
 ### 7.3 主界面（编辑壳）
 
-- Activity Bar 窄条图标，激活态用 accent 色标或浅底
+IDEA New UI 工作台结构（2026-10 重构）：
+
+- **窗口头主工具栏**（`MainToolbar.vue`，高 `--titlebar-height` 38px，底色 `--bg-header`）：项目 widget / VCS 分支 widget / 居中 Run widget / 搜索 / 设置；widget 高 26px、圆角 `--radius-sm`、hover `--bg-hover`
+- **工具窗口条**（`ToolWindowBar.vue`，宽 40px）：上组 = 垂直工具窗口（Project / Commit / Git Log），下组 = 水平工具窗口（Package / Problems / Terminal / Debug）；按钮 32×32，选中 = `--accent` 实色块 + `--accent-fg` 图标（IDEA ToolWindow.Button）
+- **工具窗口卡片**（`ToolWindowCard.vue`）：统一样式 —— 32px 标题行（名称 + ✕）+ 内容；卡片底色 `--bg-panel`
+- **工具窗口列 / 底部工具窗口区**：列宽与区高可拖拽；底部区仅占编辑器列，左侧工具窗口列保持整列全高
 - 资源树：修改 / Git 状态用点缀色，不抢代码区
-- 标签页：当前页背景或底部轻微强调；终端 / SSH / GitLog / Compare 等非文件标签固定钉在右侧
-- 状态栏：矮、信息密度中等，不使用刺眼色块
+- 标签页：当前页背景或底部轻微强调（4px 下划线）；终端 / SSH / GitLog / Compare 等非文件标签固定钉在右侧
+- 状态栏：矮、信息密度中等，不使用刺眼色块；左＝状态消息，右＝Java 状态 · 行列 · 编码 · 缩进 · 语言 · 主题
 
 ---
 

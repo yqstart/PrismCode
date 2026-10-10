@@ -9,6 +9,7 @@ import {
   defaultShellName,
   inferShellFromTitle,
 } from "@/shared/terminalShell";
+import { useSettingsStore } from "@/stores/settings";
 import { useWorkspaceStore } from "@/stores/workspace";
 
 export interface LocalTerminalSession {
@@ -24,10 +25,18 @@ export interface LocalTerminalSession {
  * SSH 远程会话已拆分为独立标签（见 ssh store），与本 store 解耦。
  */
 export const useSessionsStore = defineStore("sessions", () => {
-  /** 终端底部面板是否展开（对应 AppShell 中 TerminalPanel 的 v-show） */
-  const open = ref(false);
-  /** 底部面板当前视图：终端 / 问题 / 调试 */
-  const panelView = ref<"terminal" | "problems" | "debug">("terminal");
+  const settings = useSettingsStore();
+  /**
+   * 底部工具窗口区当前显示终端。唯一真源是 IDEA 布局状态
+   * `settings.layout.bottom.active`：置 true 打开底部区并切到终端，
+   * 置 false 收起整个底部区（对应 AppShell 中终端视图的 v-show）。
+   */
+  const open = computed({
+    get: () => settings.layout.bottom.active === "terminal",
+    set: (value: boolean) => {
+      settings.setBottomWindow(value ? "terminal" : null);
+    },
+  });
   const focused = ref(false);
   /**
    * 快捷键收起后面板仍保活：视图保持挂载、PTY 不销毁，
@@ -60,9 +69,12 @@ export const useSessionsStore = defineStore("sessions", () => {
   let suppressPersist = false;
 
   const isFocused = computed(() => open.value && focused.value);
-  /** 是否应挂载终端面板（本次运行已创建，且正在显示或收起保活） */
+  /**
+   * 是否应挂载终端视图：本次运行已创建终端且会话仍然存在。
+   * 与底部区当前显示哪个工具窗口解耦——切到问题/调试时终端保持挂载、PTY 不销毁。
+   */
   const mounted = computed(
-    () => viewHydrated.value && (open.value || dormant.value),
+    () => viewHydrated.value && localTerminals.value.length > 0,
   );
   const hasAnySession = computed(() => localTerminals.value.length > 0);
 
@@ -145,20 +157,19 @@ export const useSessionsStore = defineStore("sessions", () => {
     activeLocalId.value = id;
   }
 
-  /** 打开底部面板并切到问题视图（状态栏与快捷键入口） */
   /**
-   * 切到底部面板的调试视图：调试芯片点击时用，面板没开就一并打开。
-   * 复用 openSessions 是为了拿到同一条不变式（viewHydrated 置位 + 保证有一个终端），
+   * 切到底部工具窗口的调试视图：调试芯片点击时用，面板没开就一并打开。
+   * 先走 openSessions 拿到同一条不变式（viewHydrated 置位 + 保证有一个终端），
    * 调试目标本来就要在那个终端里跑。
    */
   function showDebug(): void {
     openSessions();
-    panelView.value = "debug";
+    settings.setBottomWindow("debug");
   }
 
-  function showProblems(cwd: string | null = null): void {
-    panelView.value = "problems";
-    openSessions(cwd);
+  /** 切到底部工具窗口的问题视图（状态栏与快捷键入口），不牵动终端 */
+  function showProblems(): void {
+    settings.setBottomWindow("problems");
   }
 
   function openSessions(cwd: string | null = null) {
@@ -398,7 +409,6 @@ export const useSessionsStore = defineStore("sessions", () => {
 
   return {
     open,
-    panelView,
     showDebug,
     showProblems,
     focused,

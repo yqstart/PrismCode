@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { defineAsyncComponent, onMounted, onUnmounted, watch } from "vue";
+import { onMounted, onUnmounted, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import ActivityBar from "@/app/ActivityBar.vue";
-import SideBar from "@/app/SideBar.vue";
-import TitleBar from "@/app/TitleBar.vue";
+import BottomToolWindows from "@/app/BottomToolWindows.vue";
+import MainToolbar from "@/app/MainToolbar.vue";
+import ToolWindowBar from "@/app/ToolWindowBar.vue";
+import LeftToolWindows from "@/app/LeftToolWindows.vue";
 import UpdateBadge from "@/app/UpdateBadge.vue";
 import EditorArea from "@/app/EditorArea.vue";
 import StatusBar from "@/app/StatusBar.vue";
@@ -58,11 +59,6 @@ import { useUiStore } from "@/stores/ui";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { executeAction } from "@/shared/actions";
 import { t } from "@/i18n";
-
-/** 终端及 xterm 不属于首屏；首次真正挂载终端面板时再加载。 */
-const TerminalPanel = defineAsyncComponent(
-  () => import("@/features/sessions/TerminalPanel.vue"),
-);
 
 /** macOS 标题栏已挂更新入口；其它平台用右上角浮动徽章 */
 const showFloatingUpdateBadge = !isMacOS();
@@ -124,11 +120,7 @@ function openDebugView() {
 /** 打开 Commit 工具窗口（IDEA ⌘0，语义为「打开/聚焦」而非切换） */
 function openCommitPanel() {
   settings.openCommitPanel();
-  if (
-    settings.layout.activePanel === "commit" &&
-    !settings.layout.sidebarCollapsed &&
-    workspace.rootPath
-  ) {
+  if (settings.layout.left.active === "commit" && workspace.rootPath) {
     void git.scheduleRefresh();
   }
 }
@@ -163,7 +155,7 @@ function toggleSidebar() {
   const now = Date.now();
   if (now - lastSidebarToggleAt < 120) return;
   lastSidebarToggleAt = now;
-  settings.toggleSidebar();
+  settings.toggleLeftWindow();
 }
 
 function toggleCommitPanel() {
@@ -171,11 +163,7 @@ function toggleCommitPanel() {
   if (now - lastCommitToggleAt < 120) return;
   lastCommitToggleAt = now;
   settings.toggleCommitPanel();
-  if (
-    settings.layout.activePanel === "commit" &&
-    !settings.layout.sidebarCollapsed &&
-    workspace.rootPath
-  ) {
+  if (settings.layout.left.active === "commit" && workspace.rootPath) {
     void git.scheduleRefresh();
   }
 }
@@ -185,8 +173,7 @@ async function locateActiveInExplorer() {
     workspace.showNotice(t("notice.noActiveFile"));
     return;
   }
-  settings.setActivePanel("explorer");
-  settings.setSidebarCollapsed(false);
+  settings.openProjectPanel();
   await workspace.revealPath(editor.activePath);
   workspace.showNotice(t("notice.revealed", { name: basename(editor.activePath) }));
 }
@@ -253,14 +240,13 @@ function onKeydown(event: KeyboardEvent) {
     (mod && event.shiftKey && !event.altKey && event.key.toLowerCase() === "m")
   ) {
     event.preventDefault();
-    sessions.showProblems(workspace.rootPath);
+    sessions.showProblems();
     return;
   }
   // IDEA New UI 工具窗口键位：⌘1 项目 / ⌘9 版本控制（Git Log）/ ⌘0 提交 / ⌘5 调试 / ⌥F12 终端
   if (mod && !event.shiftKey && !event.altKey && event.key === "1") {
     event.preventDefault();
-    settings.setActivePanel("explorer");
-    settings.setSidebarCollapsed(false);
+    settings.openProjectPanel();
     return;
   }
   if (mod && !event.shiftKey && !event.altKey && event.key === "9") {
@@ -890,7 +876,7 @@ onUnmounted(() => {
 
 <template>
   <div class="shell">
-    <TitleBar />
+    <MainToolbar />
     <div
       v-if="showFloatingUpdateBadge"
       class="floating-update"
@@ -898,12 +884,13 @@ onUnmounted(() => {
       <UpdateBadge />
     </div>
     <div class="main">
-      <ActivityBar />
-      <SideBar />
+      <!-- IDEA 工作台：左条 → 左工具窗口列 → 编辑区（含底部工具窗口区） -->
+      <ToolWindowBar />
+      <LeftToolWindows />
       <div class="center">
         <EditorArea />
-        <!-- 终端面板只占编辑器列：资源管理器（ActivityBar+SideBar）保持整列高度 -->
-        <TerminalPanel v-if="sessions.mounted" v-show="sessions.open" />
+        <!-- 底部工具窗口区只占编辑器列：左侧工具窗口列保持整列高度 -->
+        <BottomToolWindows />
       </div>
     </div>
     <StatusBar />

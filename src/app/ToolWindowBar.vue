@@ -1,42 +1,48 @@
 <script setup lang="ts">
+// ==================== IDEA 工具窗口条 ====================
+// 主窗口左侧的竖条（IDEA New UI 40px stripe）：
+//   上组 = 垂直工具窗口（Project / Commit），显示在编辑器左侧；
+//   下组 = 水平工具窗口（Terminal / Problems / Debug），显示在编辑器下方。
+// 选中态表达「该工具窗口正在显示」；点击显示，再点收起（IDEA 行为）。
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
+import { storeToRefs } from "pinia";
 import {
+  Bug,
+  CircleAlert,
   Files,
   GitCommitHorizontal,
   History,
   Package,
-  Settings,
+  Server,
   TerminalSquare,
 } from "lucide-vue-next";
-import { storeToRefs } from "pinia";
 import PackageScriptsMenu from "@/features/sessions/PackageScriptsMenu.vue";
-import { useGitLogStore } from "@/stores/gitLog";
 import { useGitStore } from "@/stores/git";
+import { useGitLogStore } from "@/stores/gitLog";
 import { usePackageScriptsStore } from "@/stores/packageScripts";
 import { useSessionsStore } from "@/stores/sessions";
 import { useSettingsStore } from "@/stores/settings";
-import { useUiStore } from "@/stores/ui";
+import { useSshStore } from "@/stores/ssh";
 import { useWorkspaceStore } from "@/stores/workspace";
-import type { SidePanelId } from "@/shared/types";
 import { useI18n } from "@/i18n";
+import type { BottomToolWindowId, LeftToolWindowId } from "@/shared/types";
 
 const { t } = useI18n();
 const settings = useSettingsStore();
-const ui = useUiStore();
-const workspace = useWorkspaceStore();
 const git = useGitStore();
 const gitLog = useGitLogStore();
 const pkg = usePackageScriptsStore();
 const sessions = useSessionsStore();
+const ssh = useSshStore();
+const workspace = useWorkspaceStore();
 const { layout } = storeToRefs(settings);
-const { isFocused: logFocused } = storeToRefs(gitLog);
 const { changedFileCount } = storeToRefs(git);
+const { isFocused: logFocused } = storeToRefs(gitLog);
+const { isFocused: sshFocused } = storeToRefs(ssh);
 const { available } = storeToRefs(pkg);
-const { open: terminalOpen } = storeToRefs(sessions);
 
-const scriptsOpen = ref(false);
-const scriptsBtn = ref<HTMLButtonElement | null>(null);
-const popStyle = ref<Record<string, string>>({});
+/** 图标尺寸与描边沿用 IDEA New UI 大图标观感 */
+const ICON_SIZE = 20;
 
 const gitBadge = computed(() => {
   const n = changedFileCount.value;
@@ -44,33 +50,13 @@ const gitBadge = computed(() => {
   return n > 99 ? "99+" : String(n);
 });
 
-const commitActive = computed(
-  () =>
-    layout.value.activePanel === "commit" && !layout.value.sidebarCollapsed,
-);
+const leftActive = computed(() => layout.value.left.active);
+const bottomActive = computed(() => layout.value.bottom.active);
 
-const logActive = computed(() => logFocused.value);
-
-function selectPanel(panel: SidePanelId) {
-  scriptsOpen.value = false;
-  if (layout.value.activePanel === panel && !layout.value.sidebarCollapsed) {
-    settings.toggleSidebar();
-    return;
-  }
-  settings.setActivePanel(panel);
-  if (panel === "commit" && workspace.rootPath) {
-    void git.scheduleRefresh();
-  }
-}
-
-function toggleLog() {
-  scriptsOpen.value = false;
-  gitLog.toggleLog();
-  if (gitLog.open && workspace.rootPath) {
-    void git.scheduleRefresh();
-    void git.loadLog(100);
-  }
-}
+/** package.json scripts 弹层（暂作下组入口，后续并入运行工具窗口） */
+const scriptsOpen = ref(false);
+const scriptsBtn = ref<HTMLButtonElement | null>(null);
+const popStyle = ref<Record<string, string>>({});
 
 function placePop() {
   const el = scriptsBtn.value;
@@ -117,79 +103,141 @@ onBeforeUnmount(() => {
   window.removeEventListener("keydown", onKey);
   window.removeEventListener("resize", placePop);
 });
+
+function toggleLeft(id: LeftToolWindowId) {
+  if (leftActive.value === id) {
+    settings.setLeftWindow(null);
+    return;
+  }
+  settings.setLeftWindow(id);
+  if (id === "commit" && workspace.rootPath) void git.scheduleRefresh();
+}
+
+/** Git Log 是编辑器标签而非工具窗口：这里只负责打开并刷新（对齐 IDEA ⌘9） */
+function toggleLog() {
+  scriptsOpen.value = false;
+  gitLog.toggleLog();
+  if (gitLog.open && workspace.rootPath) {
+    void git.scheduleRefresh();
+    void git.loadLog(100);
+  }
+}
+
+/** SSH 远程同样是编辑器标签：按钮负责显示 / 隐藏（⌘J 语义，连接保活） */
+function toggleSsh() {
+  scriptsOpen.value = false;
+  ssh.toggleSsh();
+}
+
+/** 底部工具窗口：终端走 sessions store（会话保活语义），问题/调试走布局状态 */
+function toggleBottom(id: BottomToolWindowId) {
+  scriptsOpen.value = false;
+  if (id === "terminal") {
+    if (bottomActive.value === "terminal") {
+      sessions.hideSessions();
+      return;
+    }
+    sessions.openSessions(workspace.rootPath);
+    return;
+  }
+  settings.setBottomWindow(bottomActive.value === id ? null : id);
+}
 </script>
 
 <template>
-  <aside class="activity-bar" :aria-label="t('app.activityBar')">
-    <div class="group">
+  <aside class="tool-window-bar" :aria-label="t('app.toolWindowBar')">
+    <div class="tw-group">
       <button
-        class="item"
         type="button"
+        class="tw-item"
+        :class="{ active: leftActive === 'project' }"
         :title="t('activity.explorer')"
-        :class="{
-          active:
-            layout.activePanel === 'explorer' && !layout.sidebarCollapsed,
-        }"
-        @click="selectPanel('explorer')"
+        :aria-pressed="leftActive === 'project'"
+        @click="toggleLeft('project')"
       >
-        <Files :size="18" :stroke-width="1.75" />
+        <Files :size="ICON_SIZE" :stroke-width="1.6" />
       </button>
       <button
-        class="item"
         type="button"
+        class="tw-item"
+        :class="{ active: leftActive === 'commit' }"
         :title="
           gitBadge
             ? t('activity.commitWithChanges', { count: changedFileCount })
             : t('activity.commit')
         "
-        :class="{ active: commitActive }"
-        @click="selectPanel('commit')"
+        :aria-pressed="leftActive === 'commit'"
+        @click="toggleLeft('commit')"
       >
-        <GitCommitHorizontal :size="18" :stroke-width="1.75" />
+        <GitCommitHorizontal :size="ICON_SIZE" :stroke-width="1.6" />
         <span v-if="gitBadge" class="badge">{{ gitBadge }}</span>
       </button>
-      <!-- Git Log：紧贴左上 Git 图标下，与 commit 组成 git 区 -->
       <button
-        class="item"
         type="button"
+        class="tw-item"
+        :class="{ active: logFocused }"
         :title="t('activity.gitLog')"
-        :class="{ active: logActive }"
+        :aria-pressed="logFocused"
         @click="toggleLog"
       >
-        <History :size="18" :stroke-width="1.75" />
+        <History :size="ICON_SIZE" :stroke-width="1.6" />
+      </button>
+      <button
+        type="button"
+        class="tw-item"
+        :class="{ active: sshFocused }"
+        :title="t('activity.ssh')"
+        :aria-pressed="sshFocused"
+        @click="toggleSsh"
+      >
+        <Server :size="ICON_SIZE" :stroke-width="1.6" />
       </button>
     </div>
 
-    <div class="group">
+    <div class="tw-spacer" data-tauri-drag-region />
+
+    <div class="tw-group">
       <button
         ref="scriptsBtn"
-        class="item"
         type="button"
-        :title="t('activity.scripts')"
+        class="tw-item"
         :class="{ active: scriptsOpen }"
+        :title="t('activity.scripts')"
         :disabled="!workspace.rootPath"
         @click="toggleScripts"
       >
-        <Package :size="18" :stroke-width="1.75" />
+        <Package :size="ICON_SIZE" :stroke-width="1.6" />
         <span v-if="available && !scriptsOpen" class="dot" />
       </button>
-      <!-- 终端入口：设置与 scripts 之间；点击展开/收起底部终端面板 -->
       <button
-        class="item"
         type="button"
-        :title="t('activity.terminal')"
-        :class="{ active: terminalOpen }"
-        @click="sessions.toggleSessions(workspace.rootPath)"
+        class="tw-item"
+        :class="{ active: bottomActive === 'problems' }"
+        :title="t('activity.problems')"
+        :aria-pressed="bottomActive === 'problems'"
+        @click="toggleBottom('problems')"
       >
-        <TerminalSquare :size="18" :stroke-width="1.75" />
+        <CircleAlert :size="ICON_SIZE" :stroke-width="1.6" />
       </button>
       <button
-        class="item"
         type="button"
-        :title="t('activity.settings')"
-        @click="ui.openSettings()"
+        class="tw-item"
+        :class="{ active: bottomActive === 'terminal' }"
+        :title="t('activity.terminal')"
+        :aria-pressed="bottomActive === 'terminal'"
+        @click="toggleBottom('terminal')"
       >
-        <Settings :size="18" :stroke-width="1.75" />
+        <TerminalSquare :size="ICON_SIZE" :stroke-width="1.6" />
+      </button>
+      <button
+        type="button"
+        class="tw-item"
+        :class="{ active: bottomActive === 'debug' }"
+        :title="t('activity.debug')"
+        :aria-pressed="bottomActive === 'debug'"
+        @click="toggleBottom('debug')"
+      >
+        <Bug :size="ICON_SIZE" :stroke-width="1.6" />
       </button>
     </div>
   </aside>
@@ -211,26 +259,33 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.activity-bar {
+.tool-window-bar {
   width: var(--activity-bar-width);
   height: 100%;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
   align-items: center;
-  padding: 6px 0;
+  padding: 4px 0;
   background: var(--bg-header);
   border-right: 1px solid var(--border-subtle);
 }
 
-.group {
+.tw-group {
   display: flex;
   flex-direction: column;
   gap: 2px;
   align-items: center;
 }
 
-.item {
+/* 组间弹性留白：下组工具窗口（终端/问题/调试）贴 IDEA 条底部 */
+.tw-spacer {
+  flex: 1;
+  min-height: 8px;
+  width: 100%;
+}
+
+.tw-item {
   position: relative;
   width: 32px;
   height: 32px;
@@ -242,18 +297,18 @@ onBeforeUnmount(() => {
 }
 
 /* IDEA ActionButton.hoverBackground：hover 为浅叠加块（不覆盖下方选中态） */
-.item:hover:not(:disabled):not(.active) {
+.tw-item:hover:not(:disabled):not(.active) {
   color: var(--text-primary);
   background: var(--bg-hover);
 }
 
-/* IDEA ToolWindow.Button：选中 = Blue6 实色块 + 白色图标（--accent/--accent-fg）；未选中图标走 --text-secondary。 */
-.item.active {
+/* IDEA ToolWindow.Button：选中 = Blue6 实色块 + 白色图标（--accent/--accent-fg） */
+.tw-item.active {
   color: var(--accent-fg);
   background: var(--accent);
 }
 
-.item:disabled {
+.tw-item:disabled {
   opacity: 0.35;
   cursor: not-allowed;
 }
@@ -274,6 +329,12 @@ onBeforeUnmount(() => {
   color: var(--accent-fg, #fff);
   box-shadow: 0 0 0 2px var(--bg-header);
   pointer-events: none;
+  animation: prism-dot-pop 0.32s var(--ease-out) both;
+}
+
+.tw-item.active .badge {
+  background: var(--accent-fg, #fff);
+  color: var(--accent);
 }
 
 .dot {
@@ -286,6 +347,7 @@ onBeforeUnmount(() => {
   background: var(--accent);
   box-shadow: 0 0 0 2px var(--bg-header);
   pointer-events: none;
+  animation: prism-status-pulse 2.4s ease-in-out infinite;
 }
 
 .scripts-pop {
@@ -303,7 +365,6 @@ onBeforeUnmount(() => {
   transform-origin: top left;
 }
 
-/* popover：scripts-pop 等浮层 */
 .popover-enter-active {
   transition: opacity var(--transition-medium) var(--ease-out),
     transform var(--transition-medium) var(--ease-out);
@@ -316,15 +377,5 @@ onBeforeUnmount(() => {
 .popover-leave-to {
   opacity: 0;
   transform: scale(0.96) translateY(-4px);
-}
-
-/* dot：脚本可用点脉动（已在 :root 挂 prism-status-pulse） */
-.dot {
-  animation: prism-status-pulse 2.4s ease-in-out infinite;
-}
-
-/* badge：数字徽标入场（roving / 一致 pop） */
-.badge {
-  animation: prism-dot-pop 0.32s var(--ease-out) both;
 }
 </style>

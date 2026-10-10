@@ -4,9 +4,10 @@ import { setI18nLocale } from "@/i18n";
 import {
   DEFAULT_SETTINGS,
   type AppSettings,
+  type BottomToolWindowId,
   type EditorPreferences,
   type JavaPreferences,
-  type SidePanelId,
+  type LeftToolWindowId,
   type ThemeId,
   isUpdateImportsOnMove,
   isEditorFontId,
@@ -41,6 +42,16 @@ function isDarkTheme(theme: ThemeId): boolean {
   );
 }
 
+/** 左侧工具窗口列宽约束（px） */
+function clampLeftWidth(width: number): number {
+  return Math.min(520, Math.max(200, Math.round(width)));
+}
+
+/** 底部工具窗口区高约束（px） */
+function clampBottomHeight(height: number): number {
+  return Math.min(640, Math.max(120, Math.round(height)));
+}
+
 /** 同步 macOS / 系统菜单栏文案到应用语言（无需重启） */
 async function syncNativeMenuLocale(locale: AppSettings["locale"]) {
   try {
@@ -59,62 +70,82 @@ function loadSettings(): AppSettings {
     if (!raw) return structuredClone(DEFAULT_SETTINGS);
     const parsed = JSON.parse(raw) as Partial<AppSettings> & {
       layout?: Partial<AppSettings["layout"]> & {
+        /** 旧版（VS Code 式）布局字段，仅用于迁移 */
         gitToolWindow?: {
           open?: boolean;
           height?: number;
           tab?: string;
           changesWidth?: number;
         };
+        sidebarCollapsed?: boolean;
+        sidebarWidth?: number;
         activePanel?: string;
+        terminalPanelHeight?: number;
+        commitDiffPreview?: unknown;
+        commitDiffPreviewHeight?: unknown;
       };
     };
 
-    const oldTw = parsed.layout?.gitToolWindow;
+    const parsedLayout = parsed.layout;
+    const oldTw = parsedLayout?.gitToolWindow;
+
+    // 旧侧栏字段 → IDEA 工具窗口区模型
+    // （activePanel=explorer/git/commit/search 归一为 project/commit）
+    const legacyLeftWindow: LeftToolWindowId =
+      parsedLayout?.activePanel === "commit" ||
+        (oldTw?.open === true && oldTw.tab === "commit")
+        ? "commit"
+        : "project";
+    const legacyLeftActive: LeftToolWindowId | null =
+      parsedLayout?.sidebarCollapsed === true ? null : legacyLeftWindow;
+
+    const rawLeftActive = parsedLayout?.left?.active;
+    const rawLeftLast = parsedLayout?.left?.lastActive;
+    const rawBottomActive = parsedLayout?.bottom?.active;
+    const rawBottomLast = parsedLayout?.bottom?.lastActive;
+
     const layout: AppSettings["layout"] = {
-      ...DEFAULT_SETTINGS.layout,
-      ...parsed.layout,
+      left: {
+        active:
+          rawLeftActive === null
+            ? null
+            : rawLeftActive === "project" || rawLeftActive === "commit"
+              ? rawLeftActive
+              : legacyLeftActive,
+        lastActive:
+          rawLeftLast === "project" || rawLeftLast === "commit"
+            ? rawLeftLast
+            : legacyLeftWindow,
+        width: clampLeftWidth(
+          parsedLayout?.left?.width ??
+          parsedLayout?.sidebarWidth ??
+          DEFAULT_SETTINGS.layout.left.width,
+        ),
+      },
+      bottom: {
+        active:
+          rawBottomActive === "terminal" ||
+            rawBottomActive === "problems" ||
+            rawBottomActive === "debug"
+            ? rawBottomActive
+            : null,
+        lastActive:
+          rawBottomLast === "terminal" ||
+            rawBottomLast === "problems" ||
+            rawBottomLast === "debug"
+            ? rawBottomLast
+            : "terminal",
+        height: clampBottomHeight(
+          parsedLayout?.bottom?.height ??
+          parsedLayout?.terminalPanelHeight ??
+          DEFAULT_SETTINGS.layout.bottom.height,
+        ),
+      },
       gitLogWindow: {
         ...DEFAULT_SETTINGS.layout.gitLogWindow,
-        ...(parsed.layout?.gitLogWindow ?? {}),
+        ...(parsedLayout?.gitLogWindow ?? {}),
       },
     };
-
-    // 丢掉旧字段
-    delete (layout as { gitToolWindow?: unknown }).gitToolWindow;
-    delete (layout as { commitDiffPreview?: unknown }).commitDiffPreview;
-    delete (layout as { commitDiffPreviewHeight?: unknown })
-      .commitDiffPreviewHeight;
-
-    // 全局搜索已改为 WebStorm 弹层
-    if ((layout.activePanel as string) === "search") {
-      layout.activePanel = "explorer";
-    }
-
-    // 旧侧栏 git / 底部 Commit 工具窗 → New UI 左侧 Commit
-    if (
-      (layout.activePanel as string) === "git" ||
-      (oldTw?.open && oldTw.tab === "commit")
-    ) {
-      layout.activePanel = "commit";
-    }
-
-    // 旧底部 Log 标签 → 底部 Git Log 窗口
-    if (oldTw?.open && oldTw.tab === "log") {
-      layout.gitLogWindow = {
-        open: true,
-        height: oldTw.height ?? DEFAULT_SETTINGS.layout.gitLogWindow.height,
-      };
-      if (layout.activePanel !== "commit") {
-        layout.activePanel = "explorer";
-      }
-    }
-
-    if (
-      (layout.activePanel as string) !== "explorer" &&
-      (layout.activePanel as string) !== "commit"
-    ) {
-      layout.activePanel = "explorer";
-    }
 
     const rawTheme = parsed.theme as string | undefined;
     let theme =
@@ -150,11 +181,11 @@ function loadSettings(): AppSettings {
     return {
       theme:
         theme === "intellij-dark" ||
-        theme === "intellij-light" ||
-        theme === "dawn" ||
-        theme === "prism-dark" ||
-        theme === "midnight" ||
-        theme === "cyberpunk"
+          theme === "intellij-light" ||
+          theme === "dawn" ||
+          theme === "prism-dark" ||
+          theme === "midnight" ||
+          theme === "cyberpunk"
           ? theme
           : DEFAULT_SETTINGS.theme,
       locale: parsed.locale ?? DEFAULT_SETTINGS.locale,
@@ -311,62 +342,53 @@ export const useSettingsStore = defineStore("settings", () => {
     Object.assign(settings.java, normalizeJava({ ...settings.java, ...patch }));
   }
 
-  function setSidebarCollapsed(collapsed: boolean) {
-    settings.layout.sidebarCollapsed = collapsed;
+  /** 切换左侧工具窗口；传 null 收起 */
+  function setLeftWindow(id: LeftToolWindowId | null) {
+    settings.layout.left.active = id;
+    if (id) settings.layout.left.lastActive = id;
   }
 
-  function setSidebarWidth(width: number) {
-    settings.layout.sidebarWidth = Math.min(520, Math.max(200, width));
+  /** 收起 ↔ 展开（展开回到收起前的工具窗口） */
+  function toggleLeftWindow() {
+    setLeftWindow(
+      settings.layout.left.active ? null : settings.layout.left.lastActive,
+    );
   }
 
-  function setActivePanel(panel: SidePanelId) {
-    settings.layout.activePanel = panel;
-    if (settings.layout.sidebarCollapsed) {
-      settings.layout.sidebarCollapsed = false;
-    }
+  function setLeftWidth(width: number) {
+    settings.layout.left.width = clampLeftWidth(width);
   }
 
-  function toggleSidebar() {
-    settings.layout.sidebarCollapsed = !settings.layout.sidebarCollapsed;
-  }
-
-  /** 打开左侧 Commit 工具窗口（WebStorm New UI ⌘K） */
+  /** 打开左侧 Commit 工具窗口（IDEA ⌘0 / WebStorm ⌘K） */
   function openCommitPanel() {
-    settings.layout.activePanel = "commit";
-    settings.layout.sidebarCollapsed = false;
+    setLeftWindow("commit");
   }
 
   function toggleCommitPanel() {
-    if (
-      settings.layout.activePanel === "commit" &&
-      !settings.layout.sidebarCollapsed
-    ) {
-      settings.layout.sidebarCollapsed = true;
-      return;
-    }
-    openCommitPanel();
+    setLeftWindow(settings.layout.left.active === "commit" ? null : "commit");
   }
 
-  function setGitLogWindowOpen(open: boolean) {
-    settings.layout.gitLogWindow.open = open;
+  /** 打开左侧 Project 工具窗口（IDEA ⌘1） */
+  function openProjectPanel() {
+    setLeftWindow("project");
   }
 
-  function toggleGitLogWindow() {
-    settings.layout.gitLogWindow.open = !settings.layout.gitLogWindow.open;
+  function toggleProjectPanel() {
+    setLeftWindow(settings.layout.left.active === "project" ? null : "project");
   }
 
-  function setGitLogWindowHeight(height: number) {
-    settings.layout.gitLogWindow.height = Math.min(
-      640,
-      Math.max(160, Math.round(height)),
-    );
+  /** 切换底部工具窗口；点同一个则收起（IDEA 行为） */
+  function setBottomWindow(id: BottomToolWindowId | null) {
+    settings.layout.bottom.active = id;
+    if (id) settings.layout.bottom.lastActive = id;
   }
 
-  function setTerminalPanelHeight(height: number) {
-    settings.layout.terminalPanelHeight = Math.min(
-      640,
-      Math.max(120, Math.round(height)),
-    );
+  function toggleBottomWindow(id: BottomToolWindowId) {
+    setBottomWindow(settings.layout.bottom.active === id ? null : id);
+  }
+
+  function setBottomHeight(height: number) {
+    settings.layout.bottom.height = clampBottomHeight(height);
   }
 
   function setLocale(next: AppSettings["locale"]) {
@@ -388,16 +410,16 @@ export const useSettingsStore = defineStore("settings", () => {
     setTheme,
     patchEditor,
     patchJava,
-    setSidebarCollapsed,
-    setSidebarWidth,
-    setActivePanel,
-    toggleSidebar,
+    setLeftWindow,
+    toggleLeftWindow,
+    setLeftWidth,
     openCommitPanel,
     toggleCommitPanel,
-    setGitLogWindowOpen,
-    toggleGitLogWindow,
-    setGitLogWindowHeight,
-    setTerminalPanelHeight,
+    openProjectPanel,
+    toggleProjectPanel,
+    setBottomWindow,
+    toggleBottomWindow,
+    setBottomHeight,
     setLocale,
     setAutoCheckUpdates,
     persistNow,

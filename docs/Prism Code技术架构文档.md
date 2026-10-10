@@ -25,7 +25,7 @@
 1. **轻量优先**：进程少、内存低、启动快；能用系统能力 / 成熟库解决的不自研（胶水原则）。
 2. **Rust 干重活**：文件 IO、Git、搜索遍历、SSH 全部下沉 Rust；前端负责编辑器、布局、语言服务与交互呈现。
 3. **视觉一体**：主题以 CSS 变量驱动，UI 与编辑器高亮同源切换，避免两套皮肤割裂。
-4. **布局可记忆**：分栏尺寸、侧栏状态、打开标签、主题与编辑器偏好持久化。
+4. **布局可记忆**：工具窗口开关与尺寸、打开标签、主题与编辑器偏好持久化。
 5. **优化优先于扩张**：优化项须有可感知效果或可量化指标（启动耗时 / 帧率 / 内存 / 操作延迟），「修一个验一个」。
 
 ---
@@ -40,7 +40,7 @@
 | 前端框架 | **Vue 3 + Composition API + TypeScript** | 组件化 + Vite 热更新 |
 | 构建 | **Vite 6** | 官方模板同源 |
 | 编辑器内核 | **Monaco Editor 0.57**（VSCode 同源） | 语言服务 Worker 化、内置差异对比与查找、键位可对齐 WebStorm / VS Code；按需注册 feature 与语言定义控制体积 |
-| 布局 | **自研 Dock 布局**（AppShell 五区） | 对标 VSCode 左右分栏 / 折叠 / 拖拽 |
+| 布局 | **自研 Dock 布局**（AppShell 窗口壳） | 对标 IntelliJ IDEA New UI：窗口头 + 左侧工具窗口条 + 左右 / 上下工具窗口，折叠 / 拖拽 |
 | 状态管理 | **Pinia** | 12 个 store，见 §5.2 |
 | 文件系统 | `@tauri-apps/plugin-fs` + Rust `fs.rs` | 打开目录、读写、变更监听（watch） |
 | 对话框 | `@tauri-apps/plugin-dialog` | 打开文件夹 / 保存 / 确认删除 |
@@ -95,8 +95,8 @@
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                     Prism Code（前端 Vue 3）                    │
-│  AppShell │ TitleBar │ ActivityBar │ SideBar │ EditorArea    │
-│  StatusBar │ SettingsModal │ 编辑区多标签（文件/SSH/GitLog）│ 终端底部面板 │
+│  AppShell │ MainToolbar │ ToolWindowBar │ LeftToolWindows   │
+│  EditorArea │ BottomToolWindows │ StatusBar │ SettingsModal │
 ├─────────────────────────────────────────────────────────────┤
 │  Pinia Stores：workspace / ui / editor / git / gitLog /      │
 │  search / sessions / ssh / settings / compare / packageScripts │
@@ -124,7 +124,8 @@
 ```
 PrismCode/
 ├── src/                      # Vue 前端
-│   ├── app/                  # AppShell / TitleBar / ActivityBar / SideBar / EditorArea / StatusBar
+│   ├── app/                  # AppShell / MainToolbar / ToolWindowBar / LeftToolWindows /
+│   │                         # BottomToolWindows / ToolWindowCard / EditorArea / StatusBar / UpdateBadge
 │   ├── features/
 │   │   ├── explorer/         # 资源树（pointer 拖拽移动）
 │   │   ├── editor/           # Monaco 编辑器与 provider、主题、装饰、格式化、会话恢复
@@ -153,27 +154,32 @@ PrismCode/
 
 ## 5. 前端模块设计
 
-### 5.1 布局壳（对标 VSCode）
+### 5.1 布局壳（对标 IntelliJ IDEA New UI）
 
 ```
-┌────────┬──────────┬──────────────────────────────────────┐
-│Activity│ SideBar  │           EditorArea                 │
-│ Bar    │ Project  │  多标签：文件 / Diff / GitLog /       │
-│        │ /Commit  │  Compare / SSH / Markdown 预览       │
-│        │          ├──────────────────────────────────────┤
-│        │          │   终端底部面板（TerminalPanel，仅占   │
-│        │          │   编辑区列，资源管理器保持整列全高）  │
-├────────┴──────────┴──────────────────────────────────────┤
-│                     StatusBar                            │
-└──────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│  MainToolbar（窗口头：项目 / VCS / 运行 / 搜索 / 设置）      │
+├──────────┬────────────────┬──────────────────────────────────┤
+│ToolWindow│ LeftToolWindows│            EditorArea            │
+│Bar       │ Project        │  多标签：文件 / Diff / GitLog /  │
+│          │ Commit         │  Compare / SSH / Markdown 预览   │
+│          │                ├──────────────────────────────────┤
+│          │                │  BottomToolWindows               │
+│          │                │  （Terminal / Problems / Debug， │
+│          │                │   仅占编辑区列）                 │
+├──────────┴────────────────┴──────────────────────────────────┤
+│                          StatusBar                           │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 | 区域 | 职责 |
 |---|---|
-| ActivityBar | Project / Commit / GitLog；底区 Package / 终端 / 设置 |
-| SideBar | Project（资源树）与 Commit（暂存 / 更改）切换 |
-| EditorArea | 多标签；GitLog 与普通文件标签一致（不固定右侧，参与滚动排序）；SSH / Compare 固定钉在右侧（终端为底部面板） |
-| StatusBar | 左侧：终端入口 / 根目录 / 分支（含 ↑↓ 同步标记）/ 语言 / 编码 / 冲突数；右侧：Ln/Col / 缩进 / 主题 / Ready |
+| MainToolbar（窗口头） | 左：项目 widget（项目名 ▾：切换项目 / 最近项目）+ VCS widget（分支 ▾ → Branches 弹层）；中：Run widget（运行配置 ▾ + 运行 / 调试）；右：搜索（Search Everywhere）/ 设置 / 更新徽章（macOS 内联，其它平台浮动右上角） |
+| ToolWindowBar | 上组：Project / Commit（变更数徽章）/ Git Log（编辑区标签，非工具窗口）；下组：Package（scripts 弹层）/ Problems / Terminal / Debug；选中态 = 对应工具窗口正在显示，再点收起 |
+| LeftToolWindows | Project（资源树）/ Commit（暂存 / 更改）卡片，ToolWindowCard 统一 32px 标题行（含 ✕ 隐藏）；列宽可拖拽并持久化 |
+| BottomToolWindows | Terminal / Problems / Debug 卡片（ToolWindowCard 外壳）；仅占编辑区列，区高可拖拽并持久化；首次访问后常驻挂载（v-show），收起保活不销毁 PTY |
+| EditorArea | 多标签；GitLog 与普通文件标签一致（不固定右侧，参与滚动排序）；SSH / Compare 固定钉在右侧（终端为底部工具窗口） |
+| StatusBar | 左侧：状态消息（Ready / 未保存）/ 冲突数；右侧：Java 状态 · Ln/Col · UTF-8 · Spaces · 语言 · 主题（菜单 / 右键循环） |
 | 系统菜单 | 原生菜单（文件 / 编辑 / 视图 / 工具 / 帮助），UI 文案随 i18n 切换 |
 | Settings | 模态设置，左导航 3 区：编辑器 / 快捷键 / 系统（关于 + 更新） |
 
@@ -182,13 +188,13 @@ PrismCode/
 | Store | 职责 |
 |---|---|
 | `workspace` | 打开文件夹、最近项目、资源树节点、文件变更监听、切换时重置终端/SSH |
-| `ui` | 侧栏状态、活动面板、布局尺寸 |
+| `ui` | 设置面板开关与分区 |
 | `editor` | 打开标签、活动文件、脏标记、保存、定位、会话恢复、引用结果 |
 | `git` / `gitLog` | Git 状态、远程操作守卫（`remoteInFlight` 防并发）、提交历史 |
 | `search` | 搜索历史、文件列表缓存 |
 | `sessions` | 本地终端会话（PTY 生命周期） |
 | `ssh` | SSH 主机列表、远程 Shell、切换项目强制断开 |
-| `settings` | 应用设置（主题 / 编辑器 / 更新） |
+| `settings` | 应用设置（主题 / 编辑器 / 布局 / 更新） |
 | `compare` / `packageScripts` / `appUpdate` | 冲突分栏 / npm scripts / 更新状态 |
 
 ### 5.3 快捷键体系（三层）
@@ -262,7 +268,7 @@ PrismCode/
 | 交互式 Rebase | 提交列表 pick / reword / squash / fix / drop + 拖拽排序；冲突时 Commit 横幅 Continue / Skip / Abort |
 | 冲突分栏 | `CompareView.vue`（Monaco `createDiffEditor`）：左右双栏可编辑、折叠未改动区、prev/next 冲突导航、填本地 / 远程 / Base、一键接受 ours/theirs；冲突文件在编辑区还有逐块「采用当前 / 传入 / 两者」操作（`monaco/conflictResolver.ts`） |
 | 认证 | HTTPS 弹窗登录 + 记住凭据（`~/.prismcode/git-credentials.json` + 尽力同步系统 git credential）；SSH 密钥优先 |
-| 状态同步 | 资源树 Git 状态色点；状态栏分支 + ↑↓ 同步标记 + 冲突数；编辑区有变更文件右键可 Diff / 回滚，回滚后编辑器内容同步重载 |
+| 状态同步 | 资源树 Git 状态色点；窗口头 VCS widget 显示当前分支，Commit 面板工具栏显示分支与 ↑↓ 同步标记；状态栏显示冲突数；编辑区有变更文件右键可 Diff / 回滚，回滚后编辑器内容同步重载 |
 
 **安全约束**：强制推送 / 重置 / 删除分支二次确认；凭据不打印日志；远程操作（push/pull/fetch/update）单一入口 `remoteInFlight` 守卫防并发。
 
@@ -287,8 +293,8 @@ PrismCode/
 
 | 项 | 说明 |
 |---|---|
-| 本地终端 | **底部面板**（VS Code 风格）：状态栏左下角终端按钮 / ⌘J 开关；xterm + PTY（`tauri-plugin-pty`），多标签顶栏；面板仅占**编辑区列**（AppShell `.center` 内 EditorArea 下方），资源管理器保持整列全高；高度可拖拽并持久化（`settings.layout.terminalPanelHeight`）；收起时保活（v-show 隐藏），关闭全部终端才销毁；打开面板不打断画布（SSH/GitLog/Compare）聚焦；新建终端挂载即聚焦；本地补丁将 PTY 阻塞读写/等待/终止派发到 `spawn_blocking`，避免常驻进程阻塞 Tauri IPC |
-| 终端忙/闲 | `terminalIdle.ts` 解析 PTY 输出流判定 shell 是否停在提示符（剥 ANSI 后行尾 `$ % # > ❯ »` 特征 + 150ms 稳定窗口），上报 `sessions` store 的 `localIdle`；Package 脚本芯片点击时活动终端忙则自动新开终端执行，写入命令即标记忙、命令结束提示符回归即恢复闲 |
+| 本地终端 | **底部工具窗口**（IDEA New UI 风格，BottomToolWindows 的 Terminal 卡片）：工具窗口条 Terminal 按钮 / ⌘J 开关；xterm + PTY（`tauri-plugin-pty`），多标签顶栏；工具窗口区仅占**编辑区列**（AppShell `.center` 内 EditorArea 下方），左工具窗口列保持整列全高；区高可拖拽并持久化（`settings.layout.bottom.height`）；收起时保活（v-show 隐藏），关闭全部终端才销毁；打开不打断画布（SSH/GitLog/Compare）聚焦；新建终端挂载即聚焦；本地补丁将 PTY 阻塞读写/等待/终止派发到 `spawn_blocking`，避免常驻进程阻塞 Tauri IPC |
+| 终端忙/闲 | `terminalIdle.ts` 解析 PTY 输出流判定 shell 是否停在提示符（剥 ANSI 后行尾 `$ % # > ❯ »` 特征 + 150ms 稳定窗口），上报 `sessions` store 的 `localIdle`；Package 弹层脚本项点击时活动终端忙则自动新开终端执行，写入命令即标记忙、命令结束提示符回归即恢复闲 |
 | SSH | **独立编辑区标签**（与本地终端解耦）；主机列表 / 远程终端 |
 | 主机配置 | `~/.prismcode/ssh-profiles.json`（应用级全局，与项目无关）；「记住密码」写 `~/.prismcode/ssh-credentials.json`（0600） |
 | 密钥校验 | `~/.ssh/known_hosts` + `~/.prismcode/known_hosts`；未知主机指纹需用户确认（TOFU） |

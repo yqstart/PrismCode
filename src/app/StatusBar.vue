@@ -1,22 +1,17 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { GitBranch } from "lucide-vue-next";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { storeToRefs } from "pinia";
-import BranchesPopup from "@/features/git/BranchesPopup.vue";
 import { THEME_LABELS, THEME_ORDER } from "@/shared/themes";
-import { basename } from "@/shared/fs";
 import type { ThemeId } from "@/shared/types";
 import { useEditorStore } from "@/stores/editor";
 import { useJavaStore } from "@/stores/java";
 import { useUiStore } from "@/stores/ui";
 import { useGitStore } from "@/stores/git";
 import { useSettingsStore } from "@/stores/settings";
-import { useWorkspaceStore } from "@/stores/workspace";
 import { useI18n } from "@/i18n";
 
 const { t } = useI18n();
 const settings = useSettingsStore();
-const workspace = useWorkspaceStore();
 const editor = useEditorStore();
 const git = useGitStore();
 const javaStore = useJavaStore();
@@ -27,7 +22,6 @@ const { snapshot } = storeToRefs(git);
 
 const themeMenuOpen = ref(false);
 const javaMenuOpen = ref(false);
-const branchesOpen = ref(false);
 const showJavaPill = computed(
   () =>
     activeTab.value?.language === "Java" ||
@@ -39,30 +33,8 @@ const javaStatusLabel = computed(() => t(`java.status.${javaStore.status.state}`
 const lang = computed(() => activeTab.value?.language ?? "—");
 const cursor = computed(() => activeTab.value?.cursor ?? { line: 1, column: 1 });
 const dirty = computed(() => activeTab.value?.dirty ?? false);
-const branch = computed(() =>
-  snapshot.value.initialized ? snapshot.value.branch : null,
-);
-const syncLabel = computed(() => {
-  if (!snapshot.value.initialized) return "";
-  const { ahead, behind, upstream } = snapshot.value;
-  if (!upstream && !ahead && !behind) return "";
-  const parts: string[] = [];
-  if (ahead) parts.push(`↑${ahead}`);
-  if (behind) parts.push(`↓${behind}`);
-  if (!parts.length && upstream) return t("status.synced");
-  return parts.join(" ");
-});
-const themeLabel = computed(() => THEME_LABELS[theme.value]);
 
-/** 状态栏左端名称：项目名；light 模式（无工作区）显示当前独立文件名 */
-const workspaceLabel = computed(() =>
-  workspace.rootPath
-    ? workspace.rootName
-    : (editor.activePath ? basename(editor.activePath) : workspace.rootName),
-);
-const workspaceLabelTitle = computed(
-  () => workspace.rootPath ?? editor.activePath ?? workspace.rootName,
-);
+const themeLabel = computed(() => THEME_LABELS[theme.value]);
 
 const themeOptions = computed(() =>
   THEME_ORDER.map((id) => ({ id, label: THEME_LABELS[id] })),
@@ -70,7 +42,6 @@ const themeOptions = computed(() =>
 
 function toggleThemeMenu(event: MouseEvent) {
   event.stopPropagation();
-  branchesOpen.value = false;
   themeMenuOpen.value = !themeMenuOpen.value;
 }
 
@@ -85,17 +56,9 @@ function cycleTheme() {
   settings.setTheme(next);
 }
 
-function toggleBranches(event: MouseEvent) {
-  event.stopPropagation();
-  if (!branch.value) return;
-  themeMenuOpen.value = false;
-  branchesOpen.value = !branchesOpen.value;
-}
-
 function toggleJavaMenu(event: MouseEvent) {
   event.stopPropagation();
   themeMenuOpen.value = false;
-  branchesOpen.value = false;
   javaMenuOpen.value = !javaMenuOpen.value;
 }
 
@@ -114,16 +77,6 @@ function onDocClick() {
   javaMenuOpen.value = false;
 }
 
-// 全局「分支」请求（菜单 / Find Action）→ 打开状态栏分支弹层
-watch(
-  () => git.branchesRequestSeq,
-  () => {
-    themeMenuOpen.value = false;
-    javaMenuOpen.value = false;
-    if (branch.value) branchesOpen.value = true;
-  },
-);
-
 onMounted(() => {
   window.addEventListener("click", onDocClick);
 });
@@ -136,19 +89,19 @@ onBeforeUnmount(() => {
 <template>
   <footer class="status-bar">
     <div class="left">
-      <span class="root-name" :title="workspaceLabelTitle">{{ workspaceLabel }}</span>
-      <div v-if="branch" class="branch-switch" @click.stop>
-        <button
-          type="button"
-          class="branch-btn"
-          :title="`Git Branches · ${branch}${syncLabel ? ` · ${syncLabel}` : ''}`"
-          @click="toggleBranches"
-        >
-          <GitBranch :size="12" class="branch-icon" />
-          <span class="branch-name">{{ branch }}</span>
-          <span v-if="syncLabel" class="sync-label">{{ syncLabel }}</span>
-        </button>
-      </div>
+      <span class="ok">{{ t("status.ready") }}</span>
+      <span v-if="dirty" class="dirty">{{ t("status.unsaved") }}</span>
+      <button
+        v-if="snapshot.conflictCount > 0"
+        type="button"
+        class="conflict"
+        :title="t('status.openConflict')"
+        @click="git.openFirstConflict()"
+      >
+        {{ t("status.conflicts", { count: snapshot.conflictCount }) }}
+      </button>
+    </div>
+    <div class="right">
       <div v-if="showJavaPill" class="java-switch" @click.stop>
         <button type="button" class="java-btn" @click="toggleJavaMenu">
           {{ javaStatusLabel }}
@@ -162,18 +115,7 @@ onBeforeUnmount(() => {
           <button type="button" @click="runJavaAction('settings')">{{ t("java.action.openSettings") }}</button>
         </div>
       </div>
-      <span v-if="dirty" class="dirty">{{ t("status.unsaved") }}</span>
-      <button
-        v-if="snapshot.conflictCount > 0"
-        type="button"
-        class="conflict"
-        :title="t('status.openConflict')"
-        @click="git.openFirstConflict()"
-      >
-        {{ t("status.conflicts", { count: snapshot.conflictCount }) }}
-      </button>
-    </div>
-    <div class="right">
+      <span v-if="showJavaPill" class="sep">·</span>
       <span>Ln {{ cursor.line }}, Col {{ cursor.column }}</span>
       <span class="sep">·</span>
       <span class="meta">UTF-8</span>
@@ -208,12 +150,8 @@ onBeforeUnmount(() => {
           </div>
         </Transition>
       </div>
-      <span class="sep">·</span>
-      <span class="ok">{{ t("status.ready") }}</span>
     </div>
   </footer>
-
-  <BranchesPopup :open="branchesOpen" @close="branchesOpen = false" />
 </template>
 
 <style scoped>
@@ -247,61 +185,6 @@ onBeforeUnmount(() => {
 
 .right {
   flex-shrink: 0;
-}
-
-.root-name {
-  flex-shrink: 1;
-  min-width: 0;
-  max-width: 160px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.branch-switch {
-  position: relative;
-  min-width: 0;
-  flex-shrink: 1;
-}
-
-.branch-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  max-width: 100%;
-  min-width: 0;
-  padding: 2px 6px;
-  border-radius: 4px;
-  color: var(--accent);
-  font-weight: 500;
-  line-height: inherit;
-  /* IDEA StatusBar.Widget：hover 只加圆角灰块，无描边 */
-  transition:
-    background var(--transition-fast) var(--ease-out),
-    color var(--transition-fast) var(--ease-out);
-}
-
-.branch-btn:hover {
-  background: var(--bg-hover);
-}
-
-.branch-icon {
-  flex-shrink: 0;
-}
-
-.branch-name {
-  min-width: 0;
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.sync-label {
-  flex-shrink: 0;
-  font-size: 11px;
-  color: var(--accent);
-  font-variant-numeric: tabular-nums;
 }
 
 .meta {

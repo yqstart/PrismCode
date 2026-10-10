@@ -21,8 +21,14 @@ export function isEditorFontId(value: unknown): value is EditorFontId {
   );
 }
 
-/** 左侧工具窗口：资源管理器 | Commit（WebStorm New UI） */
-export type SidePanelId = "explorer" | "commit";
+/** 左侧工具窗口（IDEA 工具窗口条上组）：项目 / Commit */
+export type LeftToolWindowId = "project" | "commit";
+
+/** 底部工具窗口（IDEA 工具窗口条下组）：终端 / 问题 / 调试 */
+export type BottomToolWindowId = "terminal" | "problems" | "debug";
+
+/** 全部工具窗口 ID */
+export type ToolWindowId = LeftToolWindowId | BottomToolWindowId;
 
 export type UpdateImportsOnMove = "always" | "prompt" | "never";
 
@@ -75,13 +81,31 @@ export interface GitLogWindowState {
   height: number;
 }
 
+/** 左侧工具窗口列：编辑器左侧的垂直工具窗口区（IDEA 布局） */
+export interface LeftAreaState {
+  /** 当前显示的工具窗口；null = 收起 */
+  active: LeftToolWindowId | null;
+  /** 收起前显示的工具窗口，再次展开时恢复 */
+  lastActive: LeftToolWindowId;
+  /** 列宽（px） */
+  width: number;
+}
+
+/** 底部工具窗口区：编辑器下方的水平工具窗口区（IDEA 布局） */
+export interface BottomAreaState {
+  /** 当前显示的工具窗口；null = 收起 */
+  active: BottomToolWindowId | null;
+  /** 收起前显示的工具窗口，再次展开时恢复 */
+  lastActive: BottomToolWindowId;
+  /** 区高（px） */
+  height: number;
+}
+
 export interface LayoutState {
-  sidebarCollapsed: boolean;
-  sidebarWidth: number;
-  activePanel: SidePanelId;
+  left: LeftAreaState;
+  bottom: BottomAreaState;
+  /** 历史兼容：曾用底栏 Git Log 高度；现 Git Log 为编辑区标签，open 不再驱动布局 */
   gitLogWindow: GitLogWindowState;
-  /** 底部终端面板高度（px），可拖拽调整并持久化 */
-  terminalPanelHeight: number;
 }
 
 export interface JavaPreferences {
@@ -131,14 +155,20 @@ export const DEFAULT_SETTINGS: AppSettings = {
     updateImportsOnMove: "prompt",
   },
   layout: {
-    sidebarCollapsed: false,
-    sidebarWidth: 300,
-    activePanel: "explorer",
+    left: {
+      active: "project",
+      lastActive: "project",
+      width: 300,
+    },
+    bottom: {
+      active: null,
+      lastActive: "terminal",
+      height: 240,
+    },
     gitLogWindow: {
       open: false,
       height: 280,
     },
-    terminalPanelHeight: 240,
   },
   java: {
     enabled: true,

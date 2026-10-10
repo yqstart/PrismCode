@@ -13,6 +13,7 @@ import { useGitLogStore } from "@/stores/gitLog";
 import { useSearchStore } from "@/stores/search";
 import { useSessionsStore } from "@/stores/sessions";
 import { useSettingsStore } from "@/stores/settings";
+import { useSshStore } from "@/stores/ssh";
 import { useUiStore } from "@/stores/ui";
 import { useWorkspaceStore } from "@/stores/workspace";
 
@@ -157,11 +158,7 @@ function toggleGitLogWindow(): void {
 function toggleCommitToolWindow(): void {
  const settings = useSettingsStore();
  settings.toggleCommitPanel();
- if (
-  settings.layout.activePanel === "commit" &&
-  !settings.layout.sidebarCollapsed &&
-  useWorkspaceStore().rootPath
- ) {
+ if (settings.layout.left.active === "commit" && useWorkspaceStore().rootPath) {
   void useGitStore().scheduleRefresh();
  }
 }
@@ -188,11 +185,9 @@ const INITIAL_ACTIONS: ActionDef[] = [
   formatShortcut("mod", "W"),
  ),
  // ---------------- 视图 ----------------
- defineAction("panel_project", "actions.category_view", () => {
-  const settings = useSettingsStore();
-  settings.setActivePanel("explorer");
-  settings.setSidebarCollapsed(false);
- }),
+ defineAction("panel_project", "actions.category_view", () =>
+  useSettingsStore().openProjectPanel(),
+ ),
  defineAction(
   "panel_commit",
   "actions.category_view",
@@ -203,8 +198,11 @@ const INITIAL_ACTIONS: ActionDef[] = [
  defineAction(
   "panel_problems",
   "actions.category_view",
-  () => useSessionsStore().showProblems(useWorkspaceStore().rootPath),
+  () => useSessionsStore().showProblems(),
   formatShortcut("mod", "6"),
+ ),
+ defineAction("panel_ssh", "actions.category_view", () =>
+  useSshStore().toggleSsh(),
  ),
  defineAction(
   "panel_terminal",
@@ -215,7 +213,7 @@ const INITIAL_ACTIONS: ActionDef[] = [
  defineAction(
   "toggle_sidebar",
   "actions.category_view",
-  () => useSettingsStore().toggleSidebar(),
+  () => useSettingsStore().toggleLeftWindow(),
   formatShortcut("mod", "B"),
  ),
  // ---------------- 设置 ----------------

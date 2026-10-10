@@ -35,14 +35,15 @@ Prism Code（棱镜编辑器）：基于 Tauri + Vue3 的轻量化桌面代码�
 - 搜索：Rust walk + 模糊/内容检索/替换（async + LRU 缓存）
 - Git：Rust `git2` + 系统 Git（状态/提交/冲突走 `git2`；push/rebase/delete-remote 等远端/兼容性敏感操作按需走系统 Git）
 - 主题：`intellij-dark`（默认，IntelliJ IDEA 2026.2 官方 New UI 色板，UI/语法色取自其 `expUI_dark/light.theme.json` 与 scheme）/ `intellij-light` / `prism-dark` / `dawn` / `midnight` / `cyberpunk`（六套；`styles/themes.css` + `features/editor/monacoTheme.ts` 同源）
-- IDEA 对齐（2026-10）：双击 ⇧ Search Everywhere（文件/符号/操作，动作注册表 `shared/actions.ts`）、⌘⇧A Find Action、工具窗口键位（⌘1 项目 / ⌘0 提交 / ⌘9 Git Log / ⌘5 调试 / ⌥F12 终端）、⌘F12 文件结构弹层、⌘⇧[ ] 切标签、⌘⌥←→ 前进后退、⇧⌘⌫ 上次编辑位置、⌘F8/⌘⌥R 与 F7/F8/⇧F8 调试键位、Esc 回编辑器、macOS 原生菜单 File/Edit/View/Navigate/Code/Run/VCS/Window/Help；New UI 布局：40px 工具条（选中 = 蓝色实块）、项目树首行即根节点行（行高 24px、选中蓝色整行块）、标签条与编辑区同色 + 4px 蓝下划线、编辑器底部 `路径 > 符号` 面包屑、顶栏项目名在左
+- IDEA 对齐（2026-10）：双击 ⇧ Search Everywhere（文件/符号/操作，动作注册表 `shared/actions.ts`）、⌘⇧A Find Action、工具窗口键位（⌘1 项目 / ⌘0 提交 / ⌘9 Git Log / ⌘5 调试 / ⌘6 问题 / ⌥F12 终端）、⌘F12 文件结构弹层、⌘⇧[ ] 切标签、⌘⌥←→ 前进后退、⇧⌘⌫ 上次编辑位置、⌘F8/⌘⌥R 与 F7/F8/⇧F8 调试键位、Esc 回编辑器、macOS 原生菜单 File/Edit/View/Navigate/Code/Run/VCS/Window/Help；New UI 布局：40px 工具条（选中 = 蓝色实块）、项目树首行即根节点行（行高 24px、选中蓝色整行块）、标签条与编辑区同色 + 4px 蓝下划线、编辑器底部 `路径 > 符号` 面包屑、顶栏项目名在左
+- 工作台布局（2026-10 重构，IDEA New UI 结构）：`MainToolbar`（窗口头：项目 widget / VCS widget / 居中 Run widget / 搜索 / 设置）→ `ToolWindowBar`（左条：上组 Project·Commit·Git Log，下组 Package·Problems·Terminal·Debug）→ `LeftToolWindows`（Project / Commit 卡片，带工具窗口 header 与列宽拖拽）→ 编辑区 → `BottomToolWindows`（Terminal / Problems / Debug 卡片，区高拖拽）→ `StatusBar`（左状态消息，右 Java 状态·行列·编码·缩进·语言·主题）。布局真源 `settings.layout.left{active,lastActive,width}` 与 `settings.layout.bottom{active,lastActive,height}`；终端「展开」状态由 `bottom.active === "terminal"` 派生（`stores/sessions.ts` 的 `open` 为可写 computed），终端视图与底部区显示解耦，切到问题/调试或收起底部区都不销毁 PTY
 - 文件图标：Material Icon Theme（资源树 / Commit / 快速打开等）
 
 ## 源码结构（当前）
 
 ```
 src/
-  app/                 # AppShell、TitleBar、ActivityBar、SideBar、EditorArea、StatusBar
+  app/                 # AppShell、MainToolbar、ToolWindowBar、LeftToolWindows、BottomToolWindows、ToolWindowCard、EditorArea、StatusBar
   features/            # explorer / git / search / editor / settings / sessions / ssh / java / debug / problems
   stores/              # settings / workspace / ui / editor / git / search / sessions / ssh
   styles/              # tokens、themes、global
@@ -57,9 +58,9 @@ Git（`features/git`）对标 **VS Code Source Control + Git Graph**：左侧 Co
 
 下拉补全由 Monaco provider 提供候选、编辑器负责触发/过滤/排序：JS/TS 走 TypeScript worker（内置补全、自动导入、签名帮助、hover、诊断、定义/引用/重命名）；HTML/CSS 走 VS Code 同源语言服务（`monaco/htmlCssProvider.ts`）；Vue script 走等长虚拟 TS 文件（`monaco/vueScriptService.ts`，诊断经 marker 映射回 SFC），template 由 HTML 服务 + `vueBindings.ts` 的 `<script setup>` 绑定注入；Emmet 与用户片段另有独立 provider（`monaco/emmetProvider.ts`、`monaco/snippetsProvider.ts`）。会话恢复保存在 `prismcode.editor-session.v2:*`，恢复标签、活动文件、光标、固定状态和受限未保存快照。自测：`pnpm test:editor-monaco`、`pnpm test:monaco-language`、`pnpm test:editor-actions`、`pnpm test:editor-options`。
 
-会话视图：本地终端（`features/sessions`，**底部面板**，入口：状态栏左下角终端按钮 / 活动栏 Package 与设置之间的终端图标 / ⌘J）与 SSH 远程（`features/sessions/SshView.vue` + `stores/ssh.ts`，独立编辑区标签）**已拆分解耦**。
-- 本地终端（`TerminalPanel.vue` 底部面板 + `SessionsView.vue`）：面板在 AppShell 中位于 `.center`（EditorArea 下方），**仅占编辑区列**，资源管理器（ActivityBar+SideBar）保持整列全高；随工作区切换重建（cwd = 项目根）；面板高度可拖拽并持久化（`settings.layout.terminalPanelHeight`）；面板收起（⌘J / 顶栏 ▼）时会话与 PTY 保活（v-show 隐藏），仅关闭全部终端 subtab 或切换工作区时销毁；打开面板不打断画布（SSH/GitLog/Compare）聚焦；新建终端挂载即聚焦（无需手动点击）；`tauri-plugin-pty` 0.3.1 使用本地补丁，PTY 阻塞 IO 统一走 `spawn_blocking`，避免常驻终端占满 Tauri 异步运行时
-- package.json scripts：活动栏 Package 入口（点击后在本地终端注入 `pnpm/npm/yarn/bun run …`）；Scripts 弹层可逐条**勾选**，勾选的脚本以芯片形式常驻终端顶栏右侧（`shared/pinnedScripts.ts` 按项目持久化勾选集合，`PackageScriptsMenu` compact 变体渲染 `pinnedScripts` 子集）；点击芯片时若活动终端正在运行任务（shell 未停在提示符）则自动**新开终端**执行——忙/闲由 `features/sessions/terminalIdle.ts` 解析 PTY 输出流判定（行尾提示符特征 + 稳定窗口），状态存 `stores/sessions.ts` 的 `localIdle`
+会话视图：本地终端（`features/sessions`，**底部 Terminal 工具窗口**，入口：工具窗口条下组终端图标 / ⌘J / ⌥F12）与 SSH 远程（`features/sessions/SshView.vue` + `stores/ssh.ts`，独立编辑区标签）**已拆分解耦**。
+- 本地终端（`BottomToolWindows.vue` 中的 Terminal 工具窗口 + `SessionsView.vue`）：底部工具窗口区在 AppShell 中位于 `.center`（EditorArea 下方），**仅占编辑区列**，左侧工具窗口列（Project/Commit）保持整列全高；随工作区切换重建（cwd = 项目根）；区高可拖拽并持久化（`settings.layout.bottom.height`）；收起底部区（⌘J / 头部 ✕）或切到 Problems/Debug 工具窗口时会话与 PTY 保活（v-show 隐藏），仅关闭全部终端 subtab 或切换工作区时销毁；打开区不打断画布（SSH/GitLog/Compare）聚焦；新建终端挂载即聚焦（无需手动点击）；`tauri-plugin-pty` 0.3.1 使用本地补丁，PTY 阻塞 IO 统一走 `spawn_blocking`，避免常驻终端占满 Tauri 异步运行时
+- package.json scripts：**工具窗口条下组 Package 入口**（点击后在本地终端注入 `pnpm/npm/yarn/bun run …`），同时并入**窗口头 Run widget 下拉**（与 Java/Maven/Spring 运行配置并列，选中脚本后 ▶ 在该项目终端执行）；Scripts 弹层可逐条**勾选**，勾选的脚本以芯片形式常驻终端顶栏右侧（`shared/pinnedScripts.ts` 按项目持久化勾选集合，`PackageScriptsMenu` compact 变体渲染 `pinnedScripts` 子集）；点击芯片时若活动终端正在运行任务（shell 未停在提示符）则自动**新开终端**执行——忙/闲由 `features/sessions/terminalIdle.ts` 解析 PTY 输出流判定（行尾提示符特征 + 稳定窗口），状态存 `stores/sessions.ts` 的 `localIdle`
 - SSH 远程：独立编辑区标签，含主机列表 / 远程终端；关闭 SSH 标签不影响本地终端，反之亦然
 - SSH 主机配置：应用级全局（`~/.prismcode/ssh-profiles.json`），与项目/窗口无关；可选「记住密码」写入 `~/.prismcode/ssh-credentials.json`（0600）
 - SSH 主机密钥：校验 `~/.ssh/known_hosts` + `~/.prismcode/known_hosts`；未知密钥需用户确认（TOFU）

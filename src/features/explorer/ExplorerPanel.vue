@@ -648,8 +648,7 @@ watch([revealToken, revealTarget], async ([, path]) => {
 watch(activePath, (path) => {
   if (!path || !rootPath.value) return;
   // 编辑区切换标签时自动在树中高亮定位
-  if (settings.layout.activePanel !== "explorer") return;
-  if (settings.layout.sidebarCollapsed) return;
+  if (settings.layout.left.active !== "project") return;
   void workspace.revealPath(path);
 });
 
@@ -759,8 +758,7 @@ async function locateActiveFile() {
     workspace.showNotice(t("notice.noActiveFile"));
     return;
   }
-  settings.setActivePanel("explorer");
-  settings.setSidebarCollapsed(false);
+  settings.openProjectPanel();
   await workspace.revealPath(activePath.value);
   workspace.showNotice(
     t("notice.revealed", { name: basename(activePath.value) }),
@@ -960,14 +958,14 @@ function onExplorerKeydown(event: KeyboardEvent) {
   const key = event.key.toLowerCase();
   const isCopyOrCut = key === "c" || key === "x";
   // 资源树复制/剪切/粘贴：⌘/Ctrl+C/X/V。文本输入区与弹层内不拦截，
-  // 让原生编辑行为优先；只有 activePanel 为 explorer 且焦点在树内才接管。
+  // 让原生编辑行为优先；只有 Project 工具窗口在前台且焦点在树内才接管。
   // 树外有选中文本（MD 预览 / Diff / Git Log 等）时 ⌘C/⌘X 同样不拦截。
   if (
     mod &&
     !event.altKey &&
     !event.shiftKey &&
     (isCopyOrCut || key === "v") &&
-    settings.layout.activePanel === "explorer" &&
+    settings.layout.left.active === "project" &&
     isExplorerTarget(event.target) &&
     !isTextEditingTarget(event.target) &&
     !(isCopyOrCut && hasSelectionOutsidePanel())
@@ -993,7 +991,7 @@ function onExplorerKeydown(event: KeyboardEvent) {
     event.ctrlKey ||
     event.metaKey ||
     event.shiftKey ||
-    settings.layout.activePanel !== "explorer" ||
+    settings.layout.left.active !== "project" ||
     !isExplorerTarget(event.target) ||
     isTextEditingTarget(event.target)
   ) {
