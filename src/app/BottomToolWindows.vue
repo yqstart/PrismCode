@@ -86,7 +86,12 @@ onBeforeUnmount(() => {
   <div
     v-show="active"
     class="bottom-area"
-    :style="{ height: `${layout.bottom.height}px` }"
+    :class="{ maximized: layout.bottom.maximized }"
+    :style="
+      layout.bottom.maximized
+        ? undefined
+        : { height: `${layout.bottom.height}px` }
+    "
   >
     <div
       class="resizer"
@@ -147,6 +152,16 @@ onBeforeUnmount(() => {
 .bottom-window {
   flex: 1;
   min-height: 0;
+}
+
+/* 最大化：铺满工作区（高度由 flex 决定，可拖拽的 resizer 隐藏） */
+.bottom-area.maximized {
+  flex: 1 1 auto;
+  max-height: none;
+}
+
+.bottom-area.maximized .resizer {
+  display: none;
 }
 
 .resizer {

@@ -884,7 +884,14 @@ onUnmounted(() => {
     >
       <UpdateBadge />
     </div>
-    <div class="main">
+    <div
+      class="main"
+      :class="{
+        'left-maximized': settings.layout.left.maximized,
+        'bottom-maximized': settings.layout.bottom.maximized,
+        'right-maximized': settings.layout.right.maximized,
+      }"
+    >
       <!-- IDEA 工作台：左条 → 左工具窗口列 → 编辑区（含底部工具窗口区） -->
       <ToolWindowBar />
       <LeftToolWindows />
@@ -955,6 +962,26 @@ onUnmounted(() => {
   min-height: 0;
   display: flex;
   flex-direction: column;
+}
+
+/* 工具窗口最大化（IDEA Maximize Tool Window）：该区铺满工作区，编辑区与其它工具窗口列隐藏 */
+.main.left-maximized :deep(.center),
+.main.left-maximized :deep(.right-area),
+.main.left-maximized :deep(.tool-window-bar.side-right) {
+  display: none;
+}
+
+/* 底部区在 .center 内，需单独隐藏编辑器区（否则与底部区争抢高度） */
+.main.bottom-maximized :deep(.editor-area),
+.main.bottom-maximized :deep(.left-area),
+.main.bottom-maximized :deep(.right-area),
+.main.bottom-maximized :deep(.tool-window-bar.side-right) {
+  display: none;
+}
+
+.main.right-maximized :deep(.center),
+.main.right-maximized :deep(.left-area) {
+  display: none;
 }
 
 /* dialog：SettingsModal 父级统一 leave 动画；其它 modal 仍走组件内 animation */

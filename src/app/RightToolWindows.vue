@@ -58,7 +58,10 @@ onBeforeUnmount(() => {
   <div
     v-show="active"
     class="right-area"
-    :style="{ width: `${layout.right.width}px` }"
+    :class="{ maximized: layout.right.maximized }"
+    :style="
+      layout.right.maximized ? undefined : { width: `${layout.right.width}px` }
+    "
   >
     <div
       class="resizer"
@@ -85,6 +88,16 @@ onBeforeUnmount(() => {
   flex-direction: column;
   background: var(--bg-panel);
   border-left: 1px solid var(--border-subtle);
+}
+
+/* 最大化：铺满工作区（宽度由 flex 决定，可拖拽的 resizer 隐藏） */
+.right-area.maximized {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.right-area.maximized .resizer {
+  display: none;
 }
 
 .resizer {

@@ -95,6 +95,8 @@ export interface LeftAreaState {
   lastActive: LeftToolWindowId;
   /** 列宽（px） */
   width: number;
+  /** 最大化：工具窗口铺满工作区，编辑器与其它区隐藏（IDEA Maximize Tool Window） */
+  maximized: boolean;
 }
 
 /** 底部工具窗口区：编辑器下方的水平工具窗口区（IDEA 布局） */
@@ -105,6 +107,8 @@ export interface BottomAreaState {
   lastActive: BottomToolWindowId;
   /** 区高（px） */
   height: number;
+  /** 最大化：工具窗口铺满工作区（IDEA Maximize Tool Window） */
+  maximized: boolean;
 }
 
 /** 右侧工具窗口列：编辑器右侧的垂直工具窗口区（IDEA 布局） */
@@ -115,6 +119,8 @@ export interface RightAreaState {
   lastActive: RightToolWindowId;
   /** 列宽（px） */
   width: number;
+  /** 最大化：工具窗口铺满工作区（IDEA Maximize Tool Window） */
+  maximized: boolean;
 }
 
 export interface LayoutState {
@@ -176,16 +182,19 @@ export const DEFAULT_SETTINGS: AppSettings = {
       active: "project",
       lastActive: "project",
       width: 300,
+      maximized: false,
     },
     bottom: {
       active: null,
       lastActive: "terminal",
       height: 240,
+      maximized: false,
     },
     right: {
       active: null,
       lastActive: "spring",
       width: 320,
+      maximized: false,
     },
     gitLogWindow: {
       open: false,

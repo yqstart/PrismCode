@@ -69,7 +69,10 @@ onBeforeUnmount(() => {
   <div
     v-show="active"
     class="left-area"
-    :style="{ width: `${layout.left.width}px` }"
+    :class="{ maximized: layout.left.maximized }"
+    :style="
+      layout.left.maximized ? undefined : { width: `${layout.left.width}px` }
+    "
   >
     <ToolWindowCard
       reset-area="left"
@@ -99,6 +102,16 @@ onBeforeUnmount(() => {
   flex-direction: column;
   background: var(--bg-panel);
   border-right: 1px solid var(--border-subtle);
+}
+
+/* 最大化：铺满工作区（宽度由 flex 决定，可拖拽的 resizer 隐藏） */
+.left-area.maximized {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.left-area.maximized .resizer {
+  display: none;
 }
 
 .resizer {

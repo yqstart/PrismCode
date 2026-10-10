@@ -27,6 +27,8 @@ export const zhCN = {
     hide: "隐藏工具窗口",
     more: "更多操作",
     resetSize: "重置尺寸",
+    maximize: "最大化工具窗口",
+    restore: "恢复工具窗口",
     commitTitle: "Commit",
   },
   activity: {

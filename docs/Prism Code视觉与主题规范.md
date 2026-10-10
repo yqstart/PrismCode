@@ -335,7 +335,7 @@ IDEA New UI 工作台结构（2026-10 重构）：
 
 - **窗口头主工具栏**（`MainToolbar.vue`，高 `--titlebar-height` 38px，底色 `--bg-header`）：项目 widget / VCS 分支 widget / 居中 Run widget / 搜索 / 设置；widget 高 26px、圆角 `--radius-sm`、hover `--bg-hover`
 - **工具窗口条**（`ToolWindowBar.vue`，宽 40px，`side` 区分左右）：左侧条上组 = 垂直工具窗口（Project / Commit / Git Log），下组 = 水平工具窗口（Package / Problems / Terminal / Debug）；右侧条 = 只读辅助面板入口（Route 图标 → Spring 端点）；按钮 32×32，选中 = `--accent` 实色块 + `--accent-fg` 图标（IDEA ToolWindow.Button）
-- **工具窗口卡片**（`ToolWindowCard.vue`）：统一样式 —— 32px 标题行（名称 + 附加动作 + ⋮ 菜单 + ✕ 隐藏）+ 内容；⋮ 菜单提供「隐藏工具窗口 / 重置尺寸」（重置为该区默认宽 / 高，`settings.resetToolWindowSize(area)`）；卡片底色 `--bg-panel`
+- **工具窗口卡片**（`ToolWindowCard.vue`）：统一样式 —— 32px 标题行（名称 + 附加动作 + ⋮ 菜单 + ✕ 隐藏）+ 内容；⋮ 菜单提供「隐藏工具窗口 / 最大化工具窗口（`settings.toggleToolWindowMaximize(area)`：该区铺满工作区，编辑器与其它工具窗口列隐藏，同一时刻只有一个区可最大化）/ 重置尺寸」（重置为该区默认宽 / 高，`settings.resetToolWindowSize(area)`）；卡片底色 `--bg-panel`
 - **工具窗口列 / 底部工具窗口区 / 右侧工具窗口列**：列宽与区高可拖拽；底部区仅占编辑器列，左侧工具窗口列保持整列全高；右侧工具窗口列承载 Spring 端点面板，宽 220–560（默认 320），左缘拖拽调宽
 - 资源树：修改 / Git 状态用点缀色，不抢代码区
 - 标签页：当前页背景或底部轻微强调（4px 下划线）；终端 / SSH / GitLog / Compare 等非文件标签固定钉在右侧

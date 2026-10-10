@@ -129,6 +129,7 @@ function loadSettings(): AppSettings {
           parsedLayout?.sidebarWidth ??
           DEFAULT_SETTINGS.layout.left.width,
         ),
+        maximized: parsedLayout?.left?.maximized === true,
       },
       bottom: {
         active:
@@ -148,6 +149,7 @@ function loadSettings(): AppSettings {
           parsedLayout?.terminalPanelHeight ??
           DEFAULT_SETTINGS.layout.bottom.height,
         ),
+        maximized: parsedLayout?.bottom?.maximized === true,
       },
       right: {
         active: rawRightActive === "spring" ? rawRightActive : null,
@@ -155,6 +157,7 @@ function loadSettings(): AppSettings {
         width: clampRightWidth(
           parsedLayout?.right?.width ?? DEFAULT_SETTINGS.layout.right.width,
         ),
+        maximized: parsedLayout?.right?.maximized === true,
       },
       gitLogWindow: {
         ...DEFAULT_SETTINGS.layout.gitLogWindow,
@@ -357,9 +360,10 @@ export const useSettingsStore = defineStore("settings", () => {
     Object.assign(settings.java, normalizeJava({ ...settings.java, ...patch }));
   }
 
-  /** 切换左侧工具窗口；传 null 收起 */
+  /** 切换左侧工具窗口；传 null 收起（切换会退出该区最大化） */
   function setLeftWindow(id: LeftToolWindowId | null) {
     settings.layout.left.active = id;
+    settings.layout.left.maximized = false;
     if (id) settings.layout.left.lastActive = id;
   }
 
@@ -392,9 +396,10 @@ export const useSettingsStore = defineStore("settings", () => {
     setLeftWindow(settings.layout.left.active === "project" ? null : "project");
   }
 
-  /** 切换底部工具窗口；点同一个则收起（IDEA 行为） */
+  /** 切换底部工具窗口；点同一个则收起（IDEA 行为；切换会退出该区最大化） */
   function setBottomWindow(id: BottomToolWindowId | null) {
     settings.layout.bottom.active = id;
+    settings.layout.bottom.maximized = false;
     if (id) settings.layout.bottom.lastActive = id;
   }
 
@@ -406,9 +411,10 @@ export const useSettingsStore = defineStore("settings", () => {
     settings.layout.bottom.height = clampBottomHeight(height);
   }
 
-  /** 切换右侧工具窗口；传 null 收起 */
+  /** 切换右侧工具窗口；传 null 收起（切换会退出该区最大化） */
   function setRightWindow(id: RightToolWindowId | null) {
     settings.layout.right.active = id;
+    settings.layout.right.maximized = false;
     if (id) settings.layout.right.lastActive = id;
   }
 
@@ -418,6 +424,19 @@ export const useSettingsStore = defineStore("settings", () => {
 
   function setRightWidth(width: number) {
     settings.layout.right.width = clampRightWidth(width);
+  }
+
+  /**
+   * 工具窗口 ⋮ 菜单「最大化 / 恢复」（IDEA Maximize Tool Window）：
+   * 该区铺满工作区，其余区与编辑器临时隐藏；同一时刻只有一个区可最大化。
+   */
+  function toggleToolWindowMaximize(area: "left" | "bottom" | "right") {
+    const target = settings.layout[area];
+    const next = !target.maximized;
+    settings.layout.left.maximized = false;
+    settings.layout.bottom.maximized = false;
+    settings.layout.right.maximized = false;
+    target.maximized = next;
   }
 
   /** 工具窗口 ⋮ 菜单「重置尺寸」：恢复该区默认宽 / 高 */
@@ -466,6 +485,7 @@ export const useSettingsStore = defineStore("settings", () => {
     toggleRightWindow,
     setRightWidth,
     resetToolWindowSize,
+    toggleToolWindowMaximize,
     setLocale,
     setAutoCheckUpdates,
     persistNow,

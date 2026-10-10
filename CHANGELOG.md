@@ -14,7 +14,7 @@
   - 界面图标库从 lucide 换成 **Reicon**（`reicon-vue`，MIT，2676 图标，Filled / Outline 双重量）：21 个文件、64 个图标；工具窗口条与主要操作图标用 `Filled`，工具窗口标题行 ⋮ / ✕ 用 Outline；颜色由 CSS `color` 驱动（图标 fill=currentColor）。
   - **Inter UI 字体**（IDEA New UI 官方 UI 字体）：`@fontsource-variable/inter` 随包分发，离线可用，unicode-range 按需加载；`--font-ui` 首选 `Inter Variable`，中文回退系统字体。
   - **右侧工具窗口区**（IDEA 右侧条）：新增 `RightToolWindows` 与 `ToolWindowBar side="right"`；首个右侧工具窗口为 **Spring 端点面板**（筛选 / 重新扫描 / 端点列表按 HTTP 方法着色 / 点击跳转到控制器行，数据来自 Spring 索引、首次挂载惰性扫描）；布局状态新增 `settings.layout.right { active, lastActive, width }`。
-  - **工具窗口 ⋮ 菜单**（`ToolWindowCard` 统一提供）：「隐藏工具窗口」「重置尺寸」（恢复该区默认宽 / 高）。
+  - **工具窗口 ⋮ 菜单**（`ToolWindowCard` 统一提供）：「隐藏工具窗口」「最大化工具窗口 / 恢复」（该区铺满工作区，编辑器与其它工具窗口列隐藏，同一时刻只有一个区可最大化）「重置尺寸」（恢复该区默认宽 / 高）。
   - **导航栏面包屑移入状态栏**（IDEA New UI 的 navigation bar 位置）：新增 `stores/breadcrumbs.ts` 共享路径段与符号链数据，编辑器底部面包屑移除；点击路径定位资源管理器、点击符号跳转的行为保留（处理器仍由 `MonacoEditor.vue` 注册），无打开文件时状态栏左端显示「就绪」。
 
 - **IntelliJ IDEA 对齐（界面样式 + 操作方式）**：

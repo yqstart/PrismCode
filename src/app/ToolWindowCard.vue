@@ -3,7 +3,7 @@
 // 工具窗口统一外壳：标题行（名称 + 附加动作 + ⋮ 菜单 + 隐藏按钮）+ 内容区。
 // 各工具窗口只负责内容；标题排版、⋮ 菜单（隐藏 / 重置尺寸）与隐藏行为在这里统一，
 // 保证 Project / Commit / Terminal / Problems / Debug / Spring 呈现同一套视觉语言。
-import { onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { More, X } from "reicon-vue";
 import { useSettingsStore } from "@/stores/settings";
 import { useI18n } from "@/i18n";
@@ -22,6 +22,17 @@ const emit = defineEmits<{
 
 const { t } = useI18n();
 const settings = useSettingsStore();
+
+/** 所属区是否处于最大化（IDEA Maximize Tool Window） */
+const maximized = computed(() =>
+  props.resetArea ? settings.layout[props.resetArea].maximized : false,
+);
+
+function toggleMaximize() {
+  menuOpen.value = false;
+  if (!props.resetArea) return;
+  settings.toggleToolWindowMaximize(props.resetArea);
+}
 
 const menuOpen = ref(false);
 const menuBtn = ref<HTMLButtonElement | null>(null);
@@ -123,6 +134,16 @@ onBeforeUnmount(() => {
       >
         <button type="button" class="tw-menu-row" @click="hide">
           {{ t("toolWindow.hide") }}
+        </button>
+        <button
+          v-if="resetArea"
+          type="button"
+          class="tw-menu-row"
+          @click="toggleMaximize"
+        >
+          {{
+            maximized ? t("toolWindow.restore") : t("toolWindow.maximize")
+          }}
         </button>
         <button
           v-if="resetArea"

@@ -27,6 +27,8 @@ export const enUS = {
     hide: "Hide tool window",
     more: "More actions",
     resetSize: "Reset size",
+    maximize: "Maximize tool window",
+    restore: "Restore tool window",
     commitTitle: "Commit",
   },
   activity: {
