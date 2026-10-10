@@ -1,148 +1,228 @@
 /* ==================== Prism Dark（默认深色） ====================
-   中性石墨底 + 柔和紫色强调，作为四套主题的共同层级基线。
+   中性石墨底 + 柔和紫色强调，作为 Prism 系主题的共同层级基线。
    三深色靠底色相区分：dark 中性灰 / midnight 海军蓝 / cyberpunk 紫黑。 */
 :root,
 [data-theme="prism-dark"] {
-  --bg-app: #141519;
-  --bg-header: #1b1d22;
-  --bg-panel: #1f2026;
-  --bg-elevated: #26272e;
-  --bg-editor: #141519;
-  --bg-terminal: #0e0f13;
-  --bg-inset: #101116;
-  --bg-hover: rgba(255, 255, 255, 0.06);
-  --bg-active: rgba(167, 139, 250, 0.14);
-  --bg-overlay: rgba(7, 8, 12, 0.72);
+ --bg-app: #141519;
+ --bg-header: #1b1d22;
+ --bg-panel: #1f2026;
+ --bg-elevated: #26272e;
+ --bg-editor: #141519;
+ --bg-terminal: #0e0f13;
+ --bg-inset: #101116;
+ --bg-hover: rgba(255, 255, 255, 0.06);
+ --bg-active: rgba(167, 139, 250, 0.14);
+ --bg-overlay: rgba(7, 8, 12, 0.72);
 
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(255, 255, 255, 0.16);
+ --border-subtle: rgba(255, 255, 255, 0.08);
+ --border-strong: rgba(255, 255, 255, 0.16);
 
-  --text-primary: #f4f4f5;
-  --text-secondary: #c3c7d1;
-  --text-muted: #a2a7b4;
+ --text-primary: #f4f4f5;
+ --text-secondary: #c3c7d1;
+ --text-muted: #a2a7b4;
 
-  --accent: #a78bfa;
-  --accent-hover: #b9a1ff;
-  --accent-soft: rgba(167, 139, 250, 0.15);
-  --accent-fg: #17131f;
+ --accent: #a78bfa;
+ --accent-hover: #b9a1ff;
+ --accent-soft: rgba(167, 139, 250, 0.15);
+ --accent-fg: #17131f;
 
-  --success: #4ade80;
-  --warning: #f6c453;
-  --danger: #f87171;
+ --success: #4ade80;
+ --warning: #f6c453;
+ --danger: #f87171;
 
-  --focus-ring: rgba(167, 139, 250, 0.55);
+ --focus-ring: rgba(167, 139, 250, 0.55);
 
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.24), 0 0 0 1px rgba(255, 255, 255, 0.025);
-  --shadow-popover: 0 16px 36px rgba(0, 0, 0, 0.42), 0 3px 10px rgba(0, 0, 0, 0.24), 0 0 0 1px rgba(255, 255, 255, 0.06);
-  --shadow-modal: 0 28px 72px rgba(0, 0, 0, 0.58), 0 8px 24px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(255, 255, 255, 0.07);
+ --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.24), 0 0 0 1px rgba(255, 255, 255, 0.025);
+ --shadow-popover: 0 16px 36px rgba(0, 0, 0, 0.42), 0 3px 10px rgba(0, 0, 0, 0.24), 0 0 0 1px rgba(255, 255, 255, 0.06);
+ --shadow-modal: 0 28px 72px rgba(0, 0, 0, 0.58), 0 8px 24px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(255, 255, 255, 0.07);
+}
+
+/* ==================== IntelliJ Dark（New UI 默认主题） ====================
+   色值取自 IntelliJ IDEA 2026.2 官方主题定义 expUI_dark.theme.json（New UI "Dark"）。 */
+[data-theme="intellij-dark"] {
+ --bg-app: #1e1f22;
+ --bg-header: #2b2d30;
+ --bg-panel: #2b2d30;
+ --bg-elevated: #2b2d30;
+ --bg-editor: #1e1f22;
+ --bg-terminal: #1e1f22;
+ --bg-inset: #1e1f22;
+ --bg-hover: #393b40;
+ --bg-active: #2e436e;
+ --bg-overlay: rgba(0, 0, 0, 0.5);
+
+ --border-subtle: #393b40;
+ --border-strong: #4e5157;
+
+ --text-primary: #dfe1e5;
+ --text-secondary: #b4b8bf;
+ --text-muted: #868a91;
+
+ --accent: #3574f0;
+ --accent-hover: #548af7;
+ --accent-soft: rgba(53, 116, 240, 0.15);
+ --accent-fg: #ffffff;
+ /* IDEA EditorTabs.underlineColor = Blue6 */
+ --tab-underline: #3574f0;
+
+ --success: #5fad65;
+ --warning: #f2c55c;
+ --danger: #db5c5c;
+
+ --focus-ring: rgba(53, 116, 240, 0.5);
+
+ --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.36), 0 0 0 1px rgba(255, 255, 255, 0.03);
+ --shadow-popover: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px #43454a;
+ --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.5), 0 0 0 1px #43454a;
+}
+
+/* ==================== IntelliJ Light（New UI 浅色） ====================
+   色值取自 IntelliJ IDEA 2026.2 官方主题定义 expUI_light.theme.json
+   （Light with Light Header 变体：工具栏 / 侧栏取 Gray13 #f7f8fa）。 */
+[data-theme="intellij-light"] {
+ --bg-app: #f7f8fa;
+ --bg-header: #f7f8fa;
+ --bg-panel: #f7f8fa;
+ --bg-elevated: #ffffff;
+ --bg-editor: #ffffff;
+ --bg-terminal: #ffffff;
+ --bg-inset: #ffffff;
+ --bg-hover: #ebecf0;
+ --bg-active: #d4e2ff;
+ --bg-overlay: rgba(0, 0, 0, 0.25);
+
+ --border-subtle: #ebecf0;
+ --border-strong: #c9ccd6;
+
+ --text-primary: #000000;
+ --text-secondary: #5a5d6b;
+ --text-muted: #818594;
+
+ --accent: #3574f0;
+ --accent-hover: #4682fa;
+ --accent-soft: rgba(53, 116, 240, 0.12);
+ --accent-fg: #ffffff;
+ /* IDEA EditorTabs.underlineColor = Blue6 */
+ --tab-underline: #3574f0;
+
+ --success: #208a3c;
+ --warning: #c27d04;
+ --danger: #db3b4b;
+
+ --focus-ring: rgba(53, 116, 240, 0.4);
+
+ /* 阴影沿用 tokens.css 的浅色默认 */
+ --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
+ --shadow-popover: 0 8px 24px rgba(0, 0, 0, 0.14), 0 2px 6px rgba(0, 0, 0, 0.06), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
+ --shadow-modal: 0 32px 80px rgba(0, 0, 0, 0.32), 0 8px 24px rgba(0, 0, 0, 0.14), 0 0 0 0.5px rgba(0, 0, 0, 0.06);
 }
 
 /* ==================== Prism Light（dawn，浅色 / 雾白） ==================== */
 [data-theme="dawn"] {
-  --bg-app: #eef0f4;
-  --bg-header: #e2e6ec;
-  --bg-panel: #f7f8fa;
-  --bg-elevated: #ffffff;
-  --bg-editor: #ffffff;
-  --bg-terminal: #e9edf2;
-  --bg-inset: #f1f3f6;
-  --bg-hover: rgba(15, 23, 42, 0.05);
-  --bg-active: rgba(79, 111, 232, 0.12);
-  --bg-overlay: rgba(15, 23, 42, 0.42);
+ --bg-app: #eef0f4;
+ --bg-header: #e2e6ec;
+ --bg-panel: #f7f8fa;
+ --bg-elevated: #ffffff;
+ --bg-editor: #ffffff;
+ --bg-terminal: #e9edf2;
+ --bg-inset: #f1f3f6;
+ --bg-hover: rgba(15, 23, 42, 0.05);
+ --bg-active: rgba(79, 111, 232, 0.12);
+ --bg-overlay: rgba(15, 23, 42, 0.42);
 
-  --border-subtle: rgba(15, 23, 42, 0.1);
-  --border-strong: rgba(15, 23, 42, 0.18);
+ --border-subtle: rgba(15, 23, 42, 0.1);
+ --border-strong: rgba(15, 23, 42, 0.18);
 
-  --text-primary: #1c2029;
-  --text-secondary: #475062;
-  --text-muted: #5b6472;
+ --text-primary: #1c2029;
+ --text-secondary: #475062;
+ --text-muted: #5b6472;
 
-  --accent: #4f6fe8;
-  --accent-hover: #3f5fd4;
-  --accent-soft: rgba(79, 111, 232, 0.12);
-  --accent-fg: #ffffff;
+ --accent: #4f6fe8;
+ --accent-hover: #3f5fd4;
+ --accent-soft: rgba(79, 111, 232, 0.12);
+ --accent-fg: #ffffff;
 
-  --success: #047857;
-  --warning: #b45309;
-  --danger: #dc2626;
+ --success: #047857;
+ --warning: #b45309;
+ --danger: #dc2626;
 
-  --focus-ring: rgba(79, 111, 232, 0.42);
+ --focus-ring: rgba(79, 111, 232, 0.42);
 
-  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.05), 0 0 0 1px rgba(15, 23, 42, 0.045);
-  --shadow-popover: 0 14px 32px rgba(15, 23, 42, 0.14), 0 3px 8px rgba(15, 23, 42, 0.06), 0 0 0 1px rgba(15, 23, 42, 0.06);
-  --shadow-modal: 0 26px 64px rgba(15, 23, 42, 0.2), 0 8px 20px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(15, 23, 42, 0.08);
+ --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.05), 0 0 0 1px rgba(15, 23, 42, 0.045);
+ --shadow-popover: 0 14px 32px rgba(15, 23, 42, 0.14), 0 3px 8px rgba(15, 23, 42, 0.06), 0 0 0 1px rgba(15, 23, 42, 0.06);
+ --shadow-modal: 0 26px 64px rgba(15, 23, 42, 0.2), 0 8px 20px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(15, 23, 42, 0.08);
 }
 
 /* ==================== Prism Midnight（深蓝深色） ====================
    海军蓝底 + 矢车菊蓝强调，与 cyberpunk 的霓虹青拉开色相。 */
 [data-theme="midnight"] {
-  --bg-app: #0b1322;
-  --bg-header: #111b30;
-  --bg-panel: #182a44;
-  --bg-elevated: #24344f;
-  --bg-editor: #0b1322;
-  --bg-terminal: #080e1b;
-  --bg-inset: #0a1120;
-  --bg-hover: rgba(255, 255, 255, 0.06);
-  --bg-active: rgba(94, 161, 255, 0.14);
-  --bg-overlay: rgba(5, 10, 20, 0.74);
+ --bg-app: #0b1322;
+ --bg-header: #111b30;
+ --bg-panel: #182a44;
+ --bg-elevated: #24344f;
+ --bg-editor: #0b1322;
+ --bg-terminal: #080e1b;
+ --bg-inset: #0a1120;
+ --bg-hover: rgba(255, 255, 255, 0.06);
+ --bg-active: rgba(94, 161, 255, 0.14);
+ --bg-overlay: rgba(5, 10, 20, 0.74);
 
-  --border-subtle: rgba(148, 184, 255, 0.12);
-  --border-strong: rgba(148, 184, 255, 0.22);
+ --border-subtle: rgba(148, 184, 255, 0.12);
+ --border-strong: rgba(148, 184, 255, 0.22);
 
-  --text-primary: #eef4fc;
-  --text-secondary: #bccadf;
-  --text-muted: #96a3ba;
+ --text-primary: #eef4fc;
+ --text-secondary: #bccadf;
+ --text-muted: #96a3ba;
 
-  --accent: #5ea1ff;
-  --accent-hover: #7db4ff;
-  --accent-soft: rgba(94, 161, 255, 0.16);
-  --accent-fg: #0a1424;
+ --accent: #5ea1ff;
+ --accent-hover: #7db4ff;
+ --accent-soft: rgba(94, 161, 255, 0.16);
+ --accent-fg: #0a1424;
 
-  --success: #34d399;
-  --warning: #fbbf24;
-  --danger: #f87171;
+ --success: #34d399;
+ --warning: #fbbf24;
+ --danger: #f87171;
 
-  --focus-ring: rgba(94, 161, 255, 0.5);
+ --focus-ring: rgba(94, 161, 255, 0.5);
 
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.025);
-  --shadow-popover: 0 16px 36px rgba(0, 0, 0, 0.48), 0 3px 10px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(255, 255, 255, 0.06);
-  --shadow-modal: 0 28px 72px rgba(0, 0, 0, 0.62), 0 8px 24px rgba(0, 0, 0, 0.34), 0 0 0 1px rgba(255, 255, 255, 0.07);
+ --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.025);
+ --shadow-popover: 0 16px 36px rgba(0, 0, 0, 0.48), 0 3px 10px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(255, 255, 255, 0.06);
+ --shadow-modal: 0 28px 72px rgba(0, 0, 0, 0.62), 0 8px 24px rgba(0, 0, 0, 0.34), 0 0 0 1px rgba(255, 255, 255, 0.07);
 }
 
 /* ==================== Prism Cyberpunk（高对比霓虹） ====================
    紫黑底 + 霓虹青强调，与 midnight 的海军蓝底 / 矢车菊蓝拉开。 */
 [data-theme="cyberpunk"] {
-  --bg-app: #0e0c16;
-  --bg-header: #171425;
-  --bg-panel: #221d33;
-  --bg-elevated: #2c2640;
-  --bg-editor: #0e0c16;
-  --bg-terminal: #090811;
-  --bg-inset: #100e1a;
-  --bg-hover: rgba(255, 255, 255, 0.065);
-  --bg-active: rgba(94, 234, 212, 0.13);
-  --bg-overlay: rgba(7, 8, 14, 0.76);
+ --bg-app: #0e0c16;
+ --bg-header: #171425;
+ --bg-panel: #221d33;
+ --bg-elevated: #2c2640;
+ --bg-editor: #0e0c16;
+ --bg-terminal: #090811;
+ --bg-inset: #100e1a;
+ --bg-hover: rgba(255, 255, 255, 0.065);
+ --bg-active: rgba(94, 234, 212, 0.13);
+ --bg-overlay: rgba(7, 8, 14, 0.76);
 
-  --border-subtle: rgba(196, 181, 253, 0.13);
-  --border-strong: rgba(196, 181, 253, 0.24);
+ --border-subtle: rgba(196, 181, 253, 0.13);
+ --border-strong: rgba(196, 181, 253, 0.24);
 
-  --text-primary: #f6f3fc;
-  --text-secondary: #c6c0d8;
-  --text-muted: #a09cb4;
+ --text-primary: #f6f3fc;
+ --text-secondary: #c6c0d8;
+ --text-muted: #a09cb4;
 
-  --accent: #5eead4;
-  --accent-hover: #7ef0dc;
-  --accent-soft: rgba(94, 234, 212, 0.15);
-  --accent-fg: #06231e;
+ --accent: #5eead4;
+ --accent-hover: #7ef0dc;
+ --accent-soft: rgba(94, 234, 212, 0.15);
+ --accent-fg: #06231e;
 
-  --success: #34d399;
-  --warning: #fbbf24;
-  --danger: #fb7185;
+ --success: #34d399;
+ --warning: #fbbf24;
+ --danger: #fb7185;
 
-  --focus-ring: rgba(94, 234, 212, 0.52);
+ --focus-ring: rgba(94, 234, 212, 0.52);
 
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.34), 0 0 0 1px rgba(255, 255, 255, 0.028);
-  --shadow-popover: 0 16px 36px rgba(0, 0, 0, 0.54), 0 3px 10px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.07);
-  --shadow-modal: 0 28px 72px rgba(0, 0, 0, 0.68), 0 8px 24px rgba(0, 0, 0, 0.38), 0 0 0 1px rgba(255, 255, 255, 0.08);
+ --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.34), 0 0 0 1px rgba(255, 255, 255, 0.028);
+ --shadow-popover: 0 16px 36px rgba(0, 0, 0, 0.54), 0 3px 10px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.07);
+ --shadow-modal: 0 28px 72px rgba(0, 0, 0, 0.68), 0 8px 24px rgba(0, 0, 0, 0.38), 0 0 0 1px rgba(255, 255, 255, 0.08);
 }

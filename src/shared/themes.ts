@@ -2,6 +2,8 @@
 import type { ThemeId } from "@/shared/types";
 
 export const THEME_LABELS: Record<ThemeId, string> = {
+  "intellij-dark": "IntelliJ Dark",
+  "intellij-light": "IntelliJ Light",
   "prism-dark": "Prism Dark",
   dawn: "Prism Light",
   midnight: "Prism Midnight",
@@ -10,6 +12,8 @@ export const THEME_LABELS: Record<ThemeId, string> = {
 
 /** 状态栏快捷切换顺序 */
 export const THEME_ORDER: ThemeId[] = [
+  "intellij-dark",
+  "intellij-light",
   "prism-dark",
   "dawn",
   "midnight",

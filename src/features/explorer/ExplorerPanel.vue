@@ -152,12 +152,26 @@ const deleteMenuLabel = computed(() =>
 const locateFileTitle = computed(() =>
   t("explorer.revealActiveTitle", { shortcut: formatShortcut("alt", "F1") }),
 );
-const panelTitle = computed(() =>
-  rootPath.value ? rootName.value : t("explorer.selectProject"),
-);
 const switchCandidates = computed(() =>
   recentFolders.value.filter((p) => p !== rootPath.value),
 );
+
+/** 根节点行：是否展开（未收起且有工作区） */
+const rootExpanded = computed(() => Boolean(rootPath.value) && !workspace.rootCollapsed);
+/** 根路径显示：home 前缀替换为 ~（对齐 IDEA 的路径写法） */
+const rootDisplayPath = computed(() => {
+  const path = rootPath.value ?? "";
+  const home = "/Users/";
+  if (!path.startsWith(home)) return path;
+  const rest = path.slice(home.length);
+  const slash = rest.indexOf("/");
+  return slash === -1 ? "~" : `~${rest.slice(slash)}`;
+});
+
+/** 根行箭头：收起 / 展开整棵项目树（对齐 IDEA 项目视图首行） */
+function toggleRoot() {
+  workspace.toggleRootCollapsed();
+}
 
 /** Tauri macOS WKWebView 的 HTML5 DnD 不可靠，改用 pointer 拖拽 */
 const DRAG_THRESHOLD_PX = 5;
@@ -998,18 +1012,6 @@ defineExpose({ locateActiveFile });
 <template>
   <div ref="panelRef" class="panel" @click="closeMenu">
     <header class="header">
-      <div class="title-wrap">
-        <button
-          ref="titleBtnRef"
-          type="button"
-          class="title-btn"
-          :title="rootPath ?? t('explorer.selectOrSwitch')"
-          @click.stop="toggleProjectMenu"
-        >
-          <span class="title">{{ panelTitle }}</span>
-          <ChevronDown :size="14" class="title-caret" />
-        </button>
-      </div>
       <div v-if="rootPath" class="header-actions">
         <button
           type="button"
@@ -1153,6 +1155,34 @@ defineExpose({ locateActiveFile });
           :title="t('explorer.dragMoveHint')"
           @contextmenu="onContext($event, rootPath, true)"
         >
+          <!-- IDEA 项目视图首行即项目根节点：名称可点开项目菜单，路径灰显 -->
+          <div class="row root-row" :class="{ active: selectedPath === rootPath }">
+            <button
+              type="button"
+              class="twist"
+              :title="
+                rootExpanded
+                  ? t('explorer.collapseAllFolders')
+                  : t('explorer.expandRoot')
+              "
+              @click.stop="toggleRoot"
+            >
+              <ChevronDown v-if="rootExpanded" :size="14" class="chev" />
+              <ChevronRight v-else :size="14" class="chev" />
+            </button>
+            <FileTypeIcon :path="rootPath" is-dir :expanded="rootExpanded" :size="14" />
+            <button
+              ref="titleBtnRef"
+              type="button"
+              class="title-btn"
+              :title="rootPath"
+              @click.stop="toggleProjectMenu"
+            >
+              <span class="root-name">{{ rootName }}</span>
+              <ChevronDown :size="12" class="title-caret" />
+            </button>
+            <span class="root-path" :title="rootPath">{{ rootDisplayPath }}</span>
+          </div>
           <button
             v-for="node in flatTree"
             :key="node.path"
@@ -1355,32 +1385,48 @@ defineExpose({ locateActiveFile });
 }
 
 .header {
-  height: 36px;
+  height: 28px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 6px 0 12px;
-  border-bottom: 1px solid var(--border-subtle);
-  background: color-mix(in srgb, var(--bg-panel) 88%, var(--bg-header));
+  justify-content: flex-end;
+  padding: 0 6px;
+  background: var(--bg-panel);
 }
 
-.title-wrap {
-  position: relative;
+/* ==================== 项目根行（对齐 IDEA 项目视图首行） ====================
+   名称可点开项目菜单，路径灰显在后，箭头收起整棵树。 */
+.root-row {
+  gap: 2px;
+  padding-right: 6px;
+}
+
+.root-name {
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--text-primary);
+}
+
+.root-path {
   min-width: 0;
   flex: 1;
-  margin-right: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+  font-size: 11px;
+  padding-left: 2px;
 }
 
 .title-btn {
-  max-width: 100%;
+  min-width: 0;
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  min-height: 26px;
-  padding: 2px 6px 2px 4px;
-  border-radius: 6px;
-  color: var(--text-secondary);
+  gap: 2px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  color: var(--text-primary);
   transition:
     background var(--transition-fast) var(--ease-out),
     color var(--transition-fast) var(--ease-out);
@@ -1389,16 +1435,6 @@ defineExpose({ locateActiveFile });
 .title-btn:hover {
   background: var(--bg-hover);
   color: var(--text-primary);
-}
-
-.title {
-  min-width: 0;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .title-caret {
@@ -1748,7 +1784,56 @@ defineExpose({ locateActiveFile });
 
 .tree {
   min-height: 100%;
-  padding: 4px 6px 12px;
+  padding: 2px 4px;
+}
+
+/* ==================== 项目根行（对齐 IDEA 项目视图首行） ====================
+   名称可点开项目菜单，路径灰显在后，箭头收起整棵树。 */
+.root-row {
+  gap: 2px;
+  padding-right: 6px;
+}
+
+.root-name {
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--text-primary);
+}
+
+.root-path {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+  font-size: 11px;
+  padding-left: 2px;
+}
+
+.root-row .title-btn {
+  min-width: 0;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  color: var(--text-primary);
+  transition:
+    background var(--transition-fast) var(--ease-out),
+    color var(--transition-fast) var(--ease-out);
+}
+
+.root-row .title-btn:hover {
+  background: var(--bg-hover);
+}
+
+.root-row .twist {
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
 }
 
 .tree.drop-root {
@@ -1758,12 +1843,12 @@ defineExpose({ locateActiveFile });
 
 .row {
   width: 100%;
-  min-height: 28px;
+  min-height: 24px;
   display: flex;
   align-items: center;
   gap: 4px;
   padding-right: 8px;
-  border-radius: 6px;
+  border-radius: 4px;
   color: var(--text-primary);
   text-align: left;
   touch-action: none;
@@ -1801,17 +1886,12 @@ defineExpose({ locateActiveFile });
 
 .row.active {
   background: var(--bg-active);
-  color: var(--accent);
-  box-shadow: inset 2px 0 0 var(--accent);
+  color: var(--text-primary);
 }
 
 .row.selected {
   background: var(--bg-active);
-  color: var(--accent);
-}
-
-.row.selected.active {
-  box-shadow: inset 2px 0 0 var(--accent);
+  color: var(--text-primary);
 }
 
 .row:deep(.flash),

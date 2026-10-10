@@ -11,6 +11,8 @@ import EditorArea from "@/app/EditorArea.vue";
 import StatusBar from "@/app/StatusBar.vue";
 import FindInFilesDialog from "@/features/search/FindInFilesDialog.vue";
 import QuickOpen from "@/features/search/QuickOpen.vue";
+import SearchEverywhere from "@/features/search/SearchEverywhere.vue";
+import FileStructureDialog from "@/features/editor/FileStructureDialog.vue";
 import SettingsModal from "@/features/settings/SettingsModal.vue";
 import ChoiceDialog from "@/shared/ChoiceDialog.vue";
 import GitAuthDialog from "@/shared/GitAuthDialog.vue";
@@ -44,13 +46,17 @@ import {
   isMainWindowSession,
   loadMainWindowRoot,
 } from "@/shared/windowSession";
+import { useDebugStore } from "@/stores/debug";
 import { useEditorStore } from "@/stores/editor";
 import { useGitStore } from "@/stores/git";
+import { useGitLogStore } from "@/stores/gitLog";
 import { useSearchStore } from "@/stores/search";
 import { useSessionsStore } from "@/stores/sessions";
 import { useSettingsStore } from "@/stores/settings";
+import { useStructureStore } from "@/stores/structure";
 import { useUiStore } from "@/stores/ui";
 import { useWorkspaceStore } from "@/stores/workspace";
+import { executeAction } from "@/shared/actions";
 import { t } from "@/i18n";
 
 /** 终端及 xterm 不属于首屏；首次真正挂载终端面板时再加载。 */
@@ -70,6 +76,9 @@ const search = useSearchStore();
 const sessions = useSessionsStore();
 const settings = useSettingsStore();
 const git = useGitStore();
+const gitLog = useGitLogStore();
+const debug = useDebugStore();
+const structure = useStructureStore();
 const { settingsOpen } = storeToRefs(ui);
 
 let unlistenMenu: (() => void) | undefined;
@@ -88,12 +97,66 @@ let lastTerminalToggleAt = 0;
 let lastSidebarToggleAt = 0;
 let lastCommitToggleAt = 0;
 let pendingCommitChordTimer: number | null = null;
+/** 双击 Shift 检测：上一次 Shift 按下的时间戳（对齐 IDEA Search Everywhere） */
+let lastShiftDownAt = 0;
 
 function toggleTerminal() {
   const now = Date.now();
   if (now - lastTerminalToggleAt < 120) return;
   lastTerminalToggleAt = now;
   sessions.toggleSessions(workspace.rootPath);
+}
+
+/** 打开版本控制历史（Git Log 标签），对齐 IDEA ⌘9 版本控制工具窗口 */
+function openGitLog() {
+  if (!workspace.rootPath) {
+    workspace.showNotice(t("notice.noWorkspace"));
+    return;
+  }
+  gitLog.openLog();
+}
+
+/** 打开调试视图（底部面板），对齐 IDEA ⌘5 调试工具窗口 */
+function openDebugView() {
+  sessions.showDebug();
+}
+
+/** 打开 Commit 工具窗口（IDEA ⌘0，语义为「打开/聚焦」而非切换） */
+function openCommitPanel() {
+  settings.openCommitPanel();
+  if (
+    settings.layout.activePanel === "commit" &&
+    !settings.layout.sidebarCollapsed &&
+    workspace.rootPath
+  ) {
+    void git.scheduleRefresh();
+  }
+}
+
+/** 后退/前进（对齐 IDEA ⌘[ / ⌘] 与 ⌘⌥←/→）：跳转栈由跨文件跳转写入 */
+function navigateBack() {
+  const target = editor.takeJumpBack();
+  if (target) editor.requestOpenAt(target.path, target.line, target.column);
+}
+
+function navigateForward() {
+  const target = editor.takeJumpForward();
+  if (target) editor.requestOpenAt(target.path, target.line, target.column);
+}
+
+/** 焦点回到编辑器（对齐 IDEA Esc：从工具窗口返回编辑器） */
+function focusEditor() {
+  const el = document.querySelector<HTMLElement>(
+    ".monaco-editor .inputarea, .monaco-editor textarea",
+  );
+  el?.focus();
+}
+
+/** 打开新弹层前收拢其它搜索弹层（对齐 IDEA：同时只存在一个搜索界面） */
+function closeSearchLayers() {
+  if (search.quickOpenVisible) search.closeQuickOpen();
+  if (search.findInFilesVisible) search.closeFindInFiles();
+  if (search.searchEverywhereVisible) search.closeSearchEverywhere();
 }
 
 function toggleSidebar() {
@@ -129,6 +192,9 @@ async function locateActiveInExplorer() {
 }
 
 function handleMenuAction(action: string) {
+  // 新菜单项统一走动作注册表（Find Action / Search Everywhere / 菜单共用同一来源）；
+  // 注册表未覆盖的旧 id 保留原有内联处理。
+  if (executeAction(action)) return;
   if (action === "open_folder") void workspace.openFolder();
   if (action === "save") void editor.saveActive();
   if (action === "settings") ui.openSettings();
@@ -143,7 +209,26 @@ function handleMenuAction(action: string) {
 
 function onKeydown(event: KeyboardEvent) {
   const mod = event.metaKey || event.ctrlKey;
-  // 编辑器的 ⌘K ⌘F 是 CodeMirror chord。⌘K 单独仍保留 Commit 面板命令，
+  // 双击 Shift：Search Everywhere（对齐 IDEA，任何焦点环境下可用；只记录时间不拦截）
+  if (
+    event.key === "Shift" &&
+    !event.repeat &&
+    !event.metaKey &&
+    !event.ctrlKey &&
+    !event.altKey
+  ) {
+    const now = Date.now();
+    if (now - lastShiftDownAt < 420) {
+      lastShiftDownAt = 0;
+      closeSearchLayers();
+      search.openSearchEverywhere("all");
+    } else {
+      lastShiftDownAt = now;
+    }
+    return;
+  }
+  lastShiftDownAt = 0;
+  // 编辑器的 ⌘K ⌘F 是 Monaco chord。⌘K 单独仍保留 Commit 面板命令，
   // 但要延迟一小段时间，避免在 chord 第一笔就被窗口级快捷键抢走。
   if (pendingCommitChordTimer !== null) {
     window.clearTimeout(pendingCommitChordTimer);
@@ -169,6 +254,65 @@ function onKeydown(event: KeyboardEvent) {
   ) {
     event.preventDefault();
     sessions.showProblems(workspace.rootPath);
+    return;
+  }
+  // IDEA New UI 工具窗口键位：⌘1 项目 / ⌘9 版本控制（Git Log）/ ⌘0 提交 / ⌘5 调试 / ⌥F12 终端
+  if (mod && !event.shiftKey && !event.altKey && event.key === "1") {
+    event.preventDefault();
+    settings.setActivePanel("explorer");
+    settings.setSidebarCollapsed(false);
+    return;
+  }
+  if (mod && !event.shiftKey && !event.altKey && event.key === "9") {
+    event.preventDefault();
+    openGitLog();
+    return;
+  }
+  if (mod && !event.shiftKey && !event.altKey && event.key === "0") {
+    event.preventDefault();
+    openCommitPanel();
+    return;
+  }
+  if (mod && !event.shiftKey && !event.altKey && event.key === "5") {
+    event.preventDefault();
+    openDebugView();
+    return;
+  }
+  // ⌘F12：文件结构弹层（对齐 IDEA File Structure）
+  if (mod && !event.shiftKey && !event.altKey && event.key === "F12") {
+    event.preventDefault();
+    closeSearchLayers();
+    structure.open();
+    return;
+  }
+  // VCS：⌘T 更新项目 / ⇧⌘K 推送（对齐 IDEA 全局 VCS 动作；无工作区时静默跳过）
+  if (mod && !event.shiftKey && !event.altKey && event.key.toLowerCase() === "t") {
+    event.preventDefault();
+    if (workspace.rootPath) void git.updateProject();
+    return;
+  }
+  if (mod && event.shiftKey && !event.altKey && event.key.toLowerCase() === "k") {
+    event.preventDefault();
+    if (workspace.rootPath) void git.pushWithDialog();
+    return;
+  }
+  if (event.altKey && !mod && !event.shiftKey && event.key === "F12") {
+    event.preventDefault();
+    toggleTerminal();
+    return;
+  }
+  // 调试：⌘F8 切换当前行断点 / ⌘⌥R 恢复运行（对齐 IDEA）
+  if (mod && !event.shiftKey && !event.altKey && event.key === "F8") {
+    event.preventDefault();
+    const tab = editor.activeTab;
+    if (tab) void debug.toggleBreakpoint(tab.path, tab.cursor.line);
+    return;
+  }
+  if (mod && event.altKey && !event.shiftKey && event.key.toLowerCase() === "r") {
+    if (debug.state === "paused") {
+      event.preventDefault();
+      void debug.resume();
+    }
     return;
   }
   if (mod && event.key === ",") {
@@ -221,7 +365,14 @@ function onKeydown(event: KeyboardEvent) {
     search.openFindInFiles();
     return;
   }
-  // ⌘F：打开编辑器内查找。编辑器聚焦时 CM 的 Prec.highest keymap 已处理并
+  // ⌘⇧A：Find Action（对齐 IDEA，Search Everywhere 的动作分组）
+  if (mod && event.shiftKey && !event.altKey && event.key.toLowerCase() === "a") {
+    event.preventDefault();
+    closeSearchLayers();
+    search.openSearchEverywhere("actions");
+    return;
+  }
+  // ⌘F：打开编辑器内查找。编辑器聚焦时 Monaco keymap 已处理并
   // preventDefault（defaultPrevented 为 true 时跳过，避免重复打开）；
   // 失焦场景（侧边栏/终端/状态栏）靠这里兜底——macOS 原生菜单也会触发
   // requestFind，重复调用幂等无害，Windows/Linux 无原生菜单则全依赖此路径。
@@ -238,7 +389,7 @@ function onKeydown(event: KeyboardEvent) {
     return;
   }
   if (mod && event.key.toLowerCase() === "b") {
-    // 编辑器内 ⌘/Ctrl+B 由 CodeMirror 执行「跳转到声明」；其它区域仍折叠侧栏。
+    // 编辑器内 ⌘/Ctrl+B 由 Monaco 执行「跳转到声明」；其它区域仍折叠侧栏。
     if (isEditorTarget(event.target)) {
       event.preventDefault();
       return;
@@ -253,7 +404,7 @@ function onKeydown(event: KeyboardEvent) {
     void locateActiveInExplorer();
     return;
   }
-  // 工作台快捷键在 CodeMirror 内仍应生效；只避开普通输入框、xterm、查找面板等。
+  // 工作台快捷键在 Monaco 内仍应生效；只避开普通输入框、xterm、查找面板等。
   if (isEditableTarget(event.target) && !isEditorTarget(event.target)) return;
   // ⌘W：关闭当前标签
   if (mod && !event.shiftKey && !event.altKey && event.key.toLowerCase() === "w") {
@@ -263,11 +414,29 @@ function onKeydown(event: KeyboardEvent) {
     }
     return;
   }
-  // ⌘⌥→ / ⌘⌥←：切换到下一个 / 上一个标签
-  if (mod && event.altKey && (event.key === "ArrowRight" || event.key === "ArrowLeft")) {
+  // ⇧⌘[ / ⇧⌘]：切换到上一个 / 下一个标签（对齐 IDEA Select Next/Previous Tab）
+  if (mod && event.shiftKey && !event.altKey && (event.key === "[" || event.key === "]")) {
     event.preventDefault();
-    if (event.key === "ArrowRight") editor.activateNextTab();
+    if (event.key === "]") editor.activateNextTab();
     else editor.activatePrevTab();
+    return;
+  }
+  // ⇧⌘⌫：回到上次编辑位置（对齐 IDEA Last Edit Location）
+  if (mod && event.shiftKey && !event.altKey && event.key === "Backspace") {
+    event.preventDefault();
+    if (!editor.goToLastEditLocation()) {
+      workspace.showNotice(t("notice.noLastEditLocation"));
+    }
+    return;
+  }
+  // ⌘[ / ⌘] 与 ⌘⌥←/→：后退 / 前进（对齐 IDEA Back/Forward）
+  if (
+    (mod && event.altKey && !event.shiftKey && (event.key === "ArrowLeft" || event.key === "ArrowRight")) ||
+    (mod && !event.shiftKey && !event.altKey && (event.key === "[" || event.key === "]"))
+  ) {
+    event.preventDefault();
+    if (event.key === "ArrowRight" || event.key === "]") navigateForward();
+    else navigateBack();
     return;
   }
   // ⌘R：刷新资源树
@@ -285,15 +454,58 @@ function onKeydown(event: KeyboardEvent) {
       search.closeQuickOpen();
       return;
     }
+    if (search.searchEverywhereVisible) {
+      search.closeSearchEverywhere();
+      return;
+    }
     if (settingsOpen.value) {
       ui.closeSettings();
+      return;
+    }
+    // 对齐 IDEA：焦点在工具区（活动栏、侧栏、状态栏、标签栏）时 Esc 回到编辑器
+    const el = event.target instanceof HTMLElement ? event.target : null;
+    if (
+      el &&
+      !isEditorTarget(el) &&
+      !el.closest(".xterm") &&
+      el.closest(".activity-bar, .sidebar, .status-bar, .titlebar, .tabs")
+    ) {
+      focusEditor();
     }
   }
 }
 
-/** 判断快捷键事件是否来自 CodeMirror 编辑区（不把普通输入框算入 chord）。 */
+/**
+ * 调试会话期间的步进键位（对齐 IDEA）：F7 单步进入 / F8 单步跳过 / ⇧F8 单步跳出。
+ * 需要捕获阶段拦截：VS Code 预设下 Monaco 把 F8 绑给了「下一个问题」，
+ * 冒泡阶段的全局 handler 拿不到按键，调试态必须优先。
+ */
+function onDebugKeydownCapture(event: KeyboardEvent) {
+  if (event.metaKey || event.ctrlKey || event.altKey) return;
+  if (debug.state !== "paused" && debug.state !== "running") return;
+  const key = event.key;
+  if (key === "F7" && !event.shiftKey) {
+    event.preventDefault();
+    event.stopPropagation();
+    void debug.stepInto();
+    return;
+  }
+  if (key === "F8" && event.shiftKey) {
+    event.preventDefault();
+    event.stopPropagation();
+    void debug.stepOut();
+    return;
+  }
+  if (key === "F8") {
+    event.preventDefault();
+    event.stopPropagation();
+    void debug.stepOver();
+  }
+}
+
+/** 判断快捷键事件是否来自 Monaco 编辑区（不把普通输入框算入 chord）。 */
 function isEditorTarget(target: EventTarget | null): boolean {
-  return target instanceof HTMLElement && Boolean(target.closest(".cm-content, .cm-editor"));
+  return target instanceof HTMLElement && Boolean(target.closest(".monaco-editor"));
 }
 
 /** 命中输入控件时跳过文本编辑类快捷键 */
@@ -302,8 +514,8 @@ function isEditableTarget(target: EventTarget | null): boolean {
   const tag = target.tagName;
   if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
   if (target.isContentEditable) return true;
-  // xterm / CodeMirror 内容区
-  if (target.closest(".xterm, .cm-content, .cm-editor")) return true;
+  // xterm / Monaco 内容区
+  if (target.closest(".xterm, .monaco-editor")) return true;
   return false;
 }
 
@@ -555,6 +767,8 @@ async function restoreApplicationWindows(bootFolder: string | null) {
 
 onMounted(async () => {
   window.addEventListener("keydown", onKeydown);
+  // 调试步进键位走捕获阶段：优先于编辑器键位；仅在调试会话活跃时拦截
+  window.addEventListener("keydown", onDebugKeydownCapture, true);
   window.addEventListener("focus", onWindowFocus);
   window.addEventListener("beforeunload", onBeforeUnload);
   teardownAutoSave = setupAutoSave({
@@ -657,6 +871,7 @@ onUnmounted(() => {
     pendingCommitChordTimer = null;
   }
   window.removeEventListener("keydown", onKeydown);
+  window.removeEventListener("keydown", onDebugKeydownCapture, true);
   window.removeEventListener("focus", onWindowFocus);
   window.removeEventListener("beforeunload", onBeforeUnload);
   editor.persistSession();
@@ -693,6 +908,8 @@ onUnmounted(() => {
     </div>
     <StatusBar />
     <QuickOpen />
+    <SearchEverywhere />
+    <FileStructureDialog />
     <FindInFilesDialog />
     <PromptDialog />
     <ReferencesPanel />

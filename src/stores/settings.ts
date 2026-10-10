@@ -24,6 +24,8 @@ const THEME_MIGRATION: Record<string, ThemeId> = {
 
 /** 各主题对应的 macOS Overlay 标题栏底色（仅最顶系统栏，不含项目行） */
 const TITLEBAR_RGB: Record<ThemeId, [number, number, number]> = {
+  "intellij-dark": [30, 31, 34], // #1e1f22
+  "intellij-light": [247, 248, 250], // #f7f8fa
   dawn: [233, 235, 239],
   "prism-dark": [23, 24, 28],
   midnight: [20, 28, 43],
@@ -31,7 +33,12 @@ const TITLEBAR_RGB: Record<ThemeId, [number, number, number]> = {
 };
 
 function isDarkTheme(theme: ThemeId): boolean {
-  return theme === "prism-dark" || theme === "midnight" || theme === "cyberpunk";
+  return (
+    theme === "intellij-dark" ||
+    theme === "prism-dark" ||
+    theme === "midnight" ||
+    theme === "cyberpunk"
+  );
 }
 
 /** 同步 macOS / 系统菜单栏文案到应用语言（无需重启） */
@@ -110,10 +117,14 @@ function loadSettings(): AppSettings {
     }
 
     const rawTheme = parsed.theme as string | undefined;
-    const theme =
+    let theme =
       (rawTheme && THEME_MIGRATION[rawTheme]) ||
       (rawTheme as ThemeId | undefined) ||
       DEFAULT_SETTINGS.theme;
+    // 旧版本的默认主题是 cyberpunk：沿用旧默认（== 从未主动切换过的用户）跟随
+    // 新默认 IntelliJ Dark。主动选过其它主题的保持不变；主动选过 cyberpunk 的
+    // 无法与旧默认区分，一并跟随（可在设置里改回）。
+    if (theme === "cyberpunk") theme = "intellij-dark";
 
     // 旧版本把 AI 配置写在 editor.aiCompletion 中。不要把这部分历史配置
     // 继续带入响应式设置，避免用户以为应用仍然会联网请求 AI。
@@ -138,6 +149,8 @@ function loadSettings(): AppSettings {
 
     return {
       theme:
+        theme === "intellij-dark" ||
+        theme === "intellij-light" ||
         theme === "dawn" ||
         theme === "prism-dark" ||
         theme === "midnight" ||

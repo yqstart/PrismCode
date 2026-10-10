@@ -49,7 +49,7 @@
 | 搜索 | **Rust walkdir + ignore + 正则** | async + `spawn_blocking` + LRU 文件列表缓存 |
 | SSH | **Rust `ssh2`（libssh2，vendored）** | 主机列表、凭据、远程 Shell |
 | 终端 | **`@xterm/xterm` + `tauri-plugin-pty` 0.3.1（本地阻塞 IO 补丁）** | 本地 PTY；同步读写/等待/终止操作走 `spawn_blocking`，SSH 走 ssh2 原生通道 |
-| 主题 | **CSS 变量 + Monaco `defineTheme`** | 四套主题，编辑器颜色与语法 token 同步 |
+| 主题 | **CSS 变量 + Monaco `defineTheme`** | 六套主题，编辑器颜色与语法 token 同步 |
 | 图标 | **Lucide**（控件）+ **Material Icon Theme**（文件图标） | 细线控件；文件类型对齐 VS Code |
 | 包管理 | pnpm | `pnpm-lock.yaml` 入库，CI `--frozen-lockfile` |
 
@@ -300,9 +300,9 @@ PrismCode/
 
 ## 10. 主题与视觉体系
 
-- **主题 ID**：`prism-dark`（深色）、`dawn`（浅色，Prism Light）、`midnight`（深蓝）、`cyberpunk`（霓虹，应用默认）——四套全部可用，设置面板主题卡 / 状态栏主题菜单 / 状态栏主题名右键循环切换
-- **单一真相源**：`styles/tokens.css` 定义语义变量（色值见 `themes.css` 四套主题块）；组件只消费变量
-- **编辑器同步**：`features/editor/theme.ts` 维护四套 `PALETTES`（含 `HighlightStyle`），UI 主题切换时 `editorThemeExtensions` 同步重建，禁止 UI 已切换而代码区不同步
+- **主题 ID**：`intellij-dark`（IntelliJ New UI Dark 官方色板，应用默认）、`intellij-light`（IntelliJ New UI Light）、`prism-dark`（深色）、`dawn`（浅色，Prism Light）、`midnight`（深蓝）、`cyberpunk`（霓虹）——六套全部可用，设置面板主题卡 / 状态栏主题菜单 / 状态栏主题名右键循环切换；IntelliJ 两套的 UI 与语法色取自本机 IDEA 安装的 `expUI_dark/light.theme.json` 与 `expUI_dark/lightScheme.xml`
+- **单一真相源**：`styles/tokens.css` 定义语义变量（色值见 `themes.css` 六套主题块）；组件只消费变量
+- **编辑器同步**：`features/editor/monacoTheme.ts` 维护六套 Monaco 主题（`monaco.editor.defineTheme`，主题名即 ThemeId），UI 主题切换时 `monaco.editor.setTheme` 同步切换，禁止 UI 已切换而代码区不同步
 - **圆角与密度**：设置弹层 16px、内容卡 12px、控件 8–10px；间距节奏 8 / 12 / 16 / 24
 - **动效**：150–200ms，纯 CSS（弹层过渡 / 标签动画 / 树 Chevron 旋转 / Toast），见《视觉与主题规范》
 

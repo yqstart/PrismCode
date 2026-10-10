@@ -82,6 +82,60 @@ export function terminalThemeColors(theme: ThemeId): ITheme {
       brightWhite: "#111827",
     };
   }
+  if (theme === "intellij-dark") {
+    // 深底：背景/前景取自 expUI_darkScheme.xml（CONSOLE_*），ANSI 用官方深色档
+    return {
+      background: "#1e1f22",
+      foreground: "#bcbec4",
+      cursor: "#ced0d6",
+      cursorAccent: "#1e1f22",
+      selectionBackground: "rgba(46,67,110,0.66)",
+      selectionForeground: "#dfe1e5",
+      black: "#1e1f22",
+      red: "#db5c5c",
+      green: "#5fad65",
+      yellow: "#f2c55c",
+      blue: "#548af7",
+      magenta: "#c77dbb",
+      cyan: "#2aacb8",
+      white: "#bcbec4",
+      brightBlack: "#868a91",
+      brightRed: "#f75464",
+      brightGreen: "#6aab73",
+      brightYellow: "#d5b778",
+      brightBlue: "#56a8f5",
+      brightMagenta: "#d9a0e8",
+      brightCyan: "#42c3d4",
+      brightWhite: "#dfe1e5",
+    };
+  }
+  if (theme === "intellij-light") {
+    // 浅底深字：底色与选中色对齐 expUI_lightScheme.xml，避免「白底 + 浅色输出」发糊
+    return {
+      background: "#ffffff",
+      foreground: "#000000",
+      cursor: "#000000",
+      cursorAccent: "#ffffff",
+      selectionBackground: "rgba(166,210,255,0.6)",
+      selectionForeground: "#000000",
+      black: "#000000",
+      red: "#db3b4b",
+      green: "#208a3c",
+      yellow: "#c27d04",
+      blue: "#2e55a3",
+      magenta: "#871094",
+      cyan: "#00627a",
+      white: "#5a5d6b",
+      brightBlack: "#818594",
+      brightRed: "#e55765",
+      brightGreen: "#369650",
+      brightYellow: "#df9303",
+      brightBlue: "#3574f0",
+      brightMagenta: "#a845c0",
+      brightCyan: "#0d84a8",
+      brightWhite: "#000000",
+    };
+  }
   return {
     background: "#0e0f13",
     foreground: "#f4f4f5",

@@ -112,6 +112,28 @@ let breakpointController: BreakpointController | null = null;
 /** 光标所在符号链（Monaco 无内置面包屑，自研 DOM 条） */
 const crumbs = ref<SymbolCrumb[]>([]);
 
+/** 面包屑首段：文件路径段（IDEA 底部面包屑始终包含路径，符号链追加在后） */
+const pathCrumbs = computed<Array<{ name: string; path: string }>>(() => {
+  const root = workspace.rootPath;
+  const relative = root ? relativeToRoot(root, props.path) : props.path;
+  const parts = relative.split("/").filter(Boolean);
+  return parts.map((name, index) => ({
+    name,
+    // 最后一段是文件本身：点击定位到资源管理器
+    path: index === parts.length - 1 ? props.path : `${root ?? ""}/${parts.slice(0, index + 1).join("/")}`,
+  }));
+});
+
+/** 面包屑是否可见：有路径段（真实文件）即显示 */
+const showBreadcrumbs = computed(
+  () => pathCrumbs.value.length > 0 && !isReadOnlyVirtualPath(props.path),
+);
+
+async function revealCrumb(path: string) {
+  if (!path) return;
+  await workspace.revealPath(path);
+}
+
 const themeName = computed(() => theme.value);
 const fontFamily = computed(() => getEditorFontFamily(editorPrefs.value.fontFamily));
 
@@ -389,6 +411,9 @@ function createEditor(): void {
     const active = codeEditor.getModel();
     if (!active) return;
     editorStore.setContent(currentPath, active.getValue());
+    // 记录最后编辑位置（对齐 IDEA Last Edit Location ⇧⌘⌫）
+    const pos = codeEditor.getPosition();
+    if (pos) editorStore.recordLastEditAt(currentPath, pos.lineNumber, pos.column);
     // 保存动作会把 dirty 清掉，这里以「内容写回后是否仍脏」判断保存时机
     if (!editorStore.isDirty(currentPath)) eslintController?.lintNow(active);
   });
@@ -630,6 +655,15 @@ watch(openAt, (target) => {
   scrollTo(target.line, target.column);
 });
 
+// 全局动作/菜单触发的 Monaco 命令（转到行、注释行、折叠等），由活动编辑器执行
+watch(
+  () => editorStore.monacoCommandRequest,
+  (req) => {
+    if (!req) return;
+    codeEditor?.getAction(req.id)?.run();
+  },
+);
+
 watch(themeName, (name) => {
   if (!name) return;
   monaco.editor.setTheme(name);
@@ -681,15 +715,28 @@ defineExpose({ scrollTo });
 
 <template>
   <div class="editor-shell">
-    <nav v-if="crumbs.length" class="breadcrumbs" :aria-label="t('editor.breadcrumbs')">
-      <template v-for="(crumb, index) in crumbs" :key="`${index}-${crumb.offset}`">
-        <span v-if="index > 0" class="separator">›</span>
+    <div ref="host" class="monaco-host" />
+    <!-- IDEA 把文件路径 + 符号面包屑放在编辑区底部（状态栏之上），这里同位置 -->
+    <nav v-if="showBreadcrumbs" class="breadcrumbs" :aria-label="t('editor.breadcrumbs')">
+      <template v-for="(seg, index) in pathCrumbs" :key="`p-${index}-${seg.name}`">
+        <span v-if="index > 0" class="separator">&gt;</span>
+        <button
+          type="button"
+          class="crumb"
+          :class="{ 'crumb-file': index === pathCrumbs.length - 1 }"
+          :title="seg.path"
+          @click="revealCrumb(seg.path)"
+        >
+          {{ seg.name }}
+        </button>
+      </template>
+      <template v-for="(crumb, index) in crumbs" :key="`s-${index}-${crumb.offset}`">
+        <span class="separator">&gt;</span>
         <button type="button" class="crumb" :title="crumb.name" @click="jumpToCrumb(crumb)">
           {{ crumb.name }}
         </button>
       </template>
     </nav>
-    <div ref="host" class="monaco-host" />
   </div>
 </template>
 
@@ -708,14 +755,15 @@ defineExpose({ scrollTo });
   overflow: hidden;
 }
 
-/* ==================== 面包屑 ==================== */
+/* ==================== 面包屑（编辑区底部，对齐 IDEA StatusBar.Breadcrumbs） ==================== */
 .breadcrumbs {
   display: flex;
   align-items: center;
   gap: 2px;
   padding: 2px 10px;
-  border-bottom: 1px solid var(--border-subtle);
-  background: var(--bg-panel);
+  border-top: 1px solid var(--border-subtle);
+  /* 与编辑区同色（IDEA 符号面包屑无独立底色） */
+  background: var(--bg-editor);
   font-size: 11px;
   flex-shrink: 0;
   overflow: hidden;
@@ -738,6 +786,12 @@ defineExpose({ scrollTo });
 .breadcrumbs .crumb:hover {
   background: var(--bg-hover);
   color: var(--text-primary);
+}
+
+/* 当前文件段加重（IDEA 底部面包屑把文件与符号加重显示） */
+.breadcrumbs .crumb-file {
+  color: var(--text-primary);
+  font-weight: 500;
 }
 
 .breadcrumbs .separator {

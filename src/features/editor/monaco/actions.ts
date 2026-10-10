@@ -93,6 +93,10 @@ const DISABLED_DEFAULTS: Record<KeymapPreset, number[]> = {
   SHIFT | ALT | KeyCode.KeyA,
   // 内置 ⌘K 前缀（保持行）会吞掉 WebStorm 的 ⌘K 组合
   CMD | KeyCode.KeyK,
+  // 内置 ⌘[ / ⌘] 是缩进调整，WebStorm 的 ⌘[ / ⌘] 是「后退/前进」导航
+  // （由工作台全局键位处理；缩进调整改走 Tab / ⇧Tab）
+  CMD | KeyCode.BracketLeft,
+  CMD | KeyCode.BracketRight,
  ],
  vscode: [],
 };

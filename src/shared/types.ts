@@ -1,4 +1,10 @@
-export type ThemeId = "prism-dark" | "dawn" | "midnight" | "cyberpunk";
+export type ThemeId =
+  | "intellij-dark"
+  | "intellij-light"
+  | "prism-dark"
+  | "dawn"
+  | "midnight"
+  | "cyberpunk";
 
 export const EDITOR_FONT_IDS = [
   "system",
@@ -104,7 +110,7 @@ export interface AppSettings {
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
-  theme: "cyberpunk",
+  theme: "intellij-dark",
   locale: "zh-CN",
   editor: {
     fontFamily: "system",

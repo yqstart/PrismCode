@@ -132,7 +132,7 @@ onBeforeUnmount(() => {
         }"
         @click="selectPanel('explorer')"
       >
-        <Files :size="20" :stroke-width="1.75" />
+        <Files :size="18" :stroke-width="1.75" />
       </button>
       <button
         class="item"
@@ -145,7 +145,7 @@ onBeforeUnmount(() => {
         :class="{ active: commitActive }"
         @click="selectPanel('commit')"
       >
-        <GitCommitHorizontal :size="20" :stroke-width="1.75" />
+        <GitCommitHorizontal :size="18" :stroke-width="1.75" />
         <span v-if="gitBadge" class="badge">{{ gitBadge }}</span>
       </button>
       <!-- Git Log：紧贴左上 Git 图标下，与 commit 组成 git 区 -->
@@ -218,40 +218,39 @@ onBeforeUnmount(() => {
   flex-direction: column;
   justify-content: space-between;
   align-items: center;
-  padding: 9px 0;
+  padding: 6px 0;
   background: var(--bg-header);
   border-right: 1px solid var(--border-subtle);
-  box-shadow: inset -1px 0 0 color-mix(in srgb, var(--bg-app) 35%, transparent);
 }
 
 .group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   align-items: center;
 }
 
 .item {
   position: relative;
-  width: 34px;
-  height: 34px;
-  border-radius: var(--radius-md);
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
   display: grid;
   place-items: center;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   transition: background var(--transition-fast), color var(--transition-fast);
 }
 
-.item:hover:not(:disabled) {
+/* IDEA ActionButton.hoverBackground：hover 为浅叠加块（不覆盖下方选中态） */
+.item:hover:not(:disabled):not(.active) {
   color: var(--text-primary);
   background: var(--bg-hover);
 }
 
+/* IDEA ToolWindow.Button：选中 = Blue6 实色块 + 白色图标（--accent/--accent-fg）；未选中图标走 --text-secondary。 */
 .item.active {
-  color: var(--accent);
-  background: var(--bg-active);
-  box-shadow: inset 2px 0 0 var(--accent),
-    0 0 0 1px color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--accent-fg);
+  background: var(--accent);
 }
 
 .item:disabled {

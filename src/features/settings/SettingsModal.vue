@@ -4,7 +4,7 @@ import { Check, X } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
 import { EDITOR_FONT_OPTIONS } from "@/features/editor/fonts";
 import { EDITOR_SHORTCUTS } from "@/features/editor/shortcuts";
-import { THEME_LABELS } from "@/shared/themes";
+import { THEME_LABELS, THEME_ORDER } from "@/shared/themes";
 import { checkForAppUpdate, getAppVersion } from "@/shared/appUpdate";
 import { PLAIN_INPUT_ATTRS } from "@/shared/plainInput";
 import { formatShortcut, isMacOS } from "@/shared/platform";
@@ -57,12 +57,22 @@ async function onCheckUpdate() {
   }
 }
 
-const themes: ThemeMeta[] = [
-  { id: "prism-dark", name: t("settings.theme.prismDark"), available: true, preview: "dark" },
-  { id: "midnight", name: t("settings.theme.midnight"), available: true, preview: "midnight" },
-  { id: "cyberpunk", name: t("settings.theme.cyberpunk"), available: true, preview: "cyber" },
-  { id: "dawn", name: t("settings.theme.dawn"), available: true, preview: "light" },
-];
+/** 主题卡片预览样式（仅决定预览渐变色组，四档复用现有 CSS） */
+const THEME_PREVIEW_KIND: Record<ThemeId, ThemeMeta["preview"]> = {
+  "intellij-dark": "dark",
+  "intellij-light": "light",
+  "prism-dark": "dark",
+  dawn: "light",
+  midnight: "midnight",
+  cyberpunk: "cyber",
+};
+
+const themes: ThemeMeta[] = THEME_ORDER.map((id) => ({
+  id,
+  name: THEME_LABELS[id],
+  available: true,
+  preview: THEME_PREVIEW_KIND[id],
+}));
 
 const navItems = computed(() => [
   { id: "editor" as const, label: t("settings.navEditor") },
@@ -733,7 +743,7 @@ function onOverlayClick(event: MouseEvent) {
 
 .theme-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
 }
 

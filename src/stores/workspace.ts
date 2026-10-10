@@ -108,6 +108,8 @@ export const useWorkspaceStore = defineStore("workspace", () => {
  const selectedPaths = ref<string[]>([]);
  const childrenMap = ref<Record<string, DirEntryInfo[]>>({});
  const expanded = ref<Set<string>>(new Set());
+ /** 项目根行是否收起（IDEA 项目视图首行箭头；收起时整棵树只显示根行） */
+ const rootCollapsed = ref(false);
  const recentFolders = ref<string[]>(loadRecentFolders());
  const clipboard = ref<{
   mode: "copy" | "cut";
@@ -198,6 +200,8 @@ export const useWorkspaceStore = defineStore("workspace", () => {
 
  const flatTree = computed(() => {
   if (!rootPath.value) return [] as TreeNode[];
+  // 项目根行箭头收起：只保留根行本身（对齐 IDEA 项目视图首行的折叠语义）
+  if (rootCollapsed.value) return [] as TreeNode[];
   const result: TreeNode[] = [];
   const q = filter.value.trim().toLowerCase();
 
@@ -1232,7 +1236,14 @@ export const useWorkspaceStore = defineStore("workspace", () => {
 
  function collapseAll() {
   if (!rootPath.value) return;
+  rootCollapsed.value = false;
   expanded.value = new Set([rootPath.value]);
+ }
+
+ /** 项目根行箭头：收起整棵树 ⇄ 展开（展开时保留原有子目录展开状态） */
+ function toggleRootCollapsed() {
+  if (!rootPath.value) return;
+  rootCollapsed.value = !rootCollapsed.value;
  }
 
  function removeRecentFolder(path: string) {
@@ -1301,6 +1312,8 @@ export const useWorkspaceStore = defineStore("workspace", () => {
  // 新窗口 boot / Dock 菜单）都触发，比在 openFolder 内 fire-and-forget 更可靠。
  // light 模式（无工作区）由 AppShell 按活动文件调用同一函数。
  watchState(rootPath, (root) => {
+  // 切换项目后根行回到展开态，避免新项目的树被上一个项目的收起状态影响
+  rootCollapsed.value = false;
   if (root) void syncWindowTitle(root);
  });
 
@@ -1328,6 +1341,8 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   selectedPaths,
   childrenMap,
   expanded,
+  rootCollapsed,
+  toggleRootCollapsed,
   recentFolders,
   clipboard,
   extraIgnores,

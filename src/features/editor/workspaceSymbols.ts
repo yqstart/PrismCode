@@ -11,12 +11,23 @@
 //
 // 范围（明确不做）：类型推断、hover、签名帮助、跨文件补全、服务进程
 
-import { readTextFile } from "@/shared/fs";
+import { readTextFile, relativeToRoot } from "@/shared/fs";
 import { indexDocumentSymbols, type DocumentSymbol, type SymbolKind } from "@/features/editor/documentSymbols";
-import { pickBestSymbols, rankSymbolCandidates } from "@/features/editor/completion/symbolFilter";
+import { pickBestSymbols, rankSymbolCandidates, type IndexedSymbol } from "@/features/editor/completion/symbolFilter";
 
 /** 单文件解析出的符号表（key = 符号名） */
 export type FileSymbolTable = Map<string, DocumentSymbol[]>;
+
+/** Search Everywhere 符号搜索结果：在 DocumentSymbol 之上补充文件定位信息 */
+export interface WorkspaceSymbolHit {
+  name: string;
+  path: string;
+  line: number;
+  column: number;
+  kind: SymbolKind;
+  /** 符号所在文件相对工作区根的路径（不在根内时回退为原始路径） */
+  containerPath?: string;
+}
 
 /** 解析失败的文件（避免反复尝试） */
 const PARSE_FAIL_MARKER = "__PARSE_FAIL__" as const;
@@ -71,6 +82,12 @@ class WorkspaceSymbolCache {
   private currentRoot: string | null = null;
   /** 使 clear 后仍在途的旧扫描结果无法回写新缓存 */
   private generation = 0;
+  /** 后台全量扫描的进行中 Promise（null = 当前没有扫描在跑） */
+  private scanPromise: Promise<void> | null = null;
+  /** scanPromise 所属索引代际：代际变化（切根 / 整体失效）后不复用旧扫描 */
+  private scanGeneration = -1;
+  /** 扫描代次：避免「旧扫描结束」误清新扫描登记的 scanPromise */
+  private scanToken = 0;
 
   private ensureWorkspace(root: string): void {
     if (this.currentRoot === root) return;
@@ -131,12 +148,62 @@ class WorkspaceSymbolCache {
     limit = 16,
   ): Promise<Array<{ name: string; kind: SymbolKind; path: string; line: number }>> {
     if (!root || !prefix) return [];
+    void this.ensureIndex(root);
+    return pickBestSymbols(this.globalIndex, prefix, limit);
+  }
+
+  /**
+   * 跨文件符号模糊搜索（Search Everywhere 的 Symbols 分组）。
+   * 首次调用触发工作区索引的后台懒构建；索引尚未就绪时以当前内存快照立即兑现，
+   * 由调用方在索引完成后重查补齐，绝不阻塞 UI。
+   */
+  async searchWorkspaceSymbols(
+    root: string,
+    query: string,
+    limit = 50,
+  ): Promise<WorkspaceSymbolHit[]> {
+    const q = query.trim();
+    if (!root || !q) return [];
+    void this.ensureIndex(root);
+    return rankWorkspaceSymbolHits(this.globalIndex, root, q, limit);
+  }
+
+  /**
+   * 后台索引扫描的进行中 Promise；返回 null 表示当前没有扫描在跑。
+   * UI 据此在索引构建完成后重查一次，避免结果长期停留在部分索引状态。
+   */
+  pendingIndexScan(): Promise<void> | null {
+    return this.scanPromise;
+  }
+
+  /** 触发（或复用）工作区索引的后台构建，返回构建完成 Promise */
+  ensureIndex(root: string): Promise<void> {
+    if (!root) return Promise.resolve();
     this.ensureWorkspace(root);
     if (!this.workspaceScanned) {
       this.workspaceScanned = true;
-      void this.scanWorkspace(root);
+      return this.startScan(root);
     }
-    return pickBestSymbols(this.globalIndex, prefix, limit);
+    return this.scanPromise ?? Promise.resolve();
+  }
+
+  /** 启动一次后台全量扫描并记录进行中状态（仅复用同一代际的扫描） */
+  private startScan(root: string): Promise<void> {
+    // 工作区已切换 / 索引已整体失效时不会复用旧 Promise，否则新根永不建索引
+    if (this.scanPromise && this.scanGeneration === this.generation) {
+      return this.scanPromise;
+    }
+    const token = ++this.scanToken;
+    const promise = this.scanWorkspace(root)
+      .catch((error) => {
+        console.warn(`[workspaceSymbols] 工作区扫描失败：${root}`, error);
+      })
+      .finally(() => {
+        if (token === this.scanToken) this.scanPromise = null;
+      });
+    this.scanGeneration = this.generation;
+    this.scanPromise = promise;
+    return promise;
   }
 
   /** 后台全量构建工作区索引（仅首次 searchSymbols 触发，成功后常驻） */
@@ -401,6 +468,82 @@ class WorkspaceSymbolCache {
     this.fileCache.delete(key);
     this.fileCache.set(key, entry);
   }
+}
+
+// ==================== Search Everywhere 符号搜索 ====================
+
+/** 符号类型优先级：越接近「定义」的类型排序越靠前 */
+const KIND_SCORE: Record<SymbolKind, number> = {
+  function: 6,
+  class: 5,
+  interface: 4,
+  type: 3,
+  enum: 2,
+  method: 1,
+  variable: 0,
+};
+
+/** 同名符号最多展示的定义数（重载 / 多文件同名） */
+const MAX_HITS_PER_NAME = 3;
+
+/** 子序列模糊匹配评分：0 = 不匹配；连续命中、词边界、前缀命中加权，长名轻微降权 */
+function fuzzySubsequenceScore(text: string, query: string): number {
+  const lowerText = text.toLowerCase();
+  const lowerQuery = query.toLowerCase();
+  if (!lowerQuery) return 0;
+  let score = 0;
+  let textIndex = 0;
+  let lastHit = -2;
+  for (const ch of lowerQuery) {
+    const hit = lowerText.indexOf(ch, textIndex);
+    if (hit === -1) return 0;
+    let bonus = 2;
+    if (hit === lastHit + 1) bonus += 8; // 连续命中：缩写式匹配（如 "wsc" → workspaceSymbolCache）
+    if (hit === 0) bonus += 6; // 名称开头
+    else if (/[^a-z0-9]/.test(lowerText[hit - 1])) bonus += 4; // 词边界（分隔符后）
+    else if (/[A-Z]/.test(text[hit])) bonus += 3; // camelCase 词首
+    score += bonus;
+    lastHit = hit;
+    textIndex = hit + 1;
+  }
+  if (lowerText.startsWith(lowerQuery)) score += 30;
+  else if (lowerText.includes(lowerQuery)) score += 15;
+  return score - Math.min(8, Math.floor(text.length / 6)); // 短名优先
+}
+
+/** 在全局符号聚合表内做模糊排序，产出 Search Everywhere 结果 */
+function rankWorkspaceSymbolHits(
+  index: Map<string, IndexedSymbol[]>,
+  root: string,
+  query: string,
+  limit: number,
+): WorkspaceSymbolHit[] {
+  const scored: Array<{ hit: WorkspaceSymbolHit; score: number }> = [];
+  for (const [name, list] of index.entries()) {
+    const nameScore = fuzzySubsequenceScore(name, query);
+    if (nameScore <= 0) continue;
+    for (const symbol of rankSymbolCandidates(list).slice(0, MAX_HITS_PER_NAME)) {
+      scored.push({
+        hit: {
+          name,
+          path: symbol.path,
+          line: symbol.line,
+          column: symbol.column,
+          kind: symbol.kind,
+          containerPath: relativeToRoot(root, symbol.path),
+        },
+        score: nameScore + KIND_SCORE[symbol.kind],
+      });
+    }
+  }
+  scored.sort(
+    (left, right) =>
+      right.score - left.score ||
+      left.hit.name.localeCompare(right.hit.name) ||
+      left.hit.path.localeCompare(right.hit.path) ||
+      left.hit.line - right.hit.line,
+  );
+  return scored.slice(0, Math.max(1, limit)).map((entry) => entry.hit);
 }
 
 /** 在 text 中找出所有 word 的精确出现位置（不依赖任何正则，含全词边界） */

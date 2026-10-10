@@ -1238,7 +1238,8 @@ onBeforeUnmount(() => {
   gap: 0;
   padding: 0 6px;
   border-bottom: 1px solid var(--border-subtle);
-  background: var(--bg-header);
+  /* IDEA EditorTabs.background = Gray1（与编辑区同色，无独立标签条底色） */
+  background: var(--bg-editor);
   overflow: hidden;
 }
 
@@ -1289,23 +1290,24 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 5px;
   padding: 0 7px 0 8px;
-  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  border-radius: 0;
   color: var(--text-muted);
   font-size: 12px;
   max-width: 240px;
   transition: color var(--transition-fast), background var(--transition-fast);
 }
 
-/* 底部 active 指示条：单时间轴（统一 --transition-medium） */
+/* 底部 active 指示条：IDEA EditorTabs underlineHeight=4 / underlineArc=4；
+   单时间轴（统一 --transition-medium） */
 .tab::after {
   content: "";
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
-  height: 2px;
-  border-radius: 2px 2px 0 0;
-  background: var(--accent);
+  height: 4px;
+  border-radius: 4px 4px 0 0;
+  background: var(--tab-underline);
   opacity: 0;
   transform: scaleX(0.4);
   transform-origin: center;
@@ -1317,15 +1319,15 @@ onBeforeUnmount(() => {
   max-width: 300px;
 }
 
+/* hover 不上底色（IDEA EditorTabs.hoverBackground 全透明），只提亮文字 */
 .tab:hover {
   color: var(--text-primary);
-  background: var(--bg-hover);
 }
 
 .tab.active {
   color: var(--text-primary);
+  /* IDEA underlinedTabBackground = Gray1：选中标签与条同色，靠底部蓝线表达 */
   background: var(--bg-editor);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
 /* 未保存状态用左侧短标记表达，避免在文件名之前放空心圆点 */
@@ -1333,10 +1335,9 @@ onBeforeUnmount(() => {
   box-shadow: inset 2px 0 0 color-mix(in srgb, var(--accent) 72%, transparent);
 }
 
+/* 选中且未保存：保留下划线 + 左侧短标记（IDEA 无额外顶部高光） */
 .tab.active.dirty {
-  box-shadow:
-    inset 2px 0 0 var(--accent),
-    inset 0 1px 0 color-mix(in srgb, var(--accent) 35%, transparent);
+  box-shadow: inset 2px 0 0 var(--accent);
 }
 
 .tab.active::after {
@@ -1417,6 +1418,14 @@ onBeforeUnmount(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  /* 模拟 IDEA EditorTabs.unselectedAlpha（0.75，这里取 0.85 稍提升可读性） */
+  opacity: 0.85;
+  transition: opacity var(--transition-fast) var(--ease-out);
+}
+
+.tab:hover .name,
+.tab.active .name {
+  opacity: 1;
 }
 
 .close {
@@ -1770,6 +1779,18 @@ onBeforeUnmount(() => {
 [data-theme="dawn"] .md-preview-content :deep(.tk-comment) { color: #008000; }
 [data-theme="dawn"] .md-preview-content :deep(.tk-number)  { color: #098658; }
 [data-theme="dawn"] .md-preview-content :deep(.tk-type)    { color: #267f99; }
+
+/* IntelliJ 主题：token 色取自官方 Dark/Light scheme（expUI_dark/lightScheme.xml） */
+[data-theme="intellij-dark"] .md-preview-content :deep(.tk-keyword) { color: #cf8e6d; }
+[data-theme="intellij-dark"] .md-preview-content :deep(.tk-string)  { color: #6aab73; }
+[data-theme="intellij-dark"] .md-preview-content :deep(.tk-comment) { color: #7a7e85; }
+[data-theme="intellij-dark"] .md-preview-content :deep(.tk-number)  { color: #2aacb8; }
+[data-theme="intellij-dark"] .md-preview-content :deep(.tk-type)    { color: #bcbec4; }
+[data-theme="intellij-light"] .md-preview-content :deep(.tk-keyword) { color: #0033b3; }
+[data-theme="intellij-light"] .md-preview-content :deep(.tk-string)  { color: #067d17; }
+[data-theme="intellij-light"] .md-preview-content :deep(.tk-comment) { color: #8c8c8c; }
+[data-theme="intellij-light"] .md-preview-content :deep(.tk-number)  { color: #1750eb; }
+[data-theme="intellij-light"] .md-preview-content :deep(.tk-type)    { color: #000000; }
 /* ==================== MD 预览内查找 ====================
    浮层复用 .canvas 绝对定位（与 Segmented Control 同层，不进 canvas 过渡）；
    控件尺寸/配色对齐 CM 查找面板（.prism-find-*），只读故无替换行。 */

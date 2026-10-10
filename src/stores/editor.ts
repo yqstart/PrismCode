@@ -194,6 +194,30 @@ export const useEditorStore = defineStore("editor", () => {
     openAt.value = { path, line, column, requestId: openAtSeq };
   }
 
+  /** 全局触发的 Monaco 内置命令请求（菜单 / 动作 → 活动编辑器执行） */
+  const monacoCommandRequest = ref<{ id: string; requestId: number } | null>(null);
+  let monacoCommandSeq = 0;
+
+  function requestMonacoCommand(id: string) {
+    monacoCommandSeq += 1;
+    monacoCommandRequest.value = { id, requestId: monacoCommandSeq };
+  }
+
+  /** 最后一次产生内容变更的位置（对齐 IDEA Last Edit Location ⇧⌘⌫） */
+  const lastEditLocation = ref<EditorJumpTarget | null>(null);
+
+  function recordLastEditAt(path: string, line: number, column: number) {
+    lastEditLocation.value = { path, line, column };
+  }
+
+  /** 跳回最后编辑位置；没有记录时返回 false 供调用方给出提示 */
+  function goToLastEditLocation(): boolean {
+    const target = lastEditLocation.value;
+    if (!target) return false;
+    requestOpenAt(target.path, target.line, target.column);
+    return true;
+  }
+
   /** 请求打开当前活动编辑器的查找面板（原生菜单 ⌘F 触发） */
   function requestFind() {
     findRequestSeq += 1;
@@ -1245,6 +1269,11 @@ export const useEditorStore = defineStore("editor", () => {
     takeJumpBack,
     takeJumpForward,
     requestOpenAt,
+    monacoCommandRequest,
+    requestMonacoCommand,
+    lastEditLocation,
+    recordLastEditAt,
+    goToLastEditLocation,
     requestFind,
     referencesVisible,
     referenceWord,

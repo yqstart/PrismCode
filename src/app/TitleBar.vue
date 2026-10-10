@@ -160,8 +160,8 @@ onUnmounted(() => {
         :stroke-width="1.75"
       />
     </button>
-    <div class="drag-fill" data-tauri-drag-region />
     <!-- 全局项目标题：项目名（粗）+ 路径（淡灰），点击复制完整路径；
+         IDEA New UI 主工具栏把项目选择器放在左侧（红绿灯之后），这里同位置。
          light 模式显示当前独立文件名与路径 -->
     <button
       type="button"
@@ -176,8 +176,8 @@ onUnmounted(() => {
       <span v-if="titlePath" class="project-sep" data-tauri-drag-region>·</span>
       <span v-if="titlePath" class="project-path" data-tauri-drag-region>{{ titlePath }}</span>
       <Transition name="copied" mode="out-in">
-        <Check v-if="copied" :size="12" class="copy-check" />
-        <Copy v-else-if="titlePath" :size="12" class="copy-icon" />
+        <Copy v-if="!copied" key="copy" :size="12" class="copy-icon" />
+        <Check v-else key="check" :size="12" class="copy-check" />
       </Transition>
     </button>
     <div class="drag-fill" data-tauri-drag-region />
@@ -197,13 +197,8 @@ onUnmounted(() => {
   /* 与左侧红绿灯 x:14（window_chrome.rs TRAFFIC_LIGHT_X）对称的右侧留白，
      让右上角终端按钮离窗口右边缘 14pt（红绿灯离左也是 14pt） */
   padding-right: 14px;
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--bg-header) 92%, var(--text-primary) 8%),
-    var(--bg-header)
-  );
+  background: var(--bg-header);
   border-bottom: 1px solid var(--border-subtle);
-  box-shadow: 0 1px 0 color-mix(in srgb, var(--bg-header) 55%, transparent);
 }
 
 .traffic-spacer {
@@ -235,13 +230,14 @@ onUnmounted(() => {
 
 /* 全局项目标题：可点击整行复制路径；内部文字继续走 data-tauri-drag-region 让标题栏可拖 */
 .project-title {
-  flex-shrink: 0;
+  flex-shrink: 1;
   min-width: 0;
-  max-width: 50%;
+  max-width: 45%;
   display: flex;
   align-items: center;
   gap: 6px;
   height: 28px;
+  margin-left: 6px;
   padding: 0 8px;
   border-radius: var(--radius-sm);
   color: var(--text-secondary);

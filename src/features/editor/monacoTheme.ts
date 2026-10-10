@@ -1,6 +1,6 @@
-// ==================== Prism 主题 → Monaco 主题 ====================
-// 4 套主题与 styles/themes/*.css 同源取值；Monaco 主题名即 ThemeId，
-// 切换时直接 monaco.editor.setTheme(themeId)。
+// ==================== 应用主题 → Monaco 主题 ====================
+// 6 套主题与 styles/themes.css 同源取值（IntelliJ 两套取自官方 expUI_dark/lightScheme.xml）；
+// Monaco 主题名即 ThemeId，切换时直接 monaco.editor.setTheme(themeId)。
 import type { ThemeId } from "@/shared/types";
 import type { editor as MonacoEditorApi } from "monaco-editor/editor";
 import { monaco } from "./monaco/setup";
@@ -42,7 +42,7 @@ interface EditorColors {
 }
 
 /** CM HighlightStyle 的 tag 分组 → Monaco token 名（含 TS 语义 token）。
- *  同色槽共享颜色，避免 4 套主题各写一份 token 列表。 */
+ *  同色槽共享颜色，避免每套主题各写一份 token 列表。 */
 const TOKEN_GROUPS: Record<keyof SyntaxColors, string[]> = {
  keyword: ["keyword", "keyword.flow", "keyword.json", "keyword.operator", "tag.keyword"],
  controlKeyword: ["keyword.control", "keyword.control.flow", "keyword.control.import"],
@@ -95,6 +95,72 @@ const TOKEN_GROUPS: Record<keyof SyntaxColors, string[]> = {
 };
 
 const THEMES: Record<ThemeId, EditorColors> = {
+ "intellij-dark": {
+  base: "vs-dark",
+  bg: "#1e1f22",
+  fg: "#bcbec4",
+  gutter: "#1e1f22",
+  gutterFg: "#4b5059",
+  activeLine: "#26282e",
+  selection: "#2e436e",
+  selectionMatch: "#2d543f",
+  caret: "#ced0d6",
+  syntax: {
+   keyword: "#cf8e6d",
+   controlKeyword: "#cf8e6d",
+   string: "#6aab73",
+   comment: "#7a7e85",
+   function: "#56a8f5",
+   number: "#2aacb8",
+   boolean: "#cf8e6d",
+   property: "#c77dbb",
+   type: "#bcbec4",
+   operator: "#bcbec4",
+   punctuation: "#bcbec4",
+   tag: "#d5b778",
+   attribute: "#bcbec4",
+   regexp: "#42c3d4",
+   variable: "#bcbec4",
+   unit: "#2aacb8",
+   modifier: "#cf8e6d",
+   meta: "#b3ae60",
+   invalid: "#f75464",
+   link: "#548af7",
+  },
+ },
+ "intellij-light": {
+  base: "vs",
+  bg: "#ffffff",
+  fg: "#000000",
+  gutter: "#ffffff",
+  gutterFg: "#aeb3c2",
+  activeLine: "#f5f8fe",
+  selection: "#a6d2ff",
+  selectionMatch: "#fcd47e",
+  caret: "#000000",
+  syntax: {
+   keyword: "#0033b3",
+   controlKeyword: "#0033b3",
+   string: "#067d17",
+   comment: "#8c8c8c",
+   function: "#00627a",
+   number: "#1750eb",
+   boolean: "#0033b3",
+   property: "#871094",
+   type: "#000000",
+   operator: "#000000",
+   punctuation: "#000000",
+   tag: "#0033b3",
+   attribute: "#000000",
+   regexp: "#264eff",
+   variable: "#000000",
+   unit: "#1750eb",
+   modifier: "#0033b3",
+   meta: "#9e880d",
+   invalid: "#f50000",
+   link: "#006dcc",
+  },
+ },
  "prism-dark": {
   base: "vs-dark",
   bg: "#141519",
@@ -323,7 +389,7 @@ function buildTheme(colors: EditorColors): MonacoEditorApi.IStandaloneThemeData 
 
 let registered = false;
 
-/** 幂等注册 4 套 Monaco 主题（base 变更需先注册再 setTheme） */
+/** 幂等注册全部 Monaco 主题（base 变更需先注册再 setTheme） */
 export function registerMonacoThemes(): void {
  if (registered) return;
  registered = true;

@@ -3,77 +3,98 @@
    改动原则：层级靠明度与细边表达，圆角克制，强调色只负责状态和操作。
    本文件只放「跨主题不变」的基础变量；语义色 / 主题色在 themes.css。 */
 :root {
-  /* ================ 圆角（编辑器密度优先，避免所有元素像卡片） ================ */
-  --radius-sm: 6px;   /* 控件 / 小按钮 / 输入框 */
-  --radius-md: 8px;   /* 行内标签 / 小卡片 */
-  --radius-lg: 10px;  /* 卡片 / 弹层 */
-  --radius-xl: 14px;  /* 设置弹层 / 大型 dialog */
+ /* ================ 圆角（编辑器密度优先，避免所有元素像卡片） ================ */
+ --radius-sm: 6px;
+ /* 控件 / 小按钮 / 输入框 */
+ --radius-md: 8px;
+ /* 行内标签 / 小卡片 */
+ --radius-lg: 10px;
+ /* 卡片 / 弹层 */
+ --radius-xl: 14px;
+ /* 设置弹层 / 大型 dialog */
 
-  /* ================ 间距（6 档，4px 步进） ================ */
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
+ /* ================ 间距（6 档，4px 步进） ================ */
+ --space-1: 4px;
+ --space-2: 8px;
+ --space-3: 12px;
+ --space-4: 16px;
+ --space-5: 20px;
+ --space-6: 24px;
 
-  /* ================ 布局尺寸 ================ */
-  --activity-bar-width: 48px;
-  --status-bar-height: 26px;
-  /* macOS Overlay 标题栏：高度须与 Rust TITLEBAR_HEIGHT 一致；
+ /* ================ 布局尺寸 ================ */
+ /* IDEA New UI 工具条宽 40px（StripeToolbar.Button 32×32 + 4px 边距） */
+ --activity-bar-width: 40px;
+ /* IDEA New UI 状态栏高度 28px（原 26px 略矮） */
+ --status-bar-height: 28px;
+ /* macOS Overlay 标题栏：高度须与 Rust TITLEBAR_HEIGHT 一致；
      1 CSS px = 1 逻辑点（pt），与 backingScaleFactor 无关；
      红绿灯由 Rust 端 setFrameOrigin 垂直居中到此高度。 */
-  --titlebar-height: 38px;
-  --traffic-light-pad: 78px;
+ --titlebar-height: 38px;
+ --traffic-light-pad: 78px;
 
-  /* ================ 字体栈 ================ */
-  --font-ui: ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Segoe UI", sans-serif;
-  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, "PingFang SC", monospace;
+ /* IDEA EditorTabs.underlineColor：编辑器标签选中下划线。
+     默认与主题强调色一致；intellij 主题覆盖为官方 Blue6 #3574f0。 */
+ --tab-underline: var(--accent);
 
-  /* ================ 字号 ================
+ /* ================ 字体栈 ================ */
+ --font-ui: ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Segoe UI", sans-serif;
+ --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, "PingFang SC", monospace;
+
+ /* ================ 字号 ================
      替代散落硬编码 11.5/12/13/14/15/20。组件内可逐步替换。 */
-  --font-size-xs: 11px;   /* 状态栏 / 极次要 */
-  --font-size-sm: 12px;   /* 辅助说明 / tab / statusBar */
-  --font-size-md: 13px;   /* body / 控件正文（默认） */
-  --font-size-lg: 15px;   /* 分区标题 / dialog 副标题 */
-  --font-size-xl: 20px;   /* 设置页 h1 / 大型 dialog 标题 */
+ --font-size-xs: 11px;
+ /* 状态栏 / 极次要 */
+ --font-size-sm: 12px;
+ /* 辅助说明 / tab / statusBar */
+ --font-size-md: 13px;
+ /* body / 控件正文（默认） */
+ --font-size-lg: 15px;
+ /* 分区标题 / dialog 副标题 */
+ --font-size-xl: 20px;
+ /* 设置页 h1 / 大型 dialog 标题 */
 
-  /* ================ 行高 ================ */
-  --line-height-tight: 1.4;   /* 紧凑：按钮 / tab */
-  --line-height-normal: 1.55; /* UI 正文（默认） */
-  --line-height-relaxed: 1.7; /* 段落 / Markdown 预览 */
+ /* ================ 行高 ================ */
+ --line-height-tight: 1.4;
+ /* 紧凑：按钮 / tab */
+ --line-height-normal: 1.55;
+ /* UI 正文（默认） */
+ --line-height-relaxed: 1.7;
+ /* 段落 / Markdown 预览 */
 
-  /* ================ 动效 ================
+ /* ================ 动效 ================
      现代紧凑：140/200/280ms 三档；统一用 --ease-out。
      fast   = hover/feedback（按钮、tab、文字色）
      medium = 弹层/弹窗（dialog、tooltip、popover）
      slow   = 缓速档（大区块过渡；画布主区已改为整块直接替换，当前无使用点） */
-  --transition-fast: 120ms;
-  --transition-medium: 180ms;
-  --transition-slow: 260ms;
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+ --transition-fast: 120ms;
+ --transition-medium: 180ms;
+ --transition-slow: 260ms;
+ --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
-  /* ================ 阴影（4 级，作为默认） ================
+ /* ================ 阴影（4 级，作为默认） ================
      深色主题应在 themes.css 覆盖更克制的版本；
      浅色主题（dawn）可直接用默认。 */
-  --shadow-card:    0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
-  --shadow-popover: 0 8px 24px rgba(0, 0, 0, 0.14), 0 2px 6px rgba(0, 0, 0, 0.06), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
-  --shadow-modal:   0 32px 80px rgba(0, 0, 0, 0.32), 0 8px 24px rgba(0, 0, 0, 0.14), 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+ --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
+ --shadow-popover: 0 8px 24px rgba(0, 0, 0, 0.14), 0 2px 6px rgba(0, 0, 0, 0.06), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
+ --shadow-modal: 0 32px 80px rgba(0, 0, 0, 0.32), 0 8px 24px rgba(0, 0, 0, 0.14), 0 0 0 0.5px rgba(0, 0, 0, 0.06);
 
-  /* ================ 滚动条（macOS overlay 风格） ================ */
-  --scrollbar-size: 6px;
-  --scrollbar-radius: 999px;
+ /* ================ 滚动条（macOS overlay 风格） ================ */
+ --scrollbar-size: 6px;
+ --scrollbar-radius: 999px;
 
-  /* ================ 控件尺寸 ================ */
-  --control-height-sm: 28px;
-  --control-height-md: 32px;
+ /* ================ 控件尺寸 ================ */
+ --control-height-sm: 28px;
+ --control-height-md: 32px;
 
-  /* ================ z-index 分层 ================
+ /* ================ z-index 分层 ================
      替换散落字面量；保留 dialog 内部 85/86/120 等差异化覆盖。 */
-  --z-base: 0;
-  --z-dropdown: 10;
-  --z-sticky: 20;
-  --z-overlay: 50;     /* QuickOpen / FindInFiles 顶层遮罩 */
-  --z-modal: 80;       /* 通用 dialog / 右键菜单 */
-  --z-toast: 200;      /* 全局最高 */
+ --z-base: 0;
+ --z-dropdown: 10;
+ --z-sticky: 20;
+ --z-overlay: 50;
+ /* QuickOpen / FindInFiles 顶层遮罩 */
+ --z-modal: 80;
+ /* 通用 dialog / 右键菜单 */
+ --z-toast: 200;
+ /* 全局最高 */
 }

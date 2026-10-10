@@ -20,7 +20,8 @@
 - ⌘P 文件查找、⌘⇧F 全局搜索与替换
 - Git 全功能：左侧 Commit、编辑区 Git Log、Branches、交互式 Rebase、冲突分栏解决、HTTPS 登录
 - 本地终端（⌘J）与 SSH 远程（状态栏入口，远程终端）
-- 四套主题：`prism-dark`（默认）/ `dawn` / `midnight` / `cyberpunk`
+- 六套主题：`intellij-dark`（默认，IntelliJ IDEA New UI 官方色板）/ `intellij-light` / `prism-dark` / `dawn` / `midnight` / `cyberpunk`
+- IntelliJ IDEA 风格交互：双击 ⇧ Search Everywhere、⌘⇧A Find Action、⌘1 / ⌘0 / ⌘9 / ⌥F12 工具窗口键位、⌘F12 文件结构
 - 中 / 英界面语言切换（无需重启）
 - 应用内检查更新（GitHub Release）
 
@@ -90,7 +91,7 @@ Unblock-File -LiteralPath "$env:USERPROFILE\Downloads\Prism Code_*.msi"
 |---|---|
 | [使用说明](docs/使用说明.md) | 功能与快捷键全览 |
 | [技术架构](docs/Prism%20Code技术架构文档.md) | 选型、分层、模块设计 |
-| [视觉主题](docs/Prism%20Code视觉与主题规范.md) | 四套主题与语义 token |
+| [视觉主题](docs/Prism%20Code视觉与主题规范.md) | 六套主题与语义 token |
 | [多平台发布](docs/多平台发布.md) | GitHub Actions 打 macOS / Win / Linux 包 |
 | [开源准备清单](docs/开源准备清单.md) | 公开发布勾选表 |
 | [官方定名](docs/Prism%20Code（棱镜编辑器）官方定名文档.md) | 品牌与命名 |

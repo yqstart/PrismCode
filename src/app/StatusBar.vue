@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { GitBranch } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
 import BranchesPopup from "@/features/git/BranchesPopup.vue";
@@ -114,6 +114,16 @@ function onDocClick() {
   javaMenuOpen.value = false;
 }
 
+// 全局「分支」请求（菜单 / Find Action）→ 打开状态栏分支弹层
+watch(
+  () => git.branchesRequestSeq,
+  () => {
+    themeMenuOpen.value = false;
+    javaMenuOpen.value = false;
+    if (branch.value) branchesOpen.value = true;
+  },
+);
+
 onMounted(() => {
   window.addEventListener("click", onDocClick);
 });
@@ -126,9 +136,7 @@ onBeforeUnmount(() => {
 <template>
   <footer class="status-bar">
     <div class="left">
-      <span class="root-name" :title="workspaceLabelTitle">{{
-        workspaceLabel
-      }}</span>
+      <span class="root-name" :title="workspaceLabelTitle">{{ workspaceLabel }}</span>
       <div v-if="branch" class="branch-switch" @click.stop>
         <button
           type="button"
@@ -141,8 +149,6 @@ onBeforeUnmount(() => {
           <span v-if="syncLabel" class="sync-label">{{ syncLabel }}</span>
         </button>
       </div>
-      <span class="sep">·</span>
-      <span class="meta">{{ lang }}</span>
       <div v-if="showJavaPill" class="java-switch" @click.stop>
         <button type="button" class="java-btn" @click="toggleJavaMenu">
           {{ javaStatusLabel }}
@@ -156,8 +162,6 @@ onBeforeUnmount(() => {
           <button type="button" @click="runJavaAction('settings')">{{ t("java.action.openSettings") }}</button>
         </div>
       </div>
-      <span class="sep">·</span>
-      <span class="meta">UTF-8</span>
       <span v-if="dirty" class="dirty">{{ t("status.unsaved") }}</span>
       <button
         v-if="snapshot.conflictCount > 0"
@@ -172,7 +176,11 @@ onBeforeUnmount(() => {
     <div class="right">
       <span>Ln {{ cursor.line }}, Col {{ cursor.column }}</span>
       <span class="sep">·</span>
+      <span class="meta">UTF-8</span>
+      <span class="sep">·</span>
       <span>Spaces: {{ editorPrefs.tabSize }}</span>
+      <span class="sep">·</span>
+      <span class="meta">{{ lang }}</span>
       <span class="sep">·</span>
       <div class="theme-switch" @click.stop>
         <button
@@ -244,7 +252,7 @@ onBeforeUnmount(() => {
 .root-name {
   flex-shrink: 1;
   min-width: 0;
-  max-width: 120px;
+  max-width: 160px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -267,6 +275,10 @@ onBeforeUnmount(() => {
   color: var(--accent);
   font-weight: 500;
   line-height: inherit;
+  /* IDEA StatusBar.Widget：hover 只加圆角灰块，无描边 */
+  transition:
+    background var(--transition-fast) var(--ease-out),
+    color var(--transition-fast) var(--ease-out);
 }
 
 .branch-btn:hover {
@@ -306,15 +318,20 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
 }
 
+/* 冲突数也是状态栏可点 Widget：与其他 Widget 统一为 4px 圆角灰块，去掉下划线；
+   红色语义保留，hover 只加块不改色 */
 .conflict {
   color: var(--danger);
   font-weight: 600;
   cursor: pointer;
   flex-shrink: 0;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background var(--transition-fast) var(--ease-out);
 }
 
 .conflict:hover {
-  text-decoration: underline;
+  background: var(--bg-hover);
 }
 
 .java-switch {
@@ -325,6 +342,9 @@ onBeforeUnmount(() => {
   padding: 2px 6px;
   border-radius: 4px;
   color: var(--text-secondary);
+  transition:
+    background var(--transition-fast) var(--ease-out),
+    color var(--transition-fast) var(--ease-out);
 }
 
 .java-btn:hover {

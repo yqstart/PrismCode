@@ -95,7 +95,6 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
   background: var(--bg-panel);
   border-right: 1px solid var(--border-subtle);
-  box-shadow: inset -1px 0 0 color-mix(in srgb, var(--bg-app) 25%, transparent);
   min-width: 200px;
   max-width: 520px;
   display: flex;
@@ -125,5 +124,28 @@ onBeforeUnmount(() => {
   height: 100%;
   cursor: col-resize;
   z-index: 2;
+}
+
+/* ==================== 面板头对齐 IDEA New UI ====================
+   面板头样式由 ExplorerPanel / CommitPanel 自身定义，这里在侧栏容器上统一收口：
+   标题 12px 常规字重 / --text-primary（去掉大写与字距），操作图标 hover 用 4px 圆角灰块。
+   头部高度两个面板均为 36px，无需干预。 */
+.sidebar :deep(.header .title) {
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--text-primary);
+}
+
+.sidebar :deep(.header .icon-btn) {
+  border-radius: 4px;
+  transition:
+    background var(--transition-fast) var(--ease-out),
+    color var(--transition-fast) var(--ease-out);
+}
+
+.sidebar :deep(.header .icon-btn:hover:not(:disabled)) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 </style>

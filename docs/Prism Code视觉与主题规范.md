@@ -1,6 +1,6 @@
 # Prism Code 视觉与主题规范
 
-> 本文档描述**已定版**的四套主题、语义 token 与视觉规范，色值与 `src/styles/themes.css`、`src/features/editor/theme.ts` 一一对应。
+> 本文档描述**已定版**的六套主题、语义 token 与视觉规范，色值与 `src/styles/themes.css`、`src/features/editor/monacoTheme.ts` 一一对应。
 >
 > 2026-08-11 重做：设计语言基线改为 **Mac 原生风**（Arc / Linear / macOS Sonoma+ Big Sur 后 modernUI 路线）：
 > - 圆角上调：8/10/12/16 → **10/12/14/18**
@@ -23,16 +23,20 @@
 
 ---
 
-## 2. 主题清单（四套全部可用）
+## 2. 主题清单（六套全部可用）
 
 | Theme ID | 显示名 | 角色 | 强调色 |
 |---|---|---|---|
+| `intellij-dark` | IntelliJ Dark | **IntelliJ IDEA 2026.2 官方 New UI Dark（应用默认）** | IDA 蓝 `#3574f0` |
+| `intellij-light` | IntelliJ Light | IntelliJ IDEA 官方 New UI Light（浅色） | IDA 蓝 `#3574f0` |
 | `prism-dark` | Prism Dark | 中性石墨深色 | 紫 `#a78bfa` |
 | `dawn` | Prism Light | **浅色** | 蓝 `#4f6fe8` |
 | `midnight` | Prism Midnight | 海军蓝深色 | 矢车菊蓝 `#5ea1ff` |
-| `cyberpunk` | Prism Cyberpunk | 紫黑底霓虹深色（应用默认） | 霓虹青 `#5eead4` |
+| `cyberpunk` | Prism Cyberpunk | 紫黑底霓虹深色 | 霓虹青 `#5eead4` |
 
-切换方式：设置 → 编辑器 → 外观主题（四宫格卡片）；状态栏主题名弹出菜单；状态栏主题名**右键**循环切换。UI 与编辑器高亮同源切换。
+IntelliJ 两套色值直接取自本机 IntelliJ IDEA 安装的官方主题定义（`expUI_dark/light.theme.json` 的 Gray/Blue/Green/Yellow/Red 全系与 `expUI_dark/lightScheme.xml` 的语法色），非近似仿制。
+
+切换方式：设置 → 编辑器 → 外观主题（三列卡片网格）；状态栏主题名弹出菜单；状态栏主题名**右键**循环切换。UI 与编辑器高亮同源切换。
 
 ---
 
@@ -148,16 +152,66 @@
 
 > 色值如有微调，需同步更新 `themes.css` 与本文档。
 
+### 3.5 IntelliJ Dark（`intellij-dark`，应用默认）
+
+| Token | 值 | 来源（IDEA 2026.2 `expUI_dark.theme.json`） |
+|---|---|---|
+| `--bg-app` | `#1e1f22` | Gray1（窗口 / 编辑器） |
+| `--bg-header` | `#2b2d30` | Gray2（工具栏 / 标签栏 / 面板头） |
+| `--bg-panel` | `#2b2d30` | Gray2（侧栏 / 工具窗口） |
+| `--bg-elevated` | `#2b2d30` | Gray2（弹层 / 菜单） |
+| `--bg-editor` | `#1e1f22` | Gray1 |
+| `--bg-terminal` | `#1e1f22` | CONSOLE_BACKGROUND_KEY |
+| `--bg-inset` | `#1e1f22` | 搜索框 = Gray1 |
+| `--bg-hover` | `#393b40` | Gray3（hoverBackground） |
+| `--bg-active` | `#2e436e` | Blue2（selectionBackground） |
+| `--border-subtle` | `#393b40` | Gray3（separatorColor） |
+| `--border-strong` | `#4e5157` | Gray5（控件边框） |
+| `--text-primary` | `#dfe1e5` | Gray12 |
+| `--text-secondary` | `#b4b8bf` | Gray10 |
+| `--text-muted` | `#868a91` | Gray8 |
+| `--accent` | `#3574f0` | Blue6（focus / underline） |
+| `--accent-hover` | `#548af7` | Blue8 |
+| `--accent-soft` | `rgba(53,116,240,.15)` | Blue6 15% |
+| `--accent-fg` | `#ffffff` | Gray14 |
+| `--success` / `--warning` / `--danger` | `#5fad65` / `#f2c55c` / `#db5c5c` | Green7 / Yellow7 / Red7 |
+| `--focus-ring` | `rgba(53,116,240,.5)` | Blue6 50% |
+
+标签与布局对齐：编辑器标签选中态为 4px 圆角下划线（underlineHeight=4 / underlineArc=4），hover 无背景块；状态栏信息分区（左：项目 / 分支，右：行列 / 缩进 / 编码 / 语言）。
+
+### 3.6 IntelliJ Light（`intellij-light`，浅色）
+
+| Token | 值 | 来源（IDEA 2026.2 `expUI_light.theme.json` + Light with Light Header） |
+|---|---|---|
+| `--bg-app` | `#f7f8fa` | Gray13（工具窗口 / 标题栏） |
+| `--bg-header` | `#f7f8fa` | Gray13（工具栏） |
+| `--bg-panel` | `#f7f8fa` | Gray13 |
+| `--bg-elevated` | `#ffffff` | Gray14（弹层） |
+| `--bg-editor` | `#ffffff` | Gray14 |
+| `--bg-inset` | `#ffffff` | TextField = Gray14 |
+| `--bg-hover` | `#ebecf0` | Gray12 |
+| `--bg-active` | `#d4e2ff` | Blue11（选中） |
+| `--border-subtle` | `#ebecf0` | Gray12 |
+| `--border-strong` | `#c9ccd6` | Gray9 |
+| `--text-primary` | `#000000` | Gray1 |
+| `--text-secondary` | `#5a5d6b` | Gray5 |
+| `--text-muted` | `#818594` | Gray7 |
+| `--accent` | `#3574f0` | Blue4（浅色主强调） |
+| `--accent-hover` | `#4682fa` | Blue5 |
+| `--success` / `--warning` / `--danger` | `#208a3c` / `#c27d04` / `#db3b4b` | Green4 / Yellow2 / Red4 |
+
 ---
 
-## 4. 编辑器主题（`features/editor/theme.ts`）
+## 4. 编辑器主题（`features/editor/monacoTheme.ts`）
 
-每套主题含独立 `HighlightStyle` 与 `EditorView.theme`，切换 UI 主题时编辑区同步重建，**禁止 UI 已 Dawn 而代码区仍 Dark**。
+每套主题含独立 `EditorColors`（背景 / 前景 / 选区 / 光标 / 语法 token），由 `monaco.editor.defineTheme` 注册（主题名即 ThemeId），切换 UI 主题时 `monaco.editor.setTheme` 同步切换，**禁止 UI 已切换而代码区不同步**。
 
 ### 4.1 编辑器 Palette 要点
 
 | 主题 | 背景 | 前景 | 选区 | 选区匹配 | 光标 |
 |---|---|---|---|---|---|
+| intellij-dark | `#1e1f22` | `#bcbec4` | `#2e436e` | `#2d543f` | `#ced0d6` |
+| intellij-light | `#ffffff` | `#000000` | `#a6d2ff` | `#fcd47e` | `#000000` |
 | prism-dark | `#141519` | `#f4f4f5` | `rgba(167,139,250,.55)` | `rgba(167,139,250,.18)` | `#a78bfa` |
 | dawn | `#ffffff` | `#1c2029` | `rgba(79,111,232,.28)` | `rgba(79,111,232,.11)` | `#4f6fe8` |
 | midnight | `#0b1322` | `#eef4fc` | `rgba(94,161,255,.38)` | `rgba(94,161,255,.14)` | `#5ea1ff` |
@@ -179,7 +233,7 @@
 | punctuation / operator | 青 `#89ddff` | 灰 `#6b7280` / `#374151` |
 | invalid | 红 `#ff5370` | 红 `#dc2626` |
 
-Midnight / Cyberpunk 各自维护完整 `HighlightStyle`（矢车菊蓝 / 霓虹青系），见 `theme.ts`。
+Midnight / Cyberpunk / IntelliJ Dark / IntelliJ Light 各自维护完整语法配色，见 `monacoTheme.ts` 的 `THEMES`；IntelliJ 两套直接采用官方 scheme（keyword `#cf8e6d` / `#0033b3`、string `#6aab73` / `#067d17`、comment `#7a7e85` / `#8c8c8c`、number `#2aacb8` / `#1750eb` 等）。
 
 ---
 
@@ -347,7 +401,7 @@ Midnight / Cyberpunk 各自维护完整 `HighlightStyle`（矢车菊蓝 / 霓虹
 
 ## 9. 验收对照
 
-1. 四套主题均可真实切换，UI 与编辑器高亮同步
+1. 六套主题均可真实切换，UI 与编辑器高亮同步；IntelliJ Dark / Light 色值与官方主题定义逐一对应
 2. 深色强调色为紫系，浅色为蓝系；Midnight 矢车菊蓝系、Cyberpunk 霓虹青系；三深色底（中性灰 / 海军蓝 / 紫黑）一眼可辨
 3. 卡片圆角与留白符合规范，不出现尖锐直角密集表单
 4. 选区对比度高于选区匹配 / 搜索结果

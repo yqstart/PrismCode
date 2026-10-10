@@ -9,9 +9,19 @@
 - **Java 运行配置**：底部终端面板顶栏新增按模块的运行芯片（测试 / 打包 / 清理 / 运行 / 调试），点击即在本地终端执行对应命令，终端忙时自动新开。后端 `commands/maven.rs` 只读声明式 `<modules>` 模块图（不启 Maven、不起 daemon），`commands/runconfig.rs` 负责生成 / 分层合并（生成层 + `.prismcode/run/project.json` 项目层 + 前端本地层）/ 启动计划 / 工具链探测；配置 `kind` 收敛为 `java.current-file | maven.module | spring-boot.maven | gradle.task` 四个字面量。聚合模块（`packaging=pom`）不产出可运行配置，直接请求运行会返回中文错误。
 - **Spring 索引**：`commands/spring.rs` 有界扫描 `application*.properties/yml` 与 Java 注解，产出配置键、取值、Bean、注入、HTTP 端点与诊断；依赖元数据只读 `~/.m2` 里 jar 的 `spring-configuration-metadata.json`（进程内缓存 + 3 秒预算）。前端据此提供 properties/yml 键补全、`@Value` 未知键诊断（写回 Monaco marker）与端点只读标签（状态栏 Java 菜单 →「Spring 端点」）。
 - **Java 调试器**：随包分发 java-debug 0.53.1（`third_party/debug-adapter/manifest.json` + `scripts/prepare-debug-adapter.mjs`，EPL-1.0），由内置 JDTLS 经 `initializationOptions.bundles` 装载，DAP 走它开出的本地 TCP 端口（Rust 侧 `commands/dap.rs` 复用 LSP 的 Content-Length 帧）。底部面板新增「调试」视图：线程 / 调用栈 / 变量 / 输出 + 继续 / 暂停 / 单步跳过 / 单步进入 / 单步跳出 / 停止；编辑器行号左侧点击可增删断点。调试启动链为「取端口 → 终端起目标（`suspend=y`）→ attach → 同步断点 → 恢复运行」，30 秒连不上会打断目标并提示重试。
+- **IntelliJ IDEA 对齐（界面样式 + 操作方式）**：
+  - 新增 **IntelliJ Dark / IntelliJ Light** 两套主题：UI 与编辑器语法色直接取自 IntelliJ IDEA 2026.2 官方主题定义（`expUI_dark/light.theme.json` 与 `expUI_dark/lightScheme.xml`，逐项对应非近似），布局细节（编辑器标签 4px 圆角下划线、透明 hover、状态栏信息分区、工具窗口选中块）按 IDEA New UI 对齐；默认主题切换为 **IntelliJ Dark**（沿用旧默认 `cyberpunk` 的配置自动跟随，可在设置中改回）。
+  - **Search Everywhere（双击 ⇧）**：文件 / 符号 / 操作聚合弹层，Tab 循环分组（全部 / 文件 / 符号 / 操作），空查询回退最近文件与常用操作；**Find Action（⌘⇧A）** 直达「操作」分组。新增全局动作注册表 `src/shared/actions.ts`（38 个真实动作，Search Everywhere / Find Action / 原生菜单共用同一来源）。
+  - IDEA 键位：工具窗口 **⌘1** 项目 / **⌘0** 提交 / **⌘9** Git Log / **⌘5** 调试 / **⌥F12** 终端；**⌘F12** 文件结构弹层（当前文件符号树，过滤 + 回车跳转）；**⇧⌘[ / ⇧⌘]** 切换标签；**⌘[ / ⌘]** 与 **⌘⌥←/→** 前进/后退；**⇧⌘⌫** 上次编辑位置；**⌘T** 更新项目、**⇧⌘K** 推送；**⌘F8** 切换断点、**⌘⌥R** 恢复运行、**F7 / F8 / ⇧F8** 步进（捕获阶段拦截，调试态优先于编辑器键位）；**Esc** 从工具区回到编辑器。
+  - macOS 原生菜单栏扩展为 File / Edit / View / Navigate / Code / Run / VCS / Window / Help（中英双语，新项不带加速键，快捷键统一由前端处理）。
+  - **布局按 IDEA New UI 重排**：左侧工具条收窄到 40px（32×32 图标按钮，选中为官方 Blue6 实色块 + 白色图标）；项目树首行改为项目根节点（箭头收起整棵树、名称点开项目菜单、右侧灰显 `~/` 路径），行高 24px、选中为蓝色整行块；侧栏面板头只保留操作图标；编辑器标签条与编辑区同色、选中标签用 4px 官方蓝下划线（`--tab-underline` token）；编辑器**底部**新增 `路径 > 符号` 面包屑（点击目录定位资源管理器、点击符号跳转，对齐 IDEA `StatusBar.Breadcrumbs`）；顶栏项目名 · 路径移到左侧（IDEA 主工具栏位置）。
 
 ### 变更
 
+- 编辑器标签对齐 IDEA New UI：选中标签 4px 圆角下划线、hover 不再使用背景块（仅文字提亮）、标签条背景与编辑区同色、去掉选中标签顶部高光。
+- 状态栏信息分区对齐 IDEA：语言 / 编码移到右侧（行列、缩进、编码、语言、主题）；高度 26 → 28px；冲突数改块状 hover 反馈。
+- WebStorm 键位预设下禁用 Monaco 内置的 ⌘[ / ⌘] 缩进命令（让位给 IDEA 的「后退 / 前进」导航）。
+- 设置弹层主题卡改为三列网格（六套主题），主题列表由 `THEME_ORDER` / `THEME_LABELS` 单一来源驱动。
 - jlink JRE 模块清单加入 `jdk.jdi`：java-debug 依赖 `com.sun.jdi.*`，而 `java.se` 不聚合任何 `jdk.*` 模块，缺失会在插件加载时报 `NoClassDefFoundError`。
 - 底部面板视图由「终端 / 问题」扩展为「终端 / 问题 / 调试」。
 - `.gitignore` 补充 `target/`、`build/`、`.gradle/`：`examples/` 下的 Maven 夹具会生成构建产物。

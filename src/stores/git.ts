@@ -104,6 +104,11 @@ export const useGitStore = defineStore("git", () => {
   /// 注意：**不会**影响其他 UI 元素（活动栏/标签/资源树），
   /// 它们走完全独立的 store 与组件树，互不阻塞。
   const remoteInFlight = ref(false);
+  /** 全局「分支」请求序号：菜单 / 动作触发状态栏的分支弹层 */
+  const branchesRequestSeq = ref(0);
+  function requestBranches(): void {
+    branchesRequestSeq.value += 1;
+  }
   let refreshSeq = 0;
   let refreshAgain = false;
   /** 短时间内的 UI 刷新请求合并为一次五路 IPC，避免文件切换/保存/聚焦
@@ -1720,6 +1725,8 @@ export const useGitStore = defineStore("git", () => {
     diffVisible,
     loading,
     remoteInFlight,
+    branchesRequestSeq,
+    requestBranches,
     commitMessage,
     amendCommit,
     statusMap,

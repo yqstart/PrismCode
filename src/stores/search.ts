@@ -10,6 +10,9 @@ import {
 } from "@/shared/searchApi";
 import { useWorkspaceStore } from "@/stores/workspace";
 
+/** Search Everywhere 分组模式：全部 / 文件 / 符号 / 动作 */
+export type SearchEverywhereMode = "all" | "files" | "symbols" | "actions";
+
 export const useSearchStore = defineStore("search", () => {
   const fileQuery = ref("");
   const contentQuery = ref("");
@@ -22,6 +25,11 @@ export const useSearchStore = defineStore("search", () => {
   const loading = ref(false);
   const quickOpenVisible = ref(false);
   const findInFilesVisible = ref(false);
+  // Search Everywhere（IDEA 风格弹层）：可见性、分组模式与输入内容都由 store 托管，
+  // 组件只负责渲染与键盘交互；输入内容在打开时清空、关闭时不保留。
+  const searchEverywhereVisible = ref(false);
+  const searchEverywhereMode = ref<SearchEverywhereMode>("all");
+  const searchEverywhereQuery = ref("");
   // 请求序号：只应用最后一次发起的搜索，丢弃过期（被后续搜索/关闭覆盖）的结果
   let contentSearchSeq = 0;
   let fileSearchSeq = 0;
@@ -220,6 +228,7 @@ export const useSearchStore = defineStore("search", () => {
 
   function openQuickOpen() {
     findInFilesVisible.value = false;
+    searchEverywhereVisible.value = false;
     invalidateFileSearch();
     quickOpenVisible.value = true;
     fileQuery.value = "";
@@ -239,6 +248,7 @@ export const useSearchStore = defineStore("search", () => {
 
   function openFindInFiles() {
     quickOpenVisible.value = false;
+    searchEverywhereVisible.value = false;
     // 每次打开都重置状态，避免上次卡住的 loading / 残留结果影响体验
     fileSearchSeq += 1;
     invalidateFindInFiles();
@@ -249,6 +259,26 @@ export const useSearchStore = defineStore("search", () => {
     findInFilesVisible.value = false;
     // 使进行中的搜索结果失效 + 重置 loading
     invalidateFindInFiles();
+  }
+
+  /**
+   * 打开 Search Everywhere 弹层：清空输入并切到指定分组。
+   * 同一时刻只保留一个搜索弹层，因此顺手收起 QuickOpen / 在文件中查找。
+   */
+  function openSearchEverywhere(mode: SearchEverywhereMode = "all") {
+    quickOpenVisible.value = false;
+    findInFilesVisible.value = false;
+    invalidateFileSearch();
+    searchEverywhereMode.value = mode;
+    searchEverywhereQuery.value = "";
+    searchEverywhereVisible.value = true;
+  }
+
+  /** 关闭 Search Everywhere：输入与在途文件搜索一并作废，下次打开不残留旧结果 */
+  function closeSearchEverywhere() {
+    searchEverywhereVisible.value = false;
+    searchEverywhereQuery.value = "";
+    invalidateFileSearch();
   }
 
   /** 查询条件变化时使旧搜索/替换结果失效，避免旧请求回写新条件的结果。 */
@@ -284,6 +314,9 @@ export const useSearchStore = defineStore("search", () => {
     loading,
     quickOpenVisible,
     findInFilesVisible,
+    searchEverywhereVisible,
+    searchEverywhereMode,
+    searchEverywhereQuery,
     runFileSearch,
     runContentSearch,
     previewReplace,
@@ -294,6 +327,8 @@ export const useSearchStore = defineStore("search", () => {
     invalidateFindInFiles,
     openFindInFiles,
     closeFindInFiles,
+    openSearchEverywhere,
+    closeSearchEverywhere,
     clearResults,
   };
 });
