@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ChevronDown, Plus, TerminalSquare, X } from "lucide-vue-next";
+import { ChevronDown, Plus, TerminalSquare, X } from "reicon-vue";
 import { storeToRefs } from "pinia";
 import { onMounted, watch } from "vue";
 import JavaRunChips from "@/features/sessions/JavaRunChips.vue";
@@ -55,7 +55,7 @@ function onAddLocal() {
           :title="t('common.close')"
           @click.stop="sessions.closeLocalTerminal(term.id)"
         >
-          <X :size="12" />
+          <X weight="Filled" :size="12" />
         </span>
       </button>
       <button
@@ -64,7 +64,7 @@ function onAddLocal() {
         :title="t('sessions.newLocalTitle')"
         @click="onAddLocal"
       >
-        <Plus :size="14" />
+        <Plus weight="Filled" :size="14" />
       </button>
       <div v-if="pinnedScripts.length || java.runConfigurations.length" class="scripts-slot">
         <JavaRunChips />
@@ -76,7 +76,7 @@ function onAddLocal() {
         :title="t('sessions.collapsePanel')"
         @click="sessions.hideSessions()"
       >
-        <ChevronDown :size="14" />
+        <ChevronDown weight="Filled" :size="14" />
       </button>
     </header>
 
@@ -90,7 +90,7 @@ function onAddLocal() {
         :active="term.id === activeLocalId"
       />
       <div v-if="!localTerminals.length" class="empty">
-        <TerminalSquare :size="28" :stroke-width="1.5" class="empty-icon" />
+        <TerminalSquare weight="Filled" :size="28" class="empty-icon" />
         <p>{{ t("sessions.localEmpty") }}</p>
         <button type="button" class="cta" @click="onAddLocal">
           {{ t("sessions.newTerminal") }}

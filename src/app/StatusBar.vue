@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { storeToRefs } from "pinia";
 import { THEME_LABELS, THEME_ORDER } from "@/shared/themes";
 import type { ThemeId } from "@/shared/types";
+import { useBreadcrumbsStore } from "@/stores/breadcrumbs";
 import { useEditorStore } from "@/stores/editor";
 import { useJavaStore } from "@/stores/java";
 import { useUiStore } from "@/stores/ui";
@@ -13,6 +14,7 @@ import { useI18n } from "@/i18n";
 const { t } = useI18n();
 const settings = useSettingsStore();
 const editor = useEditorStore();
+const breadcrumbs = useBreadcrumbsStore();
 const git = useGitStore();
 const javaStore = useJavaStore();
 const ui = useUiStore();
@@ -89,7 +91,45 @@ onBeforeUnmount(() => {
 <template>
   <footer class="status-bar">
     <div class="left">
-      <span class="ok">{{ t("status.ready") }}</span>
+      <!-- IDEA New UI：navigation bar（路径 > 符号）位于状态栏左下 -->
+      <nav
+        v-if="breadcrumbs.visible"
+        class="crumbs"
+        :aria-label="t('editor.breadcrumbs')"
+      >
+        <template
+          v-for="(seg, index) in breadcrumbs.pathCrumbs"
+          :key="`p-${index}-${seg.name}`"
+        >
+          <span v-if="index > 0" class="crumb-sep">&gt;</span>
+          <button
+            type="button"
+            class="crumb"
+            :class="{
+              'crumb-file': index === breadcrumbs.pathCrumbs.length - 1,
+            }"
+            :title="seg.path"
+            @click="breadcrumbs.reveal(seg.path)"
+          >
+            {{ seg.name }}
+          </button>
+        </template>
+        <template
+          v-for="(crumb, index) in breadcrumbs.symbolCrumbs"
+          :key="`s-${index}-${crumb.offset}`"
+        >
+          <span class="crumb-sep">&gt;</span>
+          <button
+            type="button"
+            class="crumb"
+            :title="crumb.name"
+            @click="breadcrumbs.jump(crumb)"
+          >
+            {{ crumb.name }}
+          </button>
+        </template>
+      </nav>
+      <span v-else class="ok">{{ t("status.ready") }}</span>
       <span v-if="dirty" class="dirty">{{ t("status.unsaved") }}</span>
       <button
         v-if="snapshot.conflictCount > 0"
@@ -188,6 +228,47 @@ onBeforeUnmount(() => {
 }
 
 .meta {
+  flex-shrink: 0;
+}
+
+/* ==================== 导航栏面包屑（IDEA New UI：状态栏左下） ==================== */
+.crumbs {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.crumb {
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  line-height: 1.2;
+  padding: 1px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.crumb:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+/* 当前文件段加重（与符号链区分） */
+.crumb-file {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.crumb-sep {
+  color: var(--text-muted);
   flex-shrink: 0;
 }
 

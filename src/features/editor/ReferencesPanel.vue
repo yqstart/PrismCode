@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { X } from "lucide-vue-next";
+import { X } from "reicon-vue";
 import { storeToRefs } from "pinia";
 import { relativeToRoot } from "@/shared/fs";
 import { useI18n } from "@/i18n";
@@ -39,7 +39,7 @@ function displayPath(path: string): string {
           :aria-label="t('editor.closeReferences')"
           @click="editor.closeReferences()"
         >
-          <X :size="15" />
+          <X weight="Filled" :size="15" />
         </button>
       </header>
 

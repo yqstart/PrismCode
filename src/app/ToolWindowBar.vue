@@ -8,14 +8,15 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import { storeToRefs } from "pinia";
 import {
   Bug,
-  CircleAlert,
-  Files,
-  GitCommitHorizontal,
+  AlertCircle,
+  Folder,
+  Upload,
   History,
   Package,
+  Route,
   Server,
   TerminalSquare,
-} from "lucide-vue-next";
+} from "reicon-vue";
 import PackageScriptsMenu from "@/features/sessions/PackageScriptsMenu.vue";
 import { useGitStore } from "@/stores/git";
 import { useGitLogStore } from "@/stores/gitLog";
@@ -26,6 +27,8 @@ import { useSshStore } from "@/stores/ssh";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { useI18n } from "@/i18n";
 import type { BottomToolWindowId, LeftToolWindowId } from "@/shared/types";
+
+const { side = "left" } = defineProps<{ side?: "left" | "right" }>();
 
 const { t } = useI18n();
 const settings = useSettingsStore();
@@ -52,6 +55,7 @@ const gitBadge = computed(() => {
 
 const leftActive = computed(() => layout.value.left.active);
 const bottomActive = computed(() => layout.value.bottom.active);
+const rightActive = computed(() => layout.value.right.active);
 
 /** package.json scripts 弹层（暂作下组入口，后续并入运行工具窗口） */
 const scriptsOpen = ref(false);
@@ -129,6 +133,12 @@ function toggleSsh() {
   ssh.toggleSsh();
 }
 
+/** 右侧工具窗口：Spring 端点等只读面板（点同一个收起） */
+function toggleRight() {
+  scriptsOpen.value = false;
+  settings.toggleRightWindow("spring");
+}
+
 /** 底部工具窗口：终端走 sessions store（会话保活语义），问题/调试走布局状态 */
 function toggleBottom(id: BottomToolWindowId) {
   scriptsOpen.value = false;
@@ -145,8 +155,13 @@ function toggleBottom(id: BottomToolWindowId) {
 </script>
 
 <template>
-  <aside class="tool-window-bar" :aria-label="t('app.toolWindowBar')">
-    <div class="tw-group">
+  <aside
+    class="tool-window-bar"
+    :class="`side-${side}`"
+    :aria-label="side === 'right' ? t('app.rightToolWindowBar') : t('app.toolWindowBar')"
+  >
+    <template v-if="side === 'left'">
+      <div class="tw-group">
       <button
         type="button"
         class="tw-item"
@@ -155,7 +170,7 @@ function toggleBottom(id: BottomToolWindowId) {
         :aria-pressed="leftActive === 'project'"
         @click="toggleLeft('project')"
       >
-        <Files :size="ICON_SIZE" :stroke-width="1.6" />
+        <Folder weight="Filled" :size="ICON_SIZE" />
       </button>
       <button
         type="button"
@@ -169,7 +184,7 @@ function toggleBottom(id: BottomToolWindowId) {
         :aria-pressed="leftActive === 'commit'"
         @click="toggleLeft('commit')"
       >
-        <GitCommitHorizontal :size="ICON_SIZE" :stroke-width="1.6" />
+        <Upload weight="Filled" :size="ICON_SIZE" />
         <span v-if="gitBadge" class="badge">{{ gitBadge }}</span>
       </button>
       <button
@@ -180,7 +195,7 @@ function toggleBottom(id: BottomToolWindowId) {
         :aria-pressed="logFocused"
         @click="toggleLog"
       >
-        <History :size="ICON_SIZE" :stroke-width="1.6" />
+        <History weight="Filled" :size="ICON_SIZE" />
       </button>
       <button
         type="button"
@@ -190,7 +205,7 @@ function toggleBottom(id: BottomToolWindowId) {
         :aria-pressed="sshFocused"
         @click="toggleSsh"
       >
-        <Server :size="ICON_SIZE" :stroke-width="1.6" />
+        <Server weight="Filled" :size="ICON_SIZE" />
       </button>
     </div>
 
@@ -206,7 +221,7 @@ function toggleBottom(id: BottomToolWindowId) {
         :disabled="!workspace.rootPath"
         @click="toggleScripts"
       >
-        <Package :size="ICON_SIZE" :stroke-width="1.6" />
+        <Package weight="Filled" :size="ICON_SIZE" />
         <span v-if="available && !scriptsOpen" class="dot" />
       </button>
       <button
@@ -217,7 +232,7 @@ function toggleBottom(id: BottomToolWindowId) {
         :aria-pressed="bottomActive === 'problems'"
         @click="toggleBottom('problems')"
       >
-        <CircleAlert :size="ICON_SIZE" :stroke-width="1.6" />
+        <AlertCircle weight="Filled" :size="ICON_SIZE" />
       </button>
       <button
         type="button"
@@ -227,7 +242,7 @@ function toggleBottom(id: BottomToolWindowId) {
         :aria-pressed="bottomActive === 'terminal'"
         @click="toggleBottom('terminal')"
       >
-        <TerminalSquare :size="ICON_SIZE" :stroke-width="1.6" />
+        <TerminalSquare weight="Filled" :size="ICON_SIZE" />
       </button>
       <button
         type="button"
@@ -237,9 +252,26 @@ function toggleBottom(id: BottomToolWindowId) {
         :aria-pressed="bottomActive === 'debug'"
         @click="toggleBottom('debug')"
       >
-        <Bug :size="ICON_SIZE" :stroke-width="1.6" />
+        <Bug weight="Filled" :size="ICON_SIZE" />
       </button>
-    </div>
+      </div>
+    </template>
+
+    <template v-else>
+      <div class="tw-group">
+        <button
+          type="button"
+          class="tw-item"
+          :class="{ active: rightActive === 'spring' }"
+          :title="t('activity.spring')"
+          :aria-pressed="rightActive === 'spring'"
+          @click="toggleRight"
+        >
+          <Route weight="Filled" :size="ICON_SIZE" />
+        </button>
+      </div>
+      <div class="tw-spacer" data-tauri-drag-region />
+    </template>
   </aside>
 
   <Teleport to="body">
@@ -269,6 +301,12 @@ function toggleBottom(id: BottomToolWindowId) {
   padding: 4px 0;
   background: var(--bg-header);
   border-right: 1px solid var(--border-subtle);
+}
+
+/* 右侧条：分隔线镜像到左边（IDEA 右侧 stripe） */
+.tool-window-bar.side-right {
+  border-right: none;
+  border-left: 1px solid var(--border-subtle);
 }
 
 .tw-group {

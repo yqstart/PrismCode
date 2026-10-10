@@ -18,14 +18,14 @@ import {
 } from "vue";
 import {
   Box,
-  Braces,
-  ListTree,
+  Programming,
+  Hierarchy,
   Search,
-  SquareFunction,
-  Type,
-  Variable,
-  Zap,
-} from "lucide-vue-next";
+  Code,
+  Text,
+  Code2,
+  Flash,
+} from "reicon-vue";
 import { storeToRefs } from "pinia";
 import { executeAction, searchActions, type ActionDef } from "@/shared/actions";
 import FileTypeIcon from "@/shared/FileTypeIcon.vue";
@@ -64,13 +64,13 @@ const MODE_LABEL_KEYS: Record<SearchEverywhereMode, string> = {
 
 /** 符号类型 → 行首图标 */
 const SYMBOL_ICONS: Record<SymbolKind, Component> = {
-  function: SquareFunction,
-  method: Braces,
+  function: Code,
+  method: Programming,
   class: Box,
-  interface: Type,
-  type: Type,
-  enum: ListTree,
-  variable: Variable,
+  interface: Text,
+  type: Text,
+  enum: Hierarchy,
+  variable: Code2,
 };
 
 /** All 分组下每段最多展示的条数（IDEA 的 All 视图每段都很短） */
@@ -429,7 +429,7 @@ onBeforeUnmount(() => {
   >
     <div class="panel" role="dialog" :aria-label="t('searchEverywhere.title')">
       <div class="input-row">
-        <Search :size="16" class="icon" />
+        <Search weight="Filled" :size="16" class="icon" />
         <input
           ref="inputRef"
           v-model="searchEverywhereQuery"
@@ -483,7 +483,7 @@ onBeforeUnmount(() => {
             </template>
             <template v-else-if="item.row.kind === 'symbol'">
               <component
-                :is="SYMBOL_ICONS[item.row.hit.kind]"
+                :is="SYMBOL_ICONS[item.row.hit.kind]" weight="Filled"
                 :size="14"
                 class="kind-icon"
               />
@@ -491,7 +491,7 @@ onBeforeUnmount(() => {
               <span class="detail">{{ item.row.hit.containerPath }}</span>
             </template>
             <template v-else>
-              <Zap :size="14" class="kind-icon" />
+              <Flash weight="Filled" :size="14" class="kind-icon" />
               <span class="name">{{ item.row.title }}</span>
               <span class="detail">{{ item.row.detail }}</span>
               <span v-if="item.row.shortcut" class="shortcut">{{ item.row.shortcut }}</span>

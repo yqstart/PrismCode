@@ -97,6 +97,7 @@ onBeforeUnmount(() => {
     />
 
     <ToolWindowCard
+      reset-area="bottom"
       v-if="terminalReady"
       v-show="active === 'terminal'"
       class="bottom-window"
@@ -107,6 +108,7 @@ onBeforeUnmount(() => {
     </ToolWindowCard>
 
     <ToolWindowCard
+      reset-area="bottom"
       v-if="problemsVisited"
       v-show="active === 'problems'"
       class="bottom-window"
@@ -117,6 +119,7 @@ onBeforeUnmount(() => {
     </ToolWindowCard>
 
     <ToolWindowCard
+      reset-area="bottom"
       v-if="debugVisited"
       v-show="active === 'debug'"
       class="bottom-window"

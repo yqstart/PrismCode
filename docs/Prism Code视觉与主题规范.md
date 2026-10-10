@@ -49,7 +49,7 @@ IntelliJ 两套色值直接取自本机 IntelliJ IDEA 安装的官方主题定�
 | Token | 值 | 用途 |
 |---|---|---|
 | `--bg-app` | `#141519` | 应用底（最深） |
-| `--bg-header` | `#1b1d22` | 标题栏 / 活动栏 |
+| `--bg-header` | `#1b1d22` | 标题栏 / 工具窗口条 |
 | `--bg-panel` | `#1f2026` | 侧栏 / 面板 |
 | `--bg-elevated` | `#26272e` | 卡片 / 浮起容器 |
 | `--bg-editor` | `#141519` | CodeMirror 区 |
@@ -75,7 +75,7 @@ IntelliJ 两套色值直接取自本机 IntelliJ IDEA 安装的官方主题定�
 | Token | 值 | 用途 |
 |---|---|---|
 | `--bg-app` | `#eef0f4` | 应用底（雾白） |
-| `--bg-header` | `#e2e6ec` | 标题栏 / 活动栏 |
+| `--bg-header` | `#e2e6ec` | 标题栏 / 工具窗口条 |
 | `--bg-panel` | `#f7f8fa` | 侧栏 / 面板 |
 | `--bg-elevated` | `#ffffff` | 卡片 |
 | `--bg-editor` | `#ffffff` | 编辑区 |
@@ -103,7 +103,7 @@ IntelliJ 两套色值直接取自本机 IntelliJ IDEA 安装的官方主题定�
 | Token | 值 | 用途 |
 |---|---|---|
 | `--bg-app` | `#0b1322` | 应用底 |
-| `--bg-header` | `#111b30` | 标题栏 / 活动栏 |
+| `--bg-header` | `#111b30` | 标题栏 / 工具窗口条 |
 | `--bg-panel` | `#182a44` | 侧栏 / 面板 |
 | `--bg-elevated` | `#24344f` | 卡片 |
 | `--bg-editor` | `#0b1322` | 编辑区 |
@@ -129,7 +129,7 @@ IntelliJ 两套色值直接取自本机 IntelliJ IDEA 安装的官方主题定�
 | Token | 值 | 用途 |
 |---|---|---|
 | `--bg-app` | `#0e0c16` | 应用底 |
-| `--bg-header` | `#171425` | 标题栏 / 活动栏 |
+| `--bg-header` | `#171425` | 标题栏 / 工具窗口条 |
 | `--bg-panel` | `#221d33` | 侧栏 / 面板 |
 | `--bg-elevated` | `#2c2640` | 卡片 |
 | `--bg-editor` | `#0e0c16` | 编辑区 |
@@ -243,7 +243,7 @@ Midnight / Cyberpunk / IntelliJ Dark / IntelliJ Light 各自维护完整语法�
 
 | 用途 | 建议 |
 |---|---|
-| UI 字体 | `ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Segoe UI", sans-serif` |
+| UI 字体 | `--font-ui` 首选 **Inter Variable**（`@fontsource-variable/inter` 随包分发、离线可用，unicode-range 按需加载），后接 `ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Segoe UI", sans-serif`；Inter 不含 CJK 字形，中文回退系统字体（PingFang SC 等） |
 | 代码字体 | `ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, "PingFang SC", monospace` |
 | 编辑器字体预设 | 系统等宽 / JetBrains Mono / 更纱等宽黑体 SC / Cascadia Code；未安装时自动回退 |
 
@@ -334,12 +334,25 @@ Midnight / Cyberpunk / IntelliJ Dark / IntelliJ Light 各自维护完整语法�
 IDEA New UI 工作台结构（2026-10 重构）：
 
 - **窗口头主工具栏**（`MainToolbar.vue`，高 `--titlebar-height` 38px，底色 `--bg-header`）：项目 widget / VCS 分支 widget / 居中 Run widget / 搜索 / 设置；widget 高 26px、圆角 `--radius-sm`、hover `--bg-hover`
-- **工具窗口条**（`ToolWindowBar.vue`，宽 40px）：上组 = 垂直工具窗口（Project / Commit / Git Log），下组 = 水平工具窗口（Package / Problems / Terminal / Debug）；按钮 32×32，选中 = `--accent` 实色块 + `--accent-fg` 图标（IDEA ToolWindow.Button）
-- **工具窗口卡片**（`ToolWindowCard.vue`）：统一样式 —— 32px 标题行（名称 + ✕）+ 内容；卡片底色 `--bg-panel`
-- **工具窗口列 / 底部工具窗口区**：列宽与区高可拖拽；底部区仅占编辑器列，左侧工具窗口列保持整列全高
+- **工具窗口条**（`ToolWindowBar.vue`，宽 40px，`side` 区分左右）：左侧条上组 = 垂直工具窗口（Project / Commit / Git Log），下组 = 水平工具窗口（Package / Problems / Terminal / Debug）；右侧条 = 只读辅助面板入口（Route 图标 → Spring 端点）；按钮 32×32，选中 = `--accent` 实色块 + `--accent-fg` 图标（IDEA ToolWindow.Button）
+- **工具窗口卡片**（`ToolWindowCard.vue`）：统一样式 —— 32px 标题行（名称 + 附加动作 + ⋮ 菜单 + ✕ 隐藏）+ 内容；⋮ 菜单提供「隐藏工具窗口 / 重置尺寸」（重置为该区默认宽 / 高，`settings.resetToolWindowSize(area)`）；卡片底色 `--bg-panel`
+- **工具窗口列 / 底部工具窗口区 / 右侧工具窗口列**：列宽与区高可拖拽；底部区仅占编辑器列，左侧工具窗口列保持整列全高；右侧工具窗口列承载 Spring 端点面板，宽 220–560（默认 320），左缘拖拽调宽
 - 资源树：修改 / Git 状态用点缀色，不抢代码区
 - 标签页：当前页背景或底部轻微强调（4px 下划线）；终端 / SSH / GitLog / Compare 等非文件标签固定钉在右侧
-- 状态栏：矮、信息密度中等，不使用刺眼色块；左＝状态消息，右＝Java 状态 · 行列 · 编码 · 缩进 · 语言 · 主题
+- 状态栏：矮、信息密度中等，不使用刺眼色块；左＝导航栏面包屑（`路径 > 符号`，对齐 IDEA New UI navigation bar；点击路径在资源管理器中定位、点击符号跳转；无文件时显示就绪）与状态消息（未保存 / 冲突），右＝Java 状态 · 行列 · 编码 · 缩进 · 语言 · 主题
+
+### 7.4 图标规范
+
+图标库统一为 **Reicon**（`reicon-vue`，Outline / Filled 两种重量，随包分发、离线可用）；图标路径内置 `fill="currentColor"`，颜色一律由 CSS `color` 控制，不在组件内写死色值：
+
+| 场景 | 重量 | 说明 |
+|---|---|---|
+| 工具窗口条按钮（左条 / 右条） | `weight="Filled"` | 20px 实心图标；选中 = `--accent` 实色块 + `--accent-fg` |
+| 主要操作图标（窗口头 widget、面板头操作、运行 widget 等） | `weight="Filled"` | 12–15px 为主，随按钮 `color` 变化 |
+| 工具窗口标题行 ⋮ / ✕ 等小按钮 | Outline（不传 `weight` 时的默认重量） | 14px 细线，贴近 IDEA header 观感 |
+
+- 重量只通过 `weight` 属性表达（Outline / Filled 两套路径），项目不再传 `stroke-width`；
+- 尺寸用 `size` 属性表达（数值即 px），不靠 font-size 缩放。
 
 ---
 
@@ -376,7 +389,7 @@ IDEA New UI 工作台结构（2026-10 重构）：
 | 画布主区（CM/ImagePreview/md-preview/welcome） | 整块直接替换，不做过渡（交叉淡化会让离场视图透过入场视图显形） |
 | CodeMirror 弹层 | enter-only（CM6 原生无 leave 钩子） |
 | find panel / ctx menu / dropdown | `prism-popover-in` + leave 淡出 |
-| ActivityBar / StatusBar 状态点 | `prism-status-pulse` |
+| 工具窗口条脚本提示点（Package 可用） | `prism-status-pulse` |
 | 资源树 / Commit 行 hover | `background/color/box-shadow` transition |
 | UpdateBadge / TitleBar icon | 简短 crossfade / badge enter |
 

@@ -19,11 +19,15 @@ export const zhCN = {
     tagline: "前端 + Java 一体化开发工具",
     mainToolbar: "主工具栏",
     toolWindowBar: "工具窗口条",
+    rightToolWindowBar: "右侧工具窗口条",
     resizeSidebar: "拖拽调整宽度",
     resizeBottomArea: "拖拽调整高度",
   },
   toolWindow: {
     hide: "隐藏工具窗口",
+    more: "更多操作",
+    resetSize: "重置尺寸",
+    commitTitle: "Commit",
   },
   activity: {
     explorer: "项目",
@@ -36,6 +40,7 @@ export const zhCN = {
     debug: "调试（⌘5）",
     branches: "Git 分支",
     ssh: "SSH 远程",
+    spring: "Spring 端点",
     settings: "设置",
   },
   title: {
@@ -178,6 +183,16 @@ export const zhCN = {
       title: "Spring 端点",
       open: "Spring 端点",
       empty: "未找到 Spring 端点",
+    },
+    panel: {
+      filter: "筛选端点",
+      loading: "正在扫描 Spring 端点…",
+      noWorkspace: "打开工作区后扫描 Spring 端点",
+      noMatch: "没有匹配的端点",
+      empty: "未找到 Spring 端点",
+    },
+    action: {
+      refresh: "重新扫描端点",
     },
     notice: {
       indexFailed: "Spring 索引失败：{detail}",

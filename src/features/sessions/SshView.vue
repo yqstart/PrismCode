@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { LayoutGrid, X } from "lucide-vue-next";
+import { Grid, X } from "reicon-vue";
 import { storeToRefs } from "pinia";
 import RemoteTerminal from "@/features/sessions/RemoteTerminal.vue";
 import SshHostsView from "@/features/sessions/SshHostsView.vue";
@@ -96,7 +96,7 @@ watch(remoteSessions, (list) => {
         :title="t('sessions.hostsList')"
         @click="goHosts"
       >
-        <LayoutGrid :size="12" />
+        <Grid weight="Filled" :size="12" />
         <span>{{ t("sessions.hosts") }}</span>
       </button>
       <button
@@ -113,7 +113,7 @@ watch(remoteSessions, (list) => {
           :title="t('common.close')"
           @click.stop="closeRemoteFully(term.id)"
         >
-          <X :size="12" />
+          <X weight="Filled" :size="12" />
         </span>
       </button>
     </header>

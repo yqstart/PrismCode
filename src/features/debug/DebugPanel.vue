@@ -3,7 +3,7 @@
 // 底部面板的第三个视图（与终端/问题并列）。终端用 v-show 保活，这里同样保活：
 // 调试时经常要切到终端看目标进程日志。会话只在面板收起或显式停止时结束。
 import { computed, onBeforeUnmount, watch } from "vue";
-import { ChevronRight, Pause, Play, Redo2, SkipForward, Square, Undo2 } from "lucide-vue-next";
+import { ChevronRight, Pause, Play, Redo, SkipNext, Stop, Undo } from "reicon-vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "@/i18n";
 import { useDebugStore } from "@/stores/debug";
@@ -81,7 +81,7 @@ onBeforeUnmount(() => {
         :disabled="!live || busy || !paused"
         @click="debug.resume()"
       >
-        <Play :size="13" />
+        <Play weight="Filled" :size="13" />
       </button>
       <button
         type="button"
@@ -90,7 +90,7 @@ onBeforeUnmount(() => {
         :disabled="!live || busy || paused"
         @click="debug.pause()"
       >
-        <Pause :size="13" />
+        <Pause weight="Filled" :size="13" />
       </button>
       <button
         type="button"
@@ -99,7 +99,7 @@ onBeforeUnmount(() => {
         :disabled="!paused || busy"
         @click="debug.stepOver()"
       >
-        <SkipForward :size="13" />
+        <SkipNext weight="Filled" :size="13" />
       </button>
       <button
         type="button"
@@ -108,7 +108,7 @@ onBeforeUnmount(() => {
         :disabled="!paused || busy"
         @click="debug.stepInto()"
       >
-        <Undo2 :size="13" />
+        <Undo weight="Filled" :size="13" />
       </button>
       <button
         type="button"
@@ -117,7 +117,7 @@ onBeforeUnmount(() => {
         :disabled="!paused || busy"
         @click="debug.stepOut()"
       >
-        <Redo2 :size="13" />
+        <Redo weight="Filled" :size="13" />
       </button>
       <button
         type="button"
@@ -126,7 +126,7 @@ onBeforeUnmount(() => {
         :disabled="!live"
         @click="debug.stop()"
       >
-        <Square :size="13" />
+        <Stop weight="Filled" :size="13" />
       </button>
     </header>
 
@@ -179,7 +179,7 @@ onBeforeUnmount(() => {
     </div>
 
     <p class="hint">
-      <ChevronRight :size="12" />
+      <ChevronRight weight="Filled" :size="12" />
       {{ t("debug.hint.breakpoints", { count: debug.breakpointCount }) }}
     </p>
   </div>

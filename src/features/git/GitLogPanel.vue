@@ -5,12 +5,12 @@ import {
   ArrowDown,
   ArrowUp,
   CloudDownload,
-  GitBranch,
-  RefreshCw,
+  BranchUp,
+  Refresh,
   Search,
   Tag,
   X,
-} from "lucide-vue-next";
+} from "reicon-vue";
 import { PLAIN_INPUT_ATTRS } from "@/shared/plainInput";
 import { joinPath } from "@/shared/fs";
 import {
@@ -1032,7 +1032,7 @@ watch(selectedId, (id) => {
             :class="{ active: branchMenuOpen }"
             @click="branchMenuOpen = !branchMenuOpen"
           >
-            <GitBranch :size="14" />
+            <BranchUp weight="Filled" :size="14" />
             <span>{{ branchFilterLabel }}</span>
           </button>
           <div v-if="branchMenuOpen" class="branch-menu">
@@ -1076,13 +1076,13 @@ watch(selectedId, (id) => {
         </label>
         <div class="spacer" />
         <button type="button" class="icon-btn" :title="t('git.fetch')" @click="git.fetchRemote(); ensureLog()">
-          <CloudDownload :size="14" />
+          <CloudDownload weight="Filled" :size="14" />
         </button>
         <button type="button" class="icon-btn" :title="t('git.pull')" @click="git.pull(); ensureLog()">
-          <ArrowDown :size="14" />
+          <ArrowDown weight="Filled" :size="14" />
         </button>
         <button type="button" class="icon-btn" :title="t('git.push')" @click="git.pushWithDialog(); ensureLog()">
-          <ArrowUp :size="14" />
+          <ArrowUp weight="Filled" :size="14" />
         </button>
         <div class="column-picker" data-column-picker @click.stop>
           <button type="button" class="icon-btn" :class="{ active: columnMenuOpen }" :title="t('gitLog.columns')" @click="columnMenuOpen = !columnMenuOpen">⋮</button>
@@ -1099,10 +1099,10 @@ watch(selectedId, (id) => {
           :title="t('gitLog.filter')"
           @click="filterOpen = !filterOpen"
         >
-          <Search :size="14" />
+          <Search weight="Filled" :size="14" />
         </button>
         <button type="button" class="icon-btn" :title="t('common.refresh')" @click="ensureLog()">
-          <RefreshCw :size="14" :class="{ spin: loading }" />
+          <Refresh weight="Filled" :size="14" :class="{ spin: loading }" />
         </button>
         <button type="button" class="link" @click="loadMore">
           {{ t("gitLog.loadMore") }}
@@ -1208,7 +1208,7 @@ watch(selectedId, (id) => {
             <div class="detail-head">
               <div class="detail-title">{{ t("gitLog.comparisonTitle") }}</div>
               <button type="button" class="close-detail" :title="t('gitLog.clearComparison')" @click="clearComparison(true)">
-                <X :size="14" />
+                <X weight="Filled" :size="14" />
               </button>
               <div class="meta">
                 <span class="id">{{ compareIds[0]?.slice(0, 12) }}</span>
@@ -1267,7 +1267,7 @@ watch(selectedId, (id) => {
                 {{ t("gitLog.compareCurrent") }}
               </button>
               <button type="button" @click="selectedRow.id && onCreateTag(selectedRow.id)">
-                <Tag :size="12" /> {{ t("gitLog.createTag") }}
+                <Tag weight="Filled" :size="12" /> {{ t("gitLog.createTag") }}
               </button>
               <button v-if="detailChanges.length" type="button" @click="startReview">
                 {{ t("gitLog.startReview") }}

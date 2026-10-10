@@ -37,7 +37,9 @@
  --tab-underline: var(--accent);
 
  /* ================ 字体栈 ================ */
- --font-ui: ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Segoe UI", sans-serif;
+ /* IDEA New UI 官方 UI 字体 Inter（`@fontsource-variable/inter` 随包分发，离线可用）；
+     中文回退系统字体（Inter 不含 CJK 字形）。 */
+ --font-ui: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Segoe UI", sans-serif;
  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, "PingFang SC", monospace;
 
  /* ================ 字号 ================

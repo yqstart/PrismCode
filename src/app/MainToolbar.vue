@@ -10,11 +10,11 @@ import {
   Bug,
   ChevronDown,
   FolderOpen,
-  GitBranch,
+  BranchUp,
   Play,
   Search,
   Settings,
-} from "lucide-vue-next";
+} from "reicon-vue";
 import UpdateBadge from "@/app/UpdateBadge.vue";
 import BranchesPopup from "@/features/git/BranchesPopup.vue";
 import { formatShortcut, isMacOS } from "@/shared/platform";
@@ -338,7 +338,7 @@ onUnmounted(() => {
       @click="toggleProjectMenu"
     >
       <span class="widget-label strong">{{ projectLabel }}</span>
-      <ChevronDown :size="14" :stroke-width="2" class="caret" />
+      <ChevronDown weight="Filled" :size="14" class="caret" />
     </button>
 
     <!-- VCS widget：当前分支，点击分支操作（IDEA 用 VCS widget 取代旧状态栏分支） -->
@@ -349,9 +349,9 @@ onUnmounted(() => {
       :title="`${t('activity.branches')} · ${branch}`"
       @click="toggleBranches"
     >
-      <GitBranch :size="14" :stroke-width="1.75" />
+      <BranchUp weight="Filled" :size="14" />
       <span class="widget-label">{{ branch }}</span>
-      <ChevronDown :size="14" :stroke-width="2" class="caret" />
+      <ChevronDown weight="Filled" :size="14" class="caret" />
     </button>
 
     <div class="drag-fill" data-tauri-drag-region />
@@ -366,7 +366,7 @@ onUnmounted(() => {
         @click="toggleRunMenu"
       >
         <span class="widget-label">{{ selectedTarget.label }}</span>
-        <ChevronDown :size="14" :stroke-width="2" class="caret" />
+        <ChevronDown weight="Filled" :size="14" class="caret" />
       </button>
       <button
         type="button"
@@ -375,7 +375,7 @@ onUnmounted(() => {
         :disabled="runBusy"
         @click="launchRun"
       >
-        <Play :size="15" :stroke-width="1.75" />
+        <Play weight="Filled" :size="15" />
       </button>
       <button
         type="button"
@@ -384,7 +384,7 @@ onUnmounted(() => {
         :disabled="runBusy || !canDebug"
         @click="launchDebug"
       >
-        <Bug :size="15" :stroke-width="1.75" />
+        <Bug weight="Filled" :size="15" />
       </button>
     </div>
 
@@ -397,7 +397,7 @@ onUnmounted(() => {
       :title="t('searchEverywhere.openHint')"
       @click="openSearchEverywhere"
     >
-      <Search :size="15" :stroke-width="1.75" />
+      <Search weight="Filled" :size="15" />
     </button>
     <button
       type="button"
@@ -405,7 +405,7 @@ onUnmounted(() => {
       :title="`${t('activity.settings')} · ${formatShortcut('mod', ',')}`"
       @click="ui.openSettings()"
     >
-      <Settings :size="15" :stroke-width="1.75" />
+      <Settings weight="Filled" :size="15" />
     </button>
     <span class="right-pad" />
   </header>
@@ -441,7 +441,7 @@ onUnmounted(() => {
             :title="path"
             @click="openRecentFolder(path)"
           >
-            <FolderOpen :size="13" :stroke-width="1.75" />
+            <FolderOpen weight="Filled" :size="13" />
             <span class="pop-row-label">{{ basename(path) }}</span>
             <span class="pop-row-path">{{ path }}</span>
           </button>

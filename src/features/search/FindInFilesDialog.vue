@@ -6,7 +6,7 @@ import {
   watch,
   type ComponentPublicInstance,
 } from "vue";
-import { Replace, Search, X } from "lucide-vue-next";
+import { ArrowSwapHorizontal, Search, X } from "reicon-vue";
 import { storeToRefs } from "pinia";
 import { PLAIN_INPUT_ATTRS } from "@/shared/plainInput";
 import { formatShortcut } from "@/shared/platform";
@@ -152,12 +152,12 @@ function onKeydown(event: KeyboardEvent) {
     <div class="dialog" role="dialog" aria-modal="true" :aria-label="t('search.findInFiles')">
       <header class="header">
         <div class="title-row">
-          <Search :size="18" class="title-icon" />
+          <Search weight="Filled" :size="18" class="title-icon" />
           <h1>{{ t("search.findInFiles") }}</h1>
           <span class="hint">{{ findShortcutHint }}</span>
         </div>
         <button type="button" class="icon-btn" :title="t('common.close')" @click="close">
-          <X :size="18" />
+          <X weight="Filled" :size="18" />
         </button>
       </header>
 
@@ -178,7 +178,7 @@ function onKeydown(event: KeyboardEvent) {
         <div v-if="showReplace" class="field">
           <span class="label">{{ t("search.replacePlaceholder") }}</span>
           <div class="replace-row">
-            <Replace :size="14" class="inline-icon" />
+            <ArrowSwapHorizontal weight="Filled" :size="14" class="inline-icon" />
             <input
               v-model="replaceText"
               v-bind="PLAIN_INPUT_ATTRS"

@@ -10,16 +10,16 @@ import {
 import {
   ChevronDown,
   ChevronRight,
-  ChevronsDownUp,
-  Crosshair,
+  ChevronExpandY,
+  Crosshairs,
   FilePlus,
   FileText,
   FolderOpen,
   FolderPlus,
-  FolderInput,
-  RefreshCw,
+  FolderMove,
+  Refresh,
   X,
-} from "lucide-vue-next";
+} from "reicon-vue";
 import { open } from "@tauri-apps/plugin-dialog";
 import { storeToRefs } from "pinia";
 import { writeClipboard } from "@/shared/clipboard";
@@ -1017,7 +1017,7 @@ defineExpose({ locateActiveFile });
           :title="t('explorer.newFile')"
           @click.stop="createFromToolbar(false)"
         >
-          <FilePlus :size="15" />
+          <FilePlus weight="Filled" :size="15" />
         </button>
         <button
           type="button"
@@ -1025,7 +1025,7 @@ defineExpose({ locateActiveFile });
           :title="t('explorer.newFolder')"
           @click.stop="createFromToolbar(true)"
         >
-          <FolderPlus :size="15" />
+          <FolderPlus weight="Filled" :size="15" />
         </button>
         <button
           type="button"
@@ -1034,7 +1034,7 @@ defineExpose({ locateActiveFile });
           :disabled="refreshing"
           @click.stop="workspace.refreshFromDisk()"
         >
-          <RefreshCw :size="15" :class="{ spin: refreshing }" />
+          <Refresh weight="Filled" :size="15" :class="{ spin: refreshing }" />
         </button>
         <button
           type="button"
@@ -1043,7 +1043,7 @@ defineExpose({ locateActiveFile });
           :disabled="!canLocate"
           @click.stop="locateActiveFile"
         >
-          <Crosshair :size="15" />
+          <Crosshairs weight="Filled" :size="15" />
         </button>
         <button
           type="button"
@@ -1051,7 +1051,7 @@ defineExpose({ locateActiveFile });
           :title="t('explorer.collapseAllFolders')"
           @click.stop="workspace.collapseAll()"
         >
-          <ChevronsDownUp :size="15" />
+          <ChevronExpandY weight="Filled" :size="15" />
         </button>
       </div>
     </header>
@@ -1098,8 +1098,8 @@ defineExpose({ locateActiveFile });
     <div ref="treeBodyRef" class="body">
       <template v-if="!rootPath">
         <div class="empty">
-          <FileText v-if="lightMode" :size="28" :stroke-width="1.5" class="icon" />
-          <FolderOpen v-else :size="28" :stroke-width="1.5" class="icon" />
+          <FileText weight="Filled" v-if="lightMode" :size="28" class="icon" />
+          <FolderOpen weight="Filled" v-else :size="28" class="icon" />
           <p class="name">
             {{ lightMode ? t("explorer.lightTitle") : rootName }}
           </p>
@@ -1136,7 +1136,7 @@ defineExpose({ locateActiveFile });
                 :title="t('explorer.removeRecentProject')"
                 @click="removeRecent(item, $event)"
               >
-                <X :size="12" />
+                <X weight="Filled" :size="12" />
               </button>
             </div>
           </div>
@@ -1165,8 +1165,8 @@ defineExpose({ locateActiveFile });
               "
               @click.stop="toggleRoot"
             >
-              <ChevronDown v-if="rootExpanded" :size="14" class="chev" />
-              <ChevronRight v-else :size="14" class="chev" />
+              <ChevronDown weight="Filled" v-if="rootExpanded" :size="14" class="chev" />
+              <ChevronRight weight="Filled" v-else :size="14" class="chev" />
             </button>
             <FileTypeIcon :path="rootPath" is-dir :expanded="rootExpanded" :size="14" />
             <button
@@ -1177,7 +1177,7 @@ defineExpose({ locateActiveFile });
               @click.stop="toggleProjectMenu"
             >
               <span class="root-name">{{ rootName }}</span>
-              <ChevronDown :size="12" class="title-caret" />
+              <ChevronDown weight="Filled" :size="12" class="title-caret" />
             </button>
             <span class="root-path" :title="rootPath">{{ rootDisplayPath }}</span>
           </div>
@@ -1205,7 +1205,7 @@ defineExpose({ locateActiveFile });
           >
             <span class="twist">
               <template v-if="node.isDir">
-                <ChevronRight
+                <ChevronRight weight="Filled"
                   :size="14"
                   class="chev"
                   :class="{ expanded: node.expanded }"
@@ -1328,7 +1328,7 @@ defineExpose({ locateActiveFile });
             class="project-item primary"
             @click="onOpenNewProject"
           >
-            <FolderInput :size="14" />
+            <FolderMove weight="Filled" :size="14" />
             <span>{{ t("explorer.openNewProject") }}</span>
           </button>
           <template v-if="switchCandidates.length">
@@ -1364,7 +1364,7 @@ defineExpose({ locateActiveFile });
                 :title="t('explorer.removeRecentProject')"
                 @click="removeRecent(item, $event)"
               >
-                <X :size="12" />
+                <X weight="Filled" :size="12" />
               </button>
             </div>
           </template>

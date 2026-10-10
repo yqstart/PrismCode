@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@fontsource-variable/inter':
+        specifier: ^5.3.0
+        version: 5.3.0
       '@tauri-apps/api':
         specifier: ^2
         version: 2.11.1
@@ -22,7 +25,7 @@ importers:
         version: 2.5.4
       '@tauri-apps/plugin-process':
         specifier: ^2.3.1
-        version: 2.3.1
+        version: 2.4.0
       '@tauri-apps/plugin-updater':
         specifier: ^2.10.1
         version: 2.10.1
@@ -56,6 +59,9 @@ importers:
       prettier:
         specifier: ^3.9.6
         version: 3.9.6
+      reicon-vue:
+        specifier: ^1.1.104
+        version: 1.1.104(vue@3.5.40(typescript@5.6.3))
       tauri-pty:
         specifier: ^0.3.1
         version: 0.3.1
@@ -446,6 +452,9 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@fontsource-variable/inter@5.3.0':
+    resolution: {integrity: sha512-OupL48va4JNofb97w6NYeF9S7W/kHNKM0Er8Dem5nqi4jeOLrVJDoE8tZEpnMJmtkvNbB1EIPPwHcdkF6b1oUA==}
+
   '@jridgewell/sourcemap-codec@1.5.5':
     resolution: {integrity: sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==}
 
@@ -709,8 +718,8 @@ packages:
   '@tauri-apps/plugin-opener@2.5.4':
     resolution: {integrity: sha512-1HnPkb+AmgO29HBazm4uPLKB+r7zzcTBW1d0fyYp1uP+jwtpoiNDGKMMzz58SFp49nOIrxdE3aUJtT57lfO9CQ==}
 
-  '@tauri-apps/plugin-process@2.3.1':
-    resolution: {integrity: sha512-nCa4fGVaDL/B9ai03VyPOjfAHRHSBz5v6F/ObsB73r/dA3MHHhZtldaDMIc0V/pnUw9ehzr2iEG+XkSEyC0JJA==}
+  '@tauri-apps/plugin-process@2.4.0':
+    resolution: {integrity: sha512-GddrmsSLAYrLa/yTXlXK/YRDzUgYeeOnUXTbiyvJWkmI424RmDPD3FVLeqcon7rv6O6ZfhBilcrHWnSo7o6hIQ==}
 
   '@tauri-apps/plugin-updater@2.10.1':
     resolution: {integrity: sha512-NFYMg+tWOZPJdzE/PpFj2qfqwAWwNS3kXrb1tm1gnBJ9mYzZ4WDRrwy8udzWoAnfGCHLuePNLY1WVCNHnh3eRA==}
@@ -1007,6 +1016,11 @@ packages:
     resolution: {integrity: sha512-qpp73xblxNr+bF0nSXTodM3v+zcK5IPo/GkjLsdUqRf/qpLJp/1KxBUbstoMMnwnPw9xD6OMei8kmYf6CLWfGw==}
     engines: {node: '>=22.12.0'}
     hasBin: true
+
+  reicon-vue@1.1.104:
+    resolution: {integrity: sha512-MKtVCb20Uhg9QSavucuoXd0RrvWQ2K3n6F5n0N3GxeXx3tAKMXkqf/+KfDExZIedSzU2ZMME1kxe2d18JGvDRA==}
+    peerDependencies:
+      vue: ^3.0.0
 
   rfdc@1.4.1:
     resolution: {integrity: sha512-q1b3N5QkRUWUl7iyylaaj3kOpIT0N2i9MqIEQXP73GVsN9cw3fdx8X63cEmWhJGi2PPCF23Ijp7ktmd39rawIA==}
@@ -1345,6 +1359,8 @@ snapshots:
   '@esbuild/win32-x64@0.28.2':
     optional: true
 
+  '@fontsource-variable/inter@5.3.0': {}
+
   '@jridgewell/sourcemap-codec@1.5.5': {}
 
   '@puppeteer/browsers@3.1.0':
@@ -1505,7 +1521,7 @@ snapshots:
     dependencies:
       '@tauri-apps/api': 2.11.1
 
-  '@tauri-apps/plugin-process@2.3.1':
+  '@tauri-apps/plugin-process@2.4.0':
     dependencies:
       '@tauri-apps/api': 2.12.0
 
@@ -1861,6 +1877,10 @@ snapshots:
       - proxy-agent
       - utf-8-validate
       - yauzl
+
+  reicon-vue@1.1.104(vue@3.5.40(typescript@5.6.3)):
+    dependencies:
+      vue: 3.5.40(typescript@5.6.3)
 
   rfdc@1.4.1: {}
 

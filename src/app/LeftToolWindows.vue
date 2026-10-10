@@ -72,7 +72,8 @@ onBeforeUnmount(() => {
     :style="{ width: `${layout.left.width}px` }"
   >
     <ToolWindowCard
-      :title="active === 'commit' ? t('activity.commit') : t('activity.explorer')"
+      reset-area="left"
+      :title="active === 'commit' ? t('toolWindow.commitTitle') : t('activity.explorer')"
       @close="settings.setLeftWindow(null)"
     >
       <KeepAlive>

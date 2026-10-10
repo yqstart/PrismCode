@@ -4,6 +4,7 @@ import { storeToRefs } from "pinia";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import BottomToolWindows from "@/app/BottomToolWindows.vue";
+import RightToolWindows from "@/app/RightToolWindows.vue";
 import MainToolbar from "@/app/MainToolbar.vue";
 import ToolWindowBar from "@/app/ToolWindowBar.vue";
 import LeftToolWindows from "@/app/LeftToolWindows.vue";
@@ -892,6 +893,9 @@ onUnmounted(() => {
         <!-- 底部工具窗口区只占编辑器列：左侧工具窗口列保持整列高度 -->
         <BottomToolWindows />
       </div>
+      <!-- IDEA 右半侧：右工具窗口列 → 右侧工具窗口条 -->
+      <RightToolWindows />
+      <ToolWindowBar side="right" />
     </div>
     <StatusBar />
     <QuickOpen />

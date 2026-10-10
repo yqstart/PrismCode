@@ -8,6 +8,7 @@ import {
   type EditorPreferences,
   type JavaPreferences,
   type LeftToolWindowId,
+  type RightToolWindowId,
   type ThemeId,
   isUpdateImportsOnMove,
   isEditorFontId,
@@ -50,6 +51,11 @@ function clampLeftWidth(width: number): number {
 /** 底部工具窗口区高约束（px） */
 function clampBottomHeight(height: number): number {
   return Math.min(640, Math.max(120, Math.round(height)));
+}
+
+/** 右侧工具窗口列宽约束（px） */
+function clampRightWidth(width: number): number {
+  return Math.min(560, Math.max(220, Math.round(width)));
 }
 
 /** 同步 macOS / 系统菜单栏文案到应用语言（无需重启） */
@@ -103,6 +109,8 @@ function loadSettings(): AppSettings {
     const rawLeftLast = parsedLayout?.left?.lastActive;
     const rawBottomActive = parsedLayout?.bottom?.active;
     const rawBottomLast = parsedLayout?.bottom?.lastActive;
+    const rawRightActive = parsedLayout?.right?.active;
+    const rawRightLast = parsedLayout?.right?.lastActive;
 
     const layout: AppSettings["layout"] = {
       left: {
@@ -139,6 +147,13 @@ function loadSettings(): AppSettings {
           parsedLayout?.bottom?.height ??
           parsedLayout?.terminalPanelHeight ??
           DEFAULT_SETTINGS.layout.bottom.height,
+        ),
+      },
+      right: {
+        active: rawRightActive === "spring" ? rawRightActive : null,
+        lastActive: rawRightLast === "spring" ? rawRightLast : "spring",
+        width: clampRightWidth(
+          parsedLayout?.right?.width ?? DEFAULT_SETTINGS.layout.right.width,
         ),
       },
       gitLogWindow: {
@@ -391,6 +406,33 @@ export const useSettingsStore = defineStore("settings", () => {
     settings.layout.bottom.height = clampBottomHeight(height);
   }
 
+  /** 切换右侧工具窗口；传 null 收起 */
+  function setRightWindow(id: RightToolWindowId | null) {
+    settings.layout.right.active = id;
+    if (id) settings.layout.right.lastActive = id;
+  }
+
+  function toggleRightWindow(id: RightToolWindowId) {
+    setRightWindow(settings.layout.right.active === id ? null : id);
+  }
+
+  function setRightWidth(width: number) {
+    settings.layout.right.width = clampRightWidth(width);
+  }
+
+  /** 工具窗口 ⋮ 菜单「重置尺寸」：恢复该区默认宽 / 高 */
+  function resetToolWindowSize(area: "left" | "bottom" | "right") {
+    if (area === "left") {
+      settings.layout.left.width = DEFAULT_SETTINGS.layout.left.width;
+      return;
+    }
+    if (area === "bottom") {
+      settings.layout.bottom.height = DEFAULT_SETTINGS.layout.bottom.height;
+      return;
+    }
+    settings.layout.right.width = DEFAULT_SETTINGS.layout.right.width;
+  }
+
   function setLocale(next: AppSettings["locale"]) {
     settings.locale = next;
   }
@@ -420,6 +462,10 @@ export const useSettingsStore = defineStore("settings", () => {
     setBottomWindow,
     toggleBottomWindow,
     setBottomHeight,
+    setRightWindow,
+    toggleRightWindow,
+    setRightWidth,
+    resetToolWindowSize,
     setLocale,
     setAutoCheckUpdates,
     persistNow,

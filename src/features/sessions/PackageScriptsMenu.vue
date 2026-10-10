@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { nextTick, ref } from "vue";
-import { Check, Play, Plus, RefreshCw, Trash2, X } from "lucide-vue-next";
+import { Check, Play, Plus, Refresh, Trash2, X } from "reicon-vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "@/i18n";
 import { usePackageScriptsStore } from "@/stores/packageScripts";
@@ -85,7 +85,7 @@ function onDeleteCustom(name: string) {
           :title="t('packageScripts.addCustom')"
           @click="onStartAdd"
         >
-          <Plus :size="14" />
+          <Plus weight="Filled" :size="14" />
         </button>
         <button
           type="button"
@@ -94,7 +94,7 @@ function onDeleteCustom(name: string) {
           :disabled="loading"
           @click="onRefresh"
         >
-          <RefreshCw :size="13" :class="{ spin: loading }" />
+          <Refresh weight="Filled" :size="13" :class="{ spin: loading }" />
         </button>
       </div>
     </header>
@@ -128,7 +128,7 @@ function onDeleteCustom(name: string) {
             :title="t('packageScripts.cancelCustom')"
             @click="onCancelAdd"
           >
-            <X :size="13" />
+            <X weight="Filled" :size="13" />
           </button>
           <button
             type="submit"
@@ -136,7 +136,7 @@ function onDeleteCustom(name: string) {
             :title="t('packageScripts.saveCustom')"
             :disabled="!customName.trim() || !customCommand.trim()"
           >
-            <Check :size="13" />
+            <Check weight="Filled" :size="13" />
           </button>
         </span>
       </div>
@@ -158,7 +158,7 @@ function onDeleteCustom(name: string) {
           :title="t('packageScripts.run', { name: item.name })"
           @click="onRun(item.name, item.custom)"
         >
-          <Play :size="12" class="play" />
+          <Play weight="Filled" :size="12" class="play" />
         </button>
         <input
           v-if="props.variant !== 'compact'"
@@ -189,7 +189,7 @@ function onDeleteCustom(name: string) {
           :aria-label="t('packageScripts.deleteCustom')"
           @click="onDeleteCustom(item.name)"
         >
-          <Trash2 :size="13" />
+          <Trash2 weight="Filled" :size="13" />
         </button>
       </div>
     </div>

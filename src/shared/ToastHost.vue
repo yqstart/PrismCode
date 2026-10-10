@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { storeToRefs } from "pinia";
-import { X } from "lucide-vue-next";
+import { X } from "reicon-vue";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { useI18n } from "@/i18n";
 
@@ -47,7 +47,7 @@ function onAction(toast: { id: number; action?: { label: string; onClick: () => 
         :title="t('common.close')"
         @click="workspace.dismissNotice(toast.id)"
       >
-        <X :size="12" />
+        <X weight="Filled" :size="12" />
       </button>
     </div>
   </TransitionGroup>

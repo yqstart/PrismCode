@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { Columns2, Eye, FileCode, GitCommitHorizontal, PenLine, Pin, Server, X } from "lucide-vue-next";
+import { RowVertical, Eye, CodeFile, History, Edit, Pin, Server, X } from "reicon-vue";
 import { storeToRefs } from "pinia";
 import MonacoEditor from "@/features/editor/MonacoEditor.vue";
 import ImagePreview from "@/features/editor/ImagePreview.vue";
@@ -848,13 +848,13 @@ onBeforeUnmount(() => {
             {{ fileTabLabel(tab.path, tab.name) }}
           </span>
           <span class="tab-trailing">
-            <Pin v-if="tab.pinned" :size="11" class="pin-icon" />
+            <Pin weight="Filled" v-if="tab.pinned" :size="11" class="pin-icon" />
             <span
               class="close"
               :title="t('editor.close')"
               @click.stop="editor.closeTab(tab.path)"
             >
-              <X :size="12" />
+              <X weight="Filled" :size="12" />
             </span>
           </span>
         </button>
@@ -868,14 +868,14 @@ onBeforeUnmount(() => {
           @click="activateGitLog"
           @auxclick.middle.prevent="closeGitLogTab"
         >
-          <GitCommitHorizontal :size="12" class="gitlog-icon" />
+          <History weight="Filled" :size="12" class="gitlog-icon" />
           <span class="name">{{ t("editor.gitLogTab") }}</span>
           <span
             class="close"
             :title="t('editor.closeGitLog')"
             @click.stop="closeGitLogTab"
           >
-            <X :size="12" />
+            <X weight="Filled" :size="12" />
           </span>
         </button>
 
@@ -889,14 +889,14 @@ onBeforeUnmount(() => {
           @click="activateCompare(tab.id)"
           @auxclick.middle.prevent="closeCompareTab(tab.id)"
         >
-          <Columns2 :size="12" class="cmp-icon" />
+          <RowVertical weight="Filled" :size="12" class="cmp-icon" />
           <span class="name">{{ tab.title }}</span>
           <span
             class="close"
             :title="t('editor.close')"
             @click.stop="closeCompareTab(tab.id)"
           >
-            <X :size="12" />
+            <X weight="Filled" :size="12" />
           </span>
         </button>
       </TransitionGroup>
@@ -912,14 +912,14 @@ onBeforeUnmount(() => {
           @click="activateSsh"
           @auxclick.middle.prevent="closeSshTab"
         >
-          <Server :size="12" class="ssh-icon" />
+          <Server weight="Filled" :size="12" class="ssh-icon" />
           <span class="name">{{ t("editor.sshTab") }}</span>
           <span
             class="close"
             :title="t('editor.closeSsh')"
             @click.stop="closeSshTab"
           >
-            <X :size="12" />
+            <X weight="Filled" :size="12" />
           </span>
         </button>
 
@@ -931,8 +931,8 @@ onBeforeUnmount(() => {
           :title="previewToggleTitle"
           @click="togglePreview"
         >
-          <Eye v-if="!previewShowing" :size="14" />
-          <FileCode v-else :size="14" />
+          <Eye weight="Filled" v-if="!previewShowing" :size="14" />
+          <CodeFile weight="Filled" v-else :size="14" />
           {{ previewToggleLabel }}
         </button>
       </div>
@@ -1107,7 +1107,7 @@ onBeforeUnmount(() => {
           :aria-selected="markdownPreviewMode === 'preview'"
           @click="setMdModeUi('preview')"
         >
-          <Eye :size="13" />
+          <Eye weight="Filled" :size="13" />
         </button>
         <button
           type="button"
@@ -1118,7 +1118,7 @@ onBeforeUnmount(() => {
           :aria-selected="markdownPreviewMode === 'edit'"
           @click="setMdModeUi('edit')"
         >
-          <PenLine :size="13" />
+          <Edit weight="Filled" :size="13" />
         </button>
       </div>
     </div>

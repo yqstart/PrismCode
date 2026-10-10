@@ -1,3 +1,4 @@
+import "@fontsource-variable/inter";
 import "@/features/editor/monaco/setup";
 import { createApp } from "vue";
 import App from "./App.vue";

@@ -27,8 +27,14 @@ export type LeftToolWindowId = "project" | "commit";
 /** 底部工具窗口（IDEA 工具窗口条下组）：终端 / 问题 / 调试 */
 export type BottomToolWindowId = "terminal" | "problems" | "debug";
 
+/** 右侧工具窗口（IDEA 右侧条）：Spring 端点 */
+export type RightToolWindowId = "spring";
+
 /** 全部工具窗口 ID */
-export type ToolWindowId = LeftToolWindowId | BottomToolWindowId;
+export type ToolWindowId =
+  | LeftToolWindowId
+  | BottomToolWindowId
+  | RightToolWindowId;
 
 export type UpdateImportsOnMove = "always" | "prompt" | "never";
 
@@ -101,9 +107,20 @@ export interface BottomAreaState {
   height: number;
 }
 
+/** 右侧工具窗口列：编辑器右侧的垂直工具窗口区（IDEA 布局） */
+export interface RightAreaState {
+  /** 当前显示的工具窗口；null = 收起 */
+  active: RightToolWindowId | null;
+  /** 收起前显示的工具窗口，再次展开时恢复 */
+  lastActive: RightToolWindowId;
+  /** 列宽（px） */
+  width: number;
+}
+
 export interface LayoutState {
   left: LeftAreaState;
   bottom: BottomAreaState;
+  right: RightAreaState;
   /** 历史兼容：曾用底栏 Git Log 高度；现 Git Log 为编辑区标签，open 不再驱动布局 */
   gitLogWindow: GitLogWindowState;
 }
@@ -164,6 +181,11 @@ export const DEFAULT_SETTINGS: AppSettings = {
       active: null,
       lastActive: "terminal",
       height: 240,
+    },
+    right: {
+      active: null,
+      lastActive: "spring",
+      width: 320,
     },
     gitLogWindow: {
       open: false,

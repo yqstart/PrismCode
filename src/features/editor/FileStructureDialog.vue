@@ -13,14 +13,14 @@ import {
 } from "vue";
 import {
   Box,
-  Cable,
-  CircleDot,
-  ListOrdered,
+  Plug,
+  RecordCircle,
+  OrderedList,
   Search,
-  SquareFunction,
-  Type,
-  Variable,
-} from "lucide-vue-next";
+  Code,
+  Text,
+  Code2,
+} from "reicon-vue";
 import { storeToRefs } from "pinia";
 import { PLAIN_INPUT_ATTRS } from "@/shared/plainInput";
 import { useI18n } from "@/i18n";
@@ -43,12 +43,12 @@ const rowElements = new Map<number, HTMLElement>();
 /** kind → 图标（近似 IDEA 图标语义：class 方框 / method 圆点 / interface 连接器…） */
 const KIND_ICONS: Record<SymbolKind, Component> = {
   class: Box,
-  interface: Cable,
-  enum: ListOrdered,
-  function: SquareFunction,
-  method: CircleDot,
-  type: Type,
-  variable: Variable,
+  interface: Plug,
+  enum: OrderedList,
+  function: Code,
+  method: RecordCircle,
+  type: Text,
+  variable: Code2,
 };
 
 function iconFor(kind: SymbolKind): Component {
@@ -134,7 +134,7 @@ onMounted(() => {
       :aria-label="t('structure.title')"
     >
       <form class="input-row" autocomplete="off" @submit.prevent>
-        <Search :size="16" class="icon" />
+        <Search weight="Filled" :size="16" class="icon" />
         <input
           ref="inputRef"
           v-model="filterText"
@@ -158,7 +158,7 @@ onMounted(() => {
           @click="structure.activate(index)"
           @mouseenter="structure.setActiveIndex(index)"
         >
-          <component :is="iconFor(symbol.kind)" :size="14" class="kind" />
+          <component :is="iconFor(symbol.kind)" weight="Filled" :size="14" class="kind" />
           <span class="name">{{ symbol.name }}</span>
           <span class="line">{{ symbol.line }}</span>
         </button>

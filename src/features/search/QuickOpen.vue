@@ -8,7 +8,7 @@ import {
   watch,
   type ComponentPublicInstance,
 } from "vue";
-import { Search } from "lucide-vue-next";
+import { Search } from "reicon-vue";
 import { storeToRefs } from "pinia";
 import FileTypeIcon from "@/shared/FileTypeIcon.vue";
 import { PLAIN_INPUT_ATTRS } from "@/shared/plainInput";
@@ -207,7 +207,7 @@ onBeforeUnmount(() => {
   <div v-if="quickOpenVisible" class="overlay" @mousedown.self="close">
     <div class="panel" role="dialog" :aria-label="t('search.quickOpenTitle')">
       <form class="input-row" autocomplete="off" @submit.prevent>
-        <Search :size="16" class="icon" />
+        <Search weight="Filled" :size="16" class="icon" />
         <input
           ref="inputRef"
           v-model="fileQuery"

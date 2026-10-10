@@ -3,12 +3,12 @@ import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import {
   Eye,
   EyeOff,
-  Pencil,
+  Edit2,
   Plus,
   Server,
   Trash2,
   X,
-} from "lucide-vue-next";
+} from "reicon-vue";
 import { useI18n } from "@/i18n";
 import type { SshConnectConfig } from "@/shared/sshApi";
 import { PLAIN_INPUT_ATTRS } from "@/shared/plainInput";
@@ -308,7 +308,7 @@ const unlocking = computed(() =>
   <div class="hosts">
     <header class="toolbar">
       <button type="button" class="tool-btn primary" @click="openAdd">
-        <Plus :size="15" />
+        <Plus weight="Filled" :size="15" />
         {{ t("sessions.addHost") }}
       </button>
     </header>
@@ -341,21 +341,21 @@ const unlocking = computed(() =>
               :title="t('sessions.edit')"
               @click="void openEdit(profile, $event)"
             >
-              <Pencil :size="13" />
+              <Edit2 weight="Filled" :size="13" />
             </span>
             <span
               class="icon-hit danger"
               :title="t('common.delete')"
               @click="onDeleteProfile(profile, $event)"
             >
-              <Trash2 :size="13" />
+              <Trash2 weight="Filled" :size="13" />
             </span>
           </span>
         </button>
       </div>
 
       <div v-else class="empty">
-        <Server :size="28" :stroke-width="1.5" class="empty-icon" />
+        <Server weight="Filled" :size="28" class="empty-icon" />
         <p>{{ t("sessions.hostsEmptyTitle") }}</p>
         <p class="empty-hint">{{ t("sessions.hostsEmptyHint") }}</p>
         <button type="button" class="cta" @click="openAdd">
@@ -377,7 +377,7 @@ const unlocking = computed(() =>
             :title="t('common.close')"
             @click="closeEditor"
           >
-            <X :size="16" />
+            <X weight="Filled" :size="16" />
           </button>
         </header>
         <div class="sheet-body">
@@ -455,8 +455,8 @@ const unlocking = computed(() =>
                 "
                 @click="showFormPassword = !showFormPassword"
               >
-                <EyeOff v-if="showFormPassword" :size="14" />
-                <Eye v-else :size="14" />
+                <EyeOff weight="Filled" v-if="showFormPassword" :size="14" />
+                <Eye weight="Filled" v-else :size="14" />
               </button>
             </div>
           </label>
@@ -492,8 +492,8 @@ const unlocking = computed(() =>
                   "
                   @click="showPassphrase = !showPassphrase"
                 >
-                  <EyeOff v-if="showPassphrase" :size="14" />
-                  <Eye v-else :size="14" />
+                  <EyeOff weight="Filled" v-if="showPassphrase" :size="14" />
+                  <Eye weight="Filled" v-else :size="14" />
                 </button>
               </div>
             </label>
@@ -547,7 +547,7 @@ const unlocking = computed(() =>
             :title="t('common.close')"
             @click="cancelUnlock"
           >
-            <X :size="16" />
+            <X weight="Filled" :size="16" />
           </button>
         </header>
         <div class="sheet-body">
@@ -573,8 +573,8 @@ const unlocking = computed(() =>
                 "
                 @click="showUnlockPassword = !showUnlockPassword"
               >
-                <EyeOff v-if="showUnlockPassword" :size="14" />
-                <Eye v-else :size="14" />
+                <EyeOff weight="Filled" v-if="showUnlockPassword" :size="14" />
+                <Eye weight="Filled" v-else :size="14" />
               </button>
             </div>
           </label>
@@ -599,8 +599,8 @@ const unlocking = computed(() =>
                 "
                 @click="showUnlockPassphrase = !showUnlockPassphrase"
               >
-                <EyeOff v-if="showUnlockPassphrase" :size="14" />
-                <Eye v-else :size="14" />
+                <EyeOff weight="Filled" v-if="showUnlockPassphrase" :size="14" />
+                <Eye weight="Filled" v-else :size="14" />
               </button>
             </div>
           </label>

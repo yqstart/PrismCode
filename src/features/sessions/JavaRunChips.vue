@@ -4,7 +4,7 @@
 // 与 PackageScriptsMenu 是兄弟组件（同一个 .scripts-slot），点击后统一走
 // java store 的启动计划，再由 sessions store 决定复用终端还是新开。
 import { computed } from "vue";
-import { AlertTriangle, Bug, Coffee, Package, Play, RefreshCw, RotateCcw } from "lucide-vue-next";
+import { AlertTriangle, Bug, Coffee, Package, Play, Refresh, RotateLeft } from "reicon-vue";
 import { useI18n } from "@/i18n";
 import { runActionOf, type JavaRunAction } from "@/shared/javaRun";
 import { useDebugStore } from "@/stores/debug";
@@ -68,7 +68,7 @@ async function onLaunch(configuration: RunConfiguration | undefined, debugMode: 
 <template>
   <div v-if="chips.length" class="run-chips">
     <span class="group-mark" :title="t('maven.module.label')">
-      <Coffee :size="12" />
+      <Coffee weight="Filled" :size="12" />
     </span>
     <div
       v-for="group in chips"
@@ -93,7 +93,7 @@ async function onLaunch(configuration: RunConfiguration | undefined, debugMode: 
         :title="`${t('run.action.package')} · ${group.label}`"
         @click="onLaunch(group.package, false)"
       >
-        <Package :size="11" />
+        <Package weight="Filled" :size="11" />
         {{ t("run.action.package") }}
       </button>
       <button
@@ -103,7 +103,7 @@ async function onLaunch(configuration: RunConfiguration | undefined, debugMode: 
         :title="`${t('run.action.clean')} · ${group.label}`"
         @click="onLaunch(group.clean, false)"
       >
-        <RotateCcw :size="11" />
+        <RotateLeft weight="Filled" :size="11" />
         {{ t("run.action.clean") }}
       </button>
       <button
@@ -113,7 +113,7 @@ async function onLaunch(configuration: RunConfiguration | undefined, debugMode: 
         :title="`${t('run.action.run')} · ${group.label}`"
         @click="onLaunch(group.run, false)"
       >
-        <Play :size="11" />
+        <Play weight="Filled" :size="11" />
         {{ t("run.action.run") }}
       </button>
       <button
@@ -123,7 +123,7 @@ async function onLaunch(configuration: RunConfiguration | undefined, debugMode: 
         :title="`${t('run.action.debug')} · ${group.label}`"
         @click="onLaunch(group.debug, true)"
       >
-        <Bug :size="11" />
+        <Bug weight="Filled" :size="11" />
         {{ t("run.action.debug") }}
       </button>
     </div>
@@ -133,7 +133,7 @@ async function onLaunch(configuration: RunConfiguration | undefined, debugMode: 
       class="chip warn"
       :title="diagnostics.join('\n')"
     >
-      <AlertTriangle :size="11" />
+      <AlertTriangle weight="Filled" :size="11" />
       {{ diagnostics.length }}
     </button>
     <button
@@ -143,7 +143,7 @@ async function onLaunch(configuration: RunConfiguration | undefined, debugMode: 
       :disabled="java.runLoading"
       @click="java.refreshRunConfigurations()"
     >
-      <RefreshCw :size="11" :class="{ spin: java.runLoading }" />
+      <Refresh weight="Filled" :size="11" :class="{ spin: java.runLoading }" />
     </button>
   </div>
 </template>

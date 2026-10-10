@@ -19,11 +19,15 @@ export const enUS = {
     tagline: "Frontend + Java development tool",
     mainToolbar: "Main Toolbar",
     toolWindowBar: "Tool Window Bar",
+    rightToolWindowBar: "Right Tool Window Bar",
     resizeSidebar: "Drag to resize",
     resizeBottomArea: "Drag to resize height",
   },
   toolWindow: {
     hide: "Hide tool window",
+    more: "More actions",
+    resetSize: "Reset size",
+    commitTitle: "Commit",
   },
   activity: {
     explorer: "Project",
@@ -36,6 +40,7 @@ export const enUS = {
     debug: "Debug (⌘5)",
     branches: "Git Branches",
     ssh: "SSH Remote",
+    spring: "Spring Endpoints",
     settings: "Settings",
   },
   title: {
@@ -179,6 +184,16 @@ export const enUS = {
       title: "Spring Endpoints",
       open: "Spring Endpoints",
       empty: "No Spring endpoints found",
+    },
+    panel: {
+      filter: "Filter endpoints",
+      loading: "Scanning Spring endpoints…",
+      noWorkspace: "Open a workspace to scan Spring endpoints",
+      noMatch: "No matching endpoints",
+      empty: "No Spring endpoints found",
+    },
+    action: {
+      refresh: "Rescan endpoints",
     },
     notice: {
       indexFailed: "Spring index failed: {detail}",

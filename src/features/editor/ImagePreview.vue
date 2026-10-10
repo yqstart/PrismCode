@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from "vue";
-import { Minus, Plus, RotateCcw, Maximize2 } from "lucide-vue-next";
+import { Minus, Plus, RotateLeft, Maximize2 } from "reicon-vue";
 import { storeToRefs } from "pinia";
 import {
   isRasterImagePath,
@@ -164,7 +164,7 @@ watch(
           :disabled="!natural"
           @click="zoomBy(1 / 1.25)"
         >
-          <Minus :size="12" />
+          <Minus weight="Filled" :size="12" />
         </button>
         <span class="zoom-label" :title="t('editor.image.wheelZoomHint')">{{ zoomLabel }}</span>
         <button
@@ -174,7 +174,7 @@ watch(
           :disabled="!natural"
           @click="zoomBy(1.25)"
         >
-          <Plus :size="12" />
+          <Plus weight="Filled" :size="12" />
         </button>
         <button
           type="button"
@@ -183,7 +183,7 @@ watch(
           :disabled="!natural"
           @click="zoomToActual"
         >
-          <RotateCcw :size="12" />
+          <RotateLeft weight="Filled" :size="12" />
         </button>
         <button
           type="button"
@@ -192,7 +192,7 @@ watch(
           :disabled="!natural"
           @click="fitToWindow"
         >
-          <Maximize2 :size="12" />
+          <Maximize2 weight="Filled" :size="12" />
         </button>
         <span v-if="natural" class="size">{{ natural.w }} × {{ natural.h }}</span>
       </div>

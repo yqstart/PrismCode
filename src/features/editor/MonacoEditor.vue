@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch, watchEffect } from "vue";
 import { storeToRefs } from "pinia";
 import { monaco } from "@/features/editor/monaco/setup";
 import { languageForContent, largeFileOptions } from "@/features/editor/monaco/largeFile";
@@ -54,13 +54,13 @@ import { getEditorFontFamily } from "@/features/editor/fonts";
 import { relativeToRoot } from "@/shared/fs";
 import { isReadOnlyVirtualPath } from "@/shared/virtualPaths";
 import { installBreakpointGlyphs, type BreakpointController } from "@/features/debug/breakpointGlyphs";
+import { useBreadcrumbsStore } from "@/stores/breadcrumbs";
 import { useEditorStore } from "@/stores/editor";
 import { useDebugStore } from "@/stores/debug";
 import { useGitStore } from "@/stores/git";
 import { useJavaStore } from "@/stores/java";
 import { useSettingsStore } from "@/stores/settings";
 import { useWorkspaceStore } from "@/stores/workspace";
-import { useI18n } from "@/i18n";
 
 // 语言注册必须先于 createModel 执行（模块导入即注册，幂等）
 registerVueLanguage();
@@ -73,7 +73,6 @@ const props = defineProps<{
 }>();
 
 const host = ref<HTMLDivElement | null>(null);
-const { t } = useI18n();
 const editorStore = useEditorStore();
 const settings = useSettingsStore();
 const workspace = useWorkspaceStore();
@@ -112,6 +111,9 @@ let breakpointController: BreakpointController | null = null;
 /** 光标所在符号链（Monaco 无内置面包屑，自研 DOM 条） */
 const crumbs = ref<SymbolCrumb[]>([]);
 
+/** 状态栏导航栏（IDEA New UI 把 breadcrumbs 放进状态栏）共享同一份数据 */
+const breadcrumbs = useBreadcrumbsStore();
+
 /** 面包屑首段：文件路径段（IDEA 底部面包屑始终包含路径，符号链追加在后） */
 const pathCrumbs = computed<Array<{ name: string; path: string }>>(() => {
   const root = workspace.rootPath;
@@ -128,6 +130,11 @@ const pathCrumbs = computed<Array<{ name: string; path: string }>>(() => {
 const showBreadcrumbs = computed(
   () => pathCrumbs.value.length > 0 && !isReadOnlyVirtualPath(props.path),
 );
+
+// 数据同步到状态栏导航栏；点击动作由本组件注册（需要编辑器实例能力）
+watchEffect(() => {
+  breadcrumbs.setCrumbs(pathCrumbs.value, crumbs.value, showBreadcrumbs.value);
+});
 
 async function revealCrumb(path: string) {
   if (!path) return;
@@ -446,6 +453,7 @@ function createEditor(): void {
   breadcrumbController ??= trackSymbolChain(codeEditor, (chain) => {
     crumbs.value = chain;
   });
+  breadcrumbs.registerHandlers({ reveal: revealCrumb, jump: jumpToCrumb });
   void refreshActiveExtraLibs(model);
   emitCursor();
   scheduleMeasure();
@@ -570,6 +578,8 @@ onBeforeUnmount(() => {
   breakpointController = null;
   breadcrumbController?.dispose();
   breadcrumbController = null;
+  breadcrumbs.clearHandlers();
+  breadcrumbs.setCrumbs([], [], false);
   keymapController?.dispose();
   keymapController = null;
   ownCommands?.dispose();
@@ -716,27 +726,6 @@ defineExpose({ scrollTo });
 <template>
   <div class="editor-shell">
     <div ref="host" class="monaco-host" />
-    <!-- IDEA 把文件路径 + 符号面包屑放在编辑区底部（状态栏之上），这里同位置 -->
-    <nav v-if="showBreadcrumbs" class="breadcrumbs" :aria-label="t('editor.breadcrumbs')">
-      <template v-for="(seg, index) in pathCrumbs" :key="`p-${index}-${seg.name}`">
-        <span v-if="index > 0" class="separator">&gt;</span>
-        <button
-          type="button"
-          class="crumb"
-          :class="{ 'crumb-file': index === pathCrumbs.length - 1 }"
-          :title="seg.path"
-          @click="revealCrumb(seg.path)"
-        >
-          {{ seg.name }}
-        </button>
-      </template>
-      <template v-for="(crumb, index) in crumbs" :key="`s-${index}-${crumb.offset}`">
-        <span class="separator">&gt;</span>
-        <button type="button" class="crumb" :title="crumb.name" @click="jumpToCrumb(crumb)">
-          {{ crumb.name }}
-        </button>
-      </template>
-    </nav>
   </div>
 </template>
 
@@ -753,49 +742,6 @@ defineExpose({ scrollTo });
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
-}
-
-/* ==================== 面包屑（编辑区底部，对齐 IDEA StatusBar.Breadcrumbs） ==================== */
-.breadcrumbs {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 2px 10px;
-  border-top: 1px solid var(--border-subtle);
-  /* 与编辑区同色（IDEA 符号面包屑无独立底色） */
-  background: var(--bg-editor);
-  font-size: 11px;
-  flex-shrink: 0;
-  overflow: hidden;
-  white-space: nowrap;
-}
-
-.breadcrumbs .crumb {
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: 11px;
-  padding: 1px 4px;
-  border-radius: 4px;
-  cursor: pointer;
-  max-width: 220px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.breadcrumbs .crumb:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
-}
-
-/* 当前文件段加重（IDEA 底部面包屑把文件与符号加重显示） */
-.breadcrumbs .crumb-file {
-  color: var(--text-primary);
-  font-weight: 500;
-}
-
-.breadcrumbs .separator {
-  color: var(--text-muted);
 }
 
 /* ==================== git 改动条 ==================== */

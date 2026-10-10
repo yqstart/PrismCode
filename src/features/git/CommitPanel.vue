@@ -3,21 +3,21 @@ import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import {
   AlertTriangle,
   Archive,
-  ArchiveRestore,
-  ArchiveX,
+  ArchiveUp,
+  ArchiveSlash,
   ArrowDown,
   ArrowUp,
   ChevronDown,
   CloudDownload,
   FileDown,
-  FolderSync,
-  GitCommitHorizontal,
+  FolderConnection,
+  Upload,
   History,
   Minus,
   Plus,
-  RefreshCw,
-  Undo2,
-} from "lucide-vue-next";
+  Refresh,
+  Undo,
+} from "reicon-vue";
 import { storeToRefs } from "pinia";
 import FileTypeIcon from "@/shared/FileTypeIcon.vue";
 import { basename, joinPath } from "@/shared/fs";
@@ -186,7 +186,7 @@ function onCommitKeydown(event: KeyboardEvent) {
           :title="t('git.refresh')"
           @click="git.refresh()"
         >
-          <RefreshCw :size="14" :class="{ spin: loading }" />
+          <Refresh weight="Filled" :size="14" :class="{ spin: loading }" />
         </button>
         <button
           type="button"
@@ -194,7 +194,7 @@ function onCommitKeydown(event: KeyboardEvent) {
           :title="t('git.gitLog')"
           @click="openLog"
         >
-          <History :size="14" />
+          <History weight="Filled" :size="14" />
         </button>
       </div>
     </header>
@@ -229,7 +229,7 @@ function onCommitKeydown(event: KeyboardEvent) {
           aria-label="Update Project"
           @click="git.updateProject()"
         >
-          <FolderSync :size="14" />
+          <FolderConnection weight="Filled" :size="14" />
         </button>
         <button
           type="button"
@@ -238,7 +238,7 @@ function onCommitKeydown(event: KeyboardEvent) {
           aria-label="Fetch"
           @click="git.fetchRemote()"
         >
-          <CloudDownload :size="14" />
+          <CloudDownload weight="Filled" :size="14" />
         </button>
         <button
           type="button"
@@ -247,7 +247,7 @@ function onCommitKeydown(event: KeyboardEvent) {
           :aria-label="t('git.pullShort')"
           @click="git.pull()"
         >
-          <ArrowDown :size="14" />
+          <ArrowDown weight="Filled" :size="14" />
         </button>
         <button
           type="button"
@@ -256,7 +256,7 @@ function onCommitKeydown(event: KeyboardEvent) {
           :aria-label="t('git.pushShort')"
           @click="git.pushWithDialog()"
         >
-          <ArrowUp :size="14" />
+          <ArrowUp weight="Filled" :size="14" />
         </button>
         <button
           type="button"
@@ -269,7 +269,7 @@ function onCommitKeydown(event: KeyboardEvent) {
           :aria-label="t('git.stashShort')"
           @click="git.stash()"
         >
-          <Archive :size="14" />
+          <Archive weight="Filled" :size="14" />
           <span v-if="stashes.length" class="mini-badge">{{
             stashes.length > 9 ? "9+" : stashes.length
           }}</span>
@@ -307,7 +307,7 @@ function onCommitKeydown(event: KeyboardEvent) {
       </div>
 
       <div v-if="conflictEntries.length" class="conflict-banner">
-        <AlertTriangle :size="12" />
+        <AlertTriangle weight="Filled" :size="12" />
         {{ t("git.conflictBanner", { count: conflictEntries.length }) }}
         <button
           type="button"
@@ -332,7 +332,7 @@ function onCommitKeydown(event: KeyboardEvent) {
         <div v-if="stashes.length" class="group">
           <div class="group-title" @click="stashesOpen = !stashesOpen">
             <span class="group-label">
-              <ChevronDown
+              <ChevronDown weight="Filled"
                 :size="12"
                 class="chev"
                 :class="{ closed: !stashesOpen }"
@@ -347,7 +347,7 @@ function onCommitKeydown(event: KeyboardEvent) {
                 :aria-label="t('git.stashPopLatest')"
                 @click="git.stashPop(0)"
               >
-                <Undo2 :size="14" />
+                <Undo weight="Filled" :size="14" />
               </button>
               <span class="count">{{ stashes.length }}</span>
             </div>
@@ -370,7 +370,7 @@ function onCommitKeydown(event: KeyboardEvent) {
                   :aria-label="t('git.stashApplyTitle')"
                   @click="git.stashApply(s.index)"
                 >
-                  <FileDown :size="13" />
+                  <FileDown weight="Filled" :size="13" />
                 </button>
                 <button
                   type="button"
@@ -379,7 +379,7 @@ function onCommitKeydown(event: KeyboardEvent) {
                   :aria-label="t('git.stashPopTitle')"
                   @click="git.stashPop(s.index)"
                 >
-                  <ArchiveRestore :size="13" />
+                  <ArchiveUp weight="Filled" :size="13" />
                 </button>
                 <button
                   type="button"
@@ -388,7 +388,7 @@ function onCommitKeydown(event: KeyboardEvent) {
                   :aria-label="t('git.stashDropTitle')"
                   @click="git.stashDrop(s.index)"
                 >
-                  <ArchiveX :size="13" />
+                  <ArchiveSlash weight="Filled" :size="13" />
                 </button>
               </div>
             </div>
@@ -439,7 +439,7 @@ function onCommitKeydown(event: KeyboardEvent) {
         <div v-if="stagedEntries.length" class="group">
           <div class="group-title" @click="stagedOpen = !stagedOpen">
             <span class="group-label">
-              <ChevronDown
+              <ChevronDown weight="Filled"
                 :size="12"
                 class="chev"
                 :class="{ closed: !stagedOpen }"
@@ -453,7 +453,7 @@ function onCommitKeydown(event: KeyboardEvent) {
                 :title="t('git.unstageAll')"
                 @click="onUnstageAll"
               >
-                <Minus :size="14" />
+                <Minus weight="Filled" :size="14" />
               </button>
               <span class="count">{{ stagedEntries.length }}</span>
             </div>
@@ -486,7 +486,7 @@ function onCommitKeydown(event: KeyboardEvent) {
                   :title="t('git.unstage')"
                   @click="onUnstage(entry.path)"
                 >
-                  <Minus :size="13" />
+                  <Minus weight="Filled" :size="13" />
                 </button>
               </div>
             </div>
@@ -496,7 +496,7 @@ function onCommitKeydown(event: KeyboardEvent) {
         <div class="group">
           <div class="group-title" @click="changesOpen = !changesOpen">
             <span class="group-label">
-              <ChevronDown
+              <ChevronDown weight="Filled"
                 :size="12"
                 class="chev"
                 :class="{ closed: !changesOpen }"
@@ -511,7 +511,7 @@ function onCommitKeydown(event: KeyboardEvent) {
                 :title="t('git.stageAll')"
                 @click="onStageAll"
               >
-                <Plus :size="14" />
+                <Plus weight="Filled" :size="14" />
               </button>
               <button
                 v-if="unstagedEntries.length"
@@ -520,7 +520,7 @@ function onCommitKeydown(event: KeyboardEvent) {
                 :title="t('git.discardAll')"
                 @click="onDiscardAllChanges"
               >
-                <Undo2 :size="13" />
+                <Undo weight="Filled" :size="13" />
               </button>
               <span class="count">{{ unstagedEntries.length }}</span>
             </div>
@@ -556,7 +556,7 @@ function onCommitKeydown(event: KeyboardEvent) {
                   :title="t('git.stage')"
                   @click="onStage(entry.path)"
                 >
-                  <Plus :size="13" />
+                  <Plus weight="Filled" :size="13" />
                 </button>
                 <button
                   type="button"
@@ -564,7 +564,7 @@ function onCommitKeydown(event: KeyboardEvent) {
                   :title="t('git.discard')"
                   @click="onDiscard(entry.path)"
                 >
-                  <Undo2 :size="12" />
+                  <Undo weight="Filled" :size="12" />
                 </button>
               </div>
             </div>
@@ -595,7 +595,7 @@ function onCommitKeydown(event: KeyboardEvent) {
             :aria-label="t('git.commit')"
             @click.stop="doCommit"
           >
-            <GitCommitHorizontal class="commit-action-icon" :size="15" aria-hidden="true" />
+            <Upload weight="Filled" class="commit-action-icon" :size="15" aria-hidden="true" />
             <span class="commit-action-label">{{ t("git.commit") }}</span>
           </button>
           <button
@@ -606,7 +606,7 @@ function onCommitKeydown(event: KeyboardEvent) {
             :aria-label="t('git.commitAndPush')"
             @click.stop="doCommitAndPush"
           >
-            <ArrowUp class="commit-action-icon" :size="15" aria-hidden="true" />
+            <ArrowUp weight="Filled" class="commit-action-icon" :size="15" aria-hidden="true" />
             <span class="commit-action-label">{{ t("git.commitAndPush") }}</span>
           </button>
         </div>

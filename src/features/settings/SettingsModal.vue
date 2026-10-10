@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
-import { Check, X } from "lucide-vue-next";
+import { Check, X } from "reicon-vue";
 import { storeToRefs } from "pinia";
 import { EDITOR_FONT_OPTIONS } from "@/features/editor/fonts";
 import { EDITOR_SHORTCUTS } from "@/features/editor/shortcuts";
@@ -191,7 +191,7 @@ function onOverlayClick(event: MouseEvent) {
             :title="t('common.close')"
             @click="ui.closeSettings()"
           >
-            <X :size="18" />
+            <X weight="Filled" :size="18" />
           </button>
         </header>
 
@@ -214,7 +214,7 @@ function onOverlayClick(event: MouseEvent) {
                       <span /><span /><span />
                     </div>
                     <span v-if="theme === item.id" class="check">
-                      <Check :size="12" />
+                      <Check weight="Filled" :size="12" />
                     </span>
                   </div>
                   <span class="theme-name">{{ item.name }}</span>

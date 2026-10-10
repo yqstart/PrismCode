@@ -10,6 +10,13 @@
 - **Spring 索引**：`commands/spring.rs` 有界扫描 `application*.properties/yml` 与 Java 注解，产出配置键、取值、Bean、注入、HTTP 端点与诊断；依赖元数据只读 `~/.m2` 里 jar 的 `spring-configuration-metadata.json`（进程内缓存 + 3 秒预算）。前端据此提供 properties/yml 键补全、`@Value` 未知键诊断（写回 Monaco marker）与端点只读标签（状态栏 Java 菜单 →「Spring 端点」）。
 - **Java 调试器**：随包分发 java-debug 0.53.1（`third_party/debug-adapter/manifest.json` + `scripts/prepare-debug-adapter.mjs`，EPL-1.0），由内置 JDTLS 经 `initializationOptions.bundles` 装载，DAP 走它开出的本地 TCP 端口（Rust 侧 `commands/dap.rs` 复用 LSP 的 Content-Length 帧）。底部面板新增「调试」视图：线程 / 调用栈 / 变量 / 输出 + 继续 / 暂停 / 单步跳过 / 单步进入 / 单步跳出 / 停止；编辑器行号左侧点击可增删断点。调试启动链为「取端口 → 终端起目标（`suspend=y`）→ attach → 同步断点 → 恢复运行」，30 秒连不上会打断目标并提示重试。
 - **工作台布局重构为 IDEA New UI 结构**：应用外壳从「标题栏 + 左侧活动栏 + 侧边栏 + 底部终端面板」换成 IDEA 的工作台模型——**窗口头主工具栏**（项目 widget、VCS 分支 widget、居中 Run widget、搜索、设置）、**双向工具窗口条**（上组 Project / Commit / Git Log，下组 Package / Problems / Terminal / Debug）、**工具窗口卡片**（统一 32px 标题行 + 隐藏按钮）、**编辑器列内的底部工具窗口区**、**状态栏**（左状态消息，右 Java 状态 / 行列 / 编码 / 缩进 / 语言 / 主题）。布局真源收敛为 `settings.layout.left` / `settings.layout.bottom`（`active` / `lastActive` / `width` / `height`），旧设置自动迁移；终端展开状态由 `bottom.active === "terminal"` 派生，终端视图与底部区显示解耦——切到 Problems / Debug 或收起底部区都不再销毁 PTY。Run widget 同时承载 Java/Maven/Spring 运行配置与 package.json 脚本（选中后 ▶ 执行，npm 脚本禁用调试）。
+- **工作台二轮打磨（IDEA New UI 对齐）**：
+  - 界面图标库从 lucide 换成 **Reicon**（`reicon-vue`，MIT，2676 图标，Filled / Outline 双重量）：21 个文件、64 个图标；工具窗口条与主要操作图标用 `Filled`，工具窗口标题行 ⋮ / ✕ 用 Outline；颜色由 CSS `color` 驱动（图标 fill=currentColor）。
+  - **Inter UI 字体**（IDEA New UI 官方 UI 字体）：`@fontsource-variable/inter` 随包分发，离线可用，unicode-range 按需加载；`--font-ui` 首选 `Inter Variable`，中文回退系统字体。
+  - **右侧工具窗口区**（IDEA 右侧条）：新增 `RightToolWindows` 与 `ToolWindowBar side="right"`；首个右侧工具窗口为 **Spring 端点面板**（筛选 / 重新扫描 / 端点列表按 HTTP 方法着色 / 点击跳转到控制器行，数据来自 Spring 索引、首次挂载惰性扫描）；布局状态新增 `settings.layout.right { active, lastActive, width }`。
+  - **工具窗口 ⋮ 菜单**（`ToolWindowCard` 统一提供）：「隐藏工具窗口」「重置尺寸」（恢复该区默认宽 / 高）。
+  - **导航栏面包屑移入状态栏**（IDEA New UI 的 navigation bar 位置）：新增 `stores/breadcrumbs.ts` 共享路径段与符号链数据，编辑器底部面包屑移除；点击路径定位资源管理器、点击符号跳转的行为保留（处理器仍由 `MonacoEditor.vue` 注册），无打开文件时状态栏左端显示「就绪」。
+
 - **IntelliJ IDEA 对齐（界面样式 + 操作方式）**：
   - 新增 **IntelliJ Dark / IntelliJ Light** 两套主题：UI 与编辑器语法色直接取自 IntelliJ IDEA 2026.2 官方主题定义（`expUI_dark/light.theme.json` 与 `expUI_dark/lightScheme.xml`，逐项对应非近似），布局细节（编辑器标签 4px 圆角下划线、透明 hover、状态栏信息分区、工具窗口选中块）按 IDEA New UI 对齐；默认主题切换为 **IntelliJ Dark**（沿用旧默认 `cyberpunk` 的配置自动跟随，可在设置中改回）。
   - **Search Everywhere（双击 ⇧）**：文件 / 符号 / 操作聚合弹层，Tab 循环分组（全部 / 文件 / 符号 / 操作），空查询回退最近文件与常用操作；**Find Action（⌘⇧A）** 直达「操作」分组。新增全局动作注册表 `src/shared/actions.ts`（38 个真实动作，Search Everywhere / Find Action / 原生菜单共用同一来源）。
